@@ -12,8 +12,8 @@ FROM
 WHERE EXTRACT(YEAR FROM a) BETWEEN @start_year AND @end_year
 ORDER BY calendar_year;
 
-DROP TABLE IF EXISTS obsPopFinal;
-CREATE TEMP TABLE #obsPopFinal
+DROP TABLE IF EXISTS #obsPopYear;
+CREATE TEMP TABLE #obsPopYear
 AS
 SELECT person_id, calendar_year, calendar_start_date, calendar_end_date, observation_period_start_date, observation_period_end_date,
 gender_concept_id, (op.calendar_year - c.year_of_birth) AS age
