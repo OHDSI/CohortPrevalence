@@ -1,7 +1,10 @@
+/* Option 1 numerator: day one
+ The number of patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time */
+
 IF OBJECT_ID('#allEvents', 'U') IS NOT NULL
   DROP TABLE #allEvents;
 
 CREATE TEMP TABLE #allEvents AS
 SELECT * FROM #denom1
-where COHORT.cohort_definition_id = @target_id
-  and COHORT.cohort_start_date BETWEEN DATEADD(day, -@lookback, OBSPOP.observation_period_start_date) AND OBSPOP.observation_period_end_date;
+WHERE cohort_definition_id = @target_id
+  AND cohort_start_date BETWEEN DATEADD(day, -@lookback, calendar_start_date) AND calendar_start_date;
