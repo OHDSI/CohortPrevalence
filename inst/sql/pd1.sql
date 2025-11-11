@@ -2,8 +2,8 @@
  the number of persons in the population who were observed on the first day of the period of interest
  */
 
-DROP TABLE IF EXISTS #denom1;
-CREATE TEMP TABLE #denom1 AS
+DROP TABLE IF EXISTS #denom;
+CREATE TEMP TABLE #denom AS
 WITH qualified AS (
   SELECT *
   FROM #obsPopYear
@@ -23,6 +23,8 @@ SELECT
   cohort_start_date,
   cohort_end_date,
   calendar_year,
+  calendar_start_date,
+  calendar_end_date,
   age,
   gender_concept_id
 FROM ranked

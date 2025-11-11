@@ -25,10 +25,8 @@ SELECT
   d.calendar_year,
   d.age,
   d.gender_concept_id,
-  COUNT(DISTINCT d.person_id) AS denominator,
-  COUNT(DISTINCT n.person_id) AS numerator,
-  COUNT(DISTINCT n.person_id) / COUNT(DISTINCT d.person_id) AS prevalence_rate
-FROM #denom1 d
-LEFT JOIN #allEvents n
-  ON d.person_id = n.person_id
+  SUM(case_event) AS numerator,
+  COUNT(DISTINCT subject_id) AS denominator,
+  (SUM(case_event) / COUNT(DISTINCT subject_id)) * 100000 AS prevalence_rate
+FROM #allEvents
 GROUP BY d.calendar_year, d.age, d.gender_concept_id;

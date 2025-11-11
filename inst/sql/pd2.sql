@@ -1,8 +1,8 @@
 /* Option 2 denominator: complete-period
  the number of persons in the population who contribute all observable person-days in the period of interest. This is the strictest denominator
 */
-DROP TABLE IF EXISTS #denom2;
-CREATE TEMP TABLE #denom2 AS
+DROP TABLE IF EXISTS #denom;
+CREATE TEMP TABLE #denom AS
 WITH qualified AS (
   SELECT *
   FROM #obsPopYear
@@ -23,6 +23,8 @@ SELECT
   cohort_start_date,
   cohort_end_date,
   calendar_year,
+  calendar_start_date,
+  calendar_end_date,
   age,
   gender_concept_id
 FROM ranked
