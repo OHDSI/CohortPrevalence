@@ -112,6 +112,21 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       return(allSql)
 
+    },
+
+    renderAssembledSql = function(sql, executionSettings){
+
+      checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
+
+      renderedSql <- SqlRender::render(sql,
+                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                       min_obs_time = self$minimumObservationLength,
+                                       use_first_op = self$useOnlyFirstObservationPeriod,
+                                       cohort_database_schema = executionSettings$workDatabaseSchema,
+                                       cohort_table = executionSettings$cohortTable,
+                                       prevalent_cohort_id = self$prevalentCohort$cohortId,
+                                       use_observed_time = self$lookBackOptions$useObservedTimeOnly)
+      return(renderedSql)
     }
   ),
   private = list(
@@ -307,7 +322,7 @@ CohortInfo <- R6::R6Class(
 PeriodOfInterest <- R6::R6Class(
   classname = "PeriodOfInterest",
   public = list(
-    initialize = function(poiType, poiRange) {
+    initialize = function(poiRange, poiType = "yearly") {
 
       checkmate::assert_integer(x = poiRange, min.len = 1)
       private[[".poiRange"]] <- poiRange
