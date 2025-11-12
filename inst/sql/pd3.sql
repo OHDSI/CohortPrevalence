@@ -1,8 +1,8 @@
 /* Option 3 denominator: any time
  the number of persons who who contributes at least 1 day in the period of interest. This is the most naive denominator and what IHD uses.
 */
-DROP TABLE IF EXISTS #denom3;
-CREATE TEMP TABLE #denom3 AS
+DROP TABLE IF EXISTS #denom;
+CREATE TEMP TABLE #denom AS
 WITH ranked AS (
   SELECT *,
     ROW_NUMBER() OVER (

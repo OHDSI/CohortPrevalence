@@ -4,8 +4,7 @@ TODO: parametrize picking first obs period */
 DROP TABLE IF EXISTS #obsPop;
 CREATE TEMP TABLE #obsPop
 AS
-SELECT
-subject_id, observation_period_start_date, observation_period_end_date
+SELECT subject_id, observation_period_start_date, observation_period_end_date
 FROM
 (
     SELECT *, person_id AS subject_id,

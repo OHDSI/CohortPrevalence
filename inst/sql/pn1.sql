@@ -4,6 +4,7 @@
 DROP TABLE IF EXISTS #allEvents;
 
 CREATE TEMP TABLE #allEvents AS
-SELECT * FROM #denom1
-WHERE cohort_definition_id = @targetId
-  AND cohort_start_date BETWEEN DATEADD(day, -@lookback, calendar_start_date) AND calendar_start_date;
+SELECT *,
+  CASE WHEN cohort_start_date BETWEEN DATEADD(day, -@lookback, calendar_start_date) AND calendar_start_date; THEN 1 ELSE 0 END AS case_event
+FROM #denom
+;

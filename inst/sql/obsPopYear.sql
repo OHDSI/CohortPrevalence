@@ -1,4 +1,5 @@
 /* create poi by year */
+/* THIS IS TEMPORARY FOR TESTING */
 DROP TABLE IF EXISTS #year_interval;
   CREATE TEMP TABLE #year_interval  (calendar_year INTEGER);
 INSERT INTO #year_interval (calendar_year)
@@ -19,7 +20,7 @@ CREATE TEMP TABLE #obsPopYear
 AS
 SELECT subject_id, calendar_year, cohort_definition_id,
       DATEFROMPARTS(calendar_year, 1, 1) AS calendar_start_date,
-      DATEFROMPARTS(calendar_year+1, 1, 1) AS calendar_end_date,
+      DATEFROMPARTS(calendar_year + 1, 1, 1) AS calendar_end_date,
       observation_period_start_date, observation_period_end_date,
       cohort_start_date, cohort_end_date,
       /* compute age */
