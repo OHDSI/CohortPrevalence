@@ -7,7 +7,7 @@ WITH qualified AS (
   SELECT *
   FROM #obsPopYear
   WHERE calendar_start_date >= observation_period_start_date
-    AND calendar_end_date <= observation_period_end_date;
+    AND calendar_end_date <= observation_period_end_date
 ),
 ranked AS (
   SELECT *,

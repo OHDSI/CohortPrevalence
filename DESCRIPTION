@@ -2,8 +2,8 @@ Package: CohortPrevalence
 Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
 Version: 0.0.0.9000
 Authors@R: 
-    person("Martin", "Lavallee", , "lavallee@ohdsi.org", role = c("aut", "cre"),
-    person("Kelly", "Li", , "kli@ohdsi.org", role = c("aut", "cre"))
+    person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut", "cre"))
+    person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
 Description: This package calculates prevalence of a condition in a population.
 License: Apache License
 Encoding: UTF-8

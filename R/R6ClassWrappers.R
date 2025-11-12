@@ -1,0 +1,57 @@
+
+#' Create an AnnualPrevalenceAnalysis object
+#'
+#' Constructs an `AnnualPrevalenceAnalysis` object with the specified settings.
+#'
+#' @param analysisId Unique integer analysisId to identify the analysis (required).
+#' @param prevalentCohort A `PrevalenceCohort` object specifying the cohort of interest (required).
+#' @param periodOfInterest A `PeriodOfInterest` object (required).
+#' @param lookBackDays Integer used for specifying length of lookback (required).
+#' @param numeratorType Character string specifying numerator type. Must be one of:
+#' \itemize{
+#'   \item `"pn1"`: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
+#'   \item `"pn2"`: patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time
+#' }
+#' @param denominatorType Character string specifying denominator type. Must be one of:
+#' \itemize{
+#'   \item `"pd1"`: Patients who have been observed on the first day of the period of interest
+#'   \item `"pd2"`: Patients who contribute all observable person-days in the period of interest.
+#'   \item `"pd3"`: Patients who contribute at least 1 day in the period of interest.
+#'   \item `"pd4"`: Patients who contribute sufficient time in the period of interest based on at least n observable person-days in the period of interest.
+#' }
+#' @param minimumObservationLength: Integer specifying minimum observation length (optional).
+#' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
+#' @param useObservedTimeOnly Logical: `True` to restrict to observed-time only lookback (optional).
+#' @param lookbackOptions A `LookBackOption` object (required).
+#' @param multiplier Integer specifying prevalence multiplier (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
+#'
+#' @return An `CohortPrevalenceAnalysis` R6 object.
+#' @export
+#'
+createCohortPrevalenceAnalysis <- function(analysisId,
+                                           prevalentCohort,
+                                           periodOfInterest,
+                                           lookBackDays,
+                                           numeratorType,
+                                           denominatorType,
+                                           minimumObservationLength = 0L,
+                                           useOnlyFirstObservationPeriod = FALSE,
+                                           useObservedTimeOnly = FALSE,
+                                           multiplier = 100000,
+                                           strata = NULL,
+                                           populationCohort = NULL){
+  CohortPrevalenceAnalysis$new(analysisId = analysisId,
+                               prevalentCohort = prevalentCohort,
+                               periodOfInterest = periodOfInterest,
+                               lookBackDays = lookBackDays,
+                               numeratorType = numeratorType,
+                               denominatorType = denominatorType,
+                               minimumObservationLength = minimumObservationLength,
+                               useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
+                               useObservedTimeOnly = useObservedTimeOnly,
+                               multiplier = multiplier,
+                               strata = strata,
+                               populationCohort = populationCohort)
+}
