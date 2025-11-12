@@ -10,7 +10,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           denominatorType,
                           minimumObservationLength = 0L,
                           useOnlyFirstObservationPeriod = FALSE,
-                          useObservedTimeOnly = FALSE) {
+                          useObservedTimeOnly = FALSE,
+                          multiplier = 100000,
+                          strata = NULL,
+                          populationCohort = NULL) {
       # set analysisId
       checkmate::assert_integer(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
@@ -47,6 +50,18 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_logical(x = useObservedTimeOnly, len = 1)
       private[[".useObservedTimeOnly"]] <- useObservedTimeOnly
 
+      # set multiplier
+      checkmate::assert_integer(x = multiplier, len = 1)
+      private[[". multiplier"]] <- multiplier
+
+      # set strata
+      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      private[[".strata"]] <- strata
+
+      # set population
+      checkmate::assert_class(x = populationCohort, classes = "CohortPopulation")
+      private[[".populationCohort"]] <- populationCohort
+
     }
   ),
   private = list(
@@ -59,7 +74,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .denominatorType = NULL,
     .minimumObservationLength = NULL,
     .useOnlyFirstObservationPeriod = NULL,
-    .useObservedTimeOnly = NULL
+    .useObservedTimeOnly = NULL,
+    .multiplier = NULL,
+    .strata = NULL,
+    .populationCohort = NULL
   ),
   active = list(
     # active fields for R6 class
@@ -134,6 +152,31 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_logical(x = useObservedTimeOnly, len = 1)
       private$.useObservedTimeOnly <- value
+    },
+
+    strata = function(value) {
+      if (missing(value)) {
+        return(private$.strata)
+      }
+      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      private$.strata <- value
+    },
+
+    multiplier = function(value) {
+      if (missing(value)) {
+        return(private$.multiplier)
+      }
+      checkmate::assert_integer(x = multiplier, len = 1)
+      private$.multiplier <- value
+    },
+
+
+    populationCohort = function(value) {
+      if (missing(value)) {
+        return(private$.populationCohort)
+      }
+      checkmate::assert_class(x = populationCohort, classes = "PopulationCohort")
+      private$.populationCohort <- value
     }
 
   )
