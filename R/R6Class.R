@@ -1,4 +1,6 @@
 # Main class -------------------
+
+## CohortPrevalenceAnalysis ----------------
 CohortPrevalenceAnalysis <- R6::R6Class(
   classname = "CohortPrevalenceAnalysis",
   public = list(
@@ -29,14 +31,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_class(x = lookBackOptions, classes = "LookBackOptions")
       private[[".lookBackOptions"]] <- lookBackOptions
 
-
       # set numeratorType
       checkmate::assert_choice(x = numeratorType, choices = c("pn1", "pn2"))
       private[[".numeratorType"]] <- numeratorType
 
-      # set denominatorType
-      checkmate::assert_choice(x = denominatorType, choices = c("pd1", "pd2", "pd3", "pd4"))
+      # set denominator type
+      checkmate::assert_class(x = lookBackOptions, classes = "DenominatorType")
       private[[".denominatorType"]] <- denominatorType
+
 
       # set minimumObservationLength
       checkmate::assert_integer(x = minimumObservationLength, len = 1)
@@ -122,7 +124,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.denominatorType)
       }
-      checkmate::assert_choice(x = denominatorType, choices = c("pd1", "pd2", "pd3", "pd4"))
+      checkmate::assert_class(x = denominatorType, classes = "DenominatorType")
       private$.denominatorType <- value
     },
 
@@ -172,6 +174,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
 # SubClasses ------
 
+## Lookback options --------------
 LookBackOptions <- R6::R6Class(
   classname = "LookBackOptions",
   public = list(
@@ -210,7 +213,7 @@ LookBackOptions <- R6::R6Class(
   )
 )
 
-
+## Cohort Info ----------------
 CohortInfo <- R6::R6Class(
   classname = "CohortInfo",
   public = list(
@@ -248,7 +251,7 @@ CohortInfo <- R6::R6Class(
   )
 )
 
-
+## Period of Interest ----------------
 PeriodOfInterest <- R6::R6Class(
   classname = "PeriodOfInterest",
   public = list(
@@ -285,4 +288,38 @@ PeriodOfInterest <- R6::R6Class(
     }
   )
 
+)
+
+## Denominator Type -------------
+DenominatorType <- R6::R6Class(
+  classname = "DenominatorType",
+  public = list(
+    initialize = function(denomType, sufficientDays) {
+      # set denominatorType
+      checkmate::assert_choice(x = denomType, choices = c("pd1", "pd2", "pd3", "pd4"))
+      private[[".denomType"]] <- denomType
+
+      if (denomType == "pd4") {
+        checkmate::assert_integer(x = sufficientDays, len = 1)
+        private[[".sufficientDays"]] <- sufficientDays
+      }
+    },
+    # TODO add more defensive programming to prevent suffientDays to non pd4
+    updateDenominatorType = function(denomType, sufficientDays) {
+      checkmate::assert_choice(x = denomType, choices = c("pd1", "pd2", "pd3", "pd4"))
+      private$.denomType <- denomType
+      if (denomType != "pd4") {
+        private$.sufficientDays <- NULL
+        cli::cat_line(glue::glue("Remove sufficientDays option for {denomType}"))
+      }
+      if (denomType == "pd4") {
+        private$.sufficientDays <- sufficientDays
+        cli::cat_line(glue::glue("Update sufficientDays option to {sufficientDays} days for {denomType}"))
+      }
+    }
+  ),
+  private = list(
+    .denomType = NULL,
+    .sufficientDays = NULL
+  )
 )
