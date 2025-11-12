@@ -1,8 +1,6 @@
 library(CohortPrevalence)
 analysisId <- 1
-prevalentCohort <- createPrevalenceCohort(cohortId = 1923,
-                                          cohortName = "test")
-periodOfInterest <- createYearlyPrevalence(range = c(2016:2020))
+
 lookBackOptions <- createLookBackOptions()
 numeratorType <- "pn1"
 denominatorType <- createDenominatorType(denomType = "pd3")
