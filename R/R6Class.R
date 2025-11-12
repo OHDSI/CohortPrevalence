@@ -73,7 +73,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         )
         yearRangeSql <- .insertTableSql(
           executionSettings,
-          tableName = "yearly_interval",
+          tableName = "#year_interval",
           data = years
         )
         # get the obs pop year sql
@@ -119,15 +119,16 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
 
       renderedSql <- SqlRender::render(sql,
-                                       cdmDatabaseSchema = executionSettings$cdmDatabaseSchema,
+                                       cdm_database_schema = executionSettings$cdmDatabaseSchema,
                                        min_obs_time = self$minimumObservationLength,
                                        use_first_op = self$useOnlyFirstObservationPeriod,
                                        cohort_database_schema = executionSettings$workDatabaseSchema,
                                        cohort_table = executionSettings$cohortTable,
-                                       prevalent_cohort_id = self$prevalentCohort$cohortId,
+                                       prevalent_cohort_id = self$prevalentCohort$id(),
                                        use_observed_time = self$lookBackOptions$useObservedTimeOnly,
-                                       lookback = self$lookBackOptions$lookBackDays) |>
-        SqlRender::translate(targetDialect = executionSettings$dbms,
+                                       lookback = self$lookBackOptions$lookBackDays,
+                                       multiplier = self$multiplier) |>
+        SqlRender::translate(targetDialect = executionSettings$getDbms(),
                              tempEmulationSchema = executionSettings$tempEmulationSchema)
       return(renderedSql)
     },

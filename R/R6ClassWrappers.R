@@ -1,4 +1,3 @@
-
 #' Create a `CohortPrevalenceAnalysis` object
 #'
 #' Constructs an `CohortPrevalenceAnalysis` object with the specified settings.

@@ -2,19 +2,18 @@
 % Please edit documentation in R/R6ClassWrappers.R
 \name{createCohortPrevalenceAnalysis}
 \alias{createCohortPrevalenceAnalysis}
-\title{Create an AnnualPrevalenceAnalysis object}
+\title{Create a \code{CohortPrevalenceAnalysis} object}
 \usage{
 createCohortPrevalenceAnalysis(
   analysisId,
   prevalentCohort,
   periodOfInterest,
-  lookBackDays,
+  lookBackOptions,
   numeratorType,
   denominatorType,
   minimumObservationLength = 0L,
   useOnlyFirstObservationPeriod = FALSE,
-  useObservedTimeOnly = FALSE,
-  multiplier = 1e+05,
+  multiplier = 100000L,
   strata = NULL,
   populationCohort = NULL
 )
@@ -26,25 +25,15 @@ createCohortPrevalenceAnalysis(
 
 \item{periodOfInterest}{A \code{PeriodOfInterest} object (required).}
 
-\item{lookBackDays}{Integer used for specifying length of lookback (required).}
-
 \item{numeratorType}{Character string specifying numerator type. Must be one of:
 \itemize{
 \item \code{"pn1"}: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
 \item \code{"pn2"}: patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time
 }}
 
-\item{denominatorType}{Character string specifying denominator type. Must be one of:
-\itemize{
-\item \code{"pd1"}: Patients who have been observed on the first day of the period of interest
-\item \code{"pd2"}: Patients who contribute all observable person-days in the period of interest.
-\item \code{"pd3"}: Patients who contribute at least 1 day in the period of interest.
-\item \code{"pd4"}: Patients who contribute sufficient time in the period of interest based on at least n observable person-days in the period of interest.
-}}
+\item{denominatorType}{A \code{DenominatorType} object (required).}
 
 \item{useOnlyFirstObservationPeriod}{Logical: \code{TRUE} to restrict analysis to the first observation period (optional).}
-
-\item{useObservedTimeOnly}{Logical: \code{True} to restrict to observed-time only lookback (optional).}
 
 \item{multiplier}{Integer specifying prevalence multiplier (optional).}
 
@@ -52,13 +41,15 @@ createCohortPrevalenceAnalysis(
 
 \item{populationCohort}{A \code{CohortPopulation} object specifying the population of interest on which to compute prevalence.}
 
+\item{lookBackDays}{Integer used for specifying length of lookback (required).}
+
 \item{minimumObservationLength:}{Integer specifying minimum observation length (optional).}
 
 \item{lookbackOptions}{A \code{LookBackOption} object (required).}
 }
 \value{
-An \code{CohortPrevalenceAnalysis} R6 object.
+A \code{CohortPrevalenceAnalysis} R6 object.
 }
 \description{
-Constructs an \code{AnnualPrevalenceAnalysis} object with the specified settings.
+Constructs an \code{CohortPrevalenceAnalysis} object with the specified settings.
 }

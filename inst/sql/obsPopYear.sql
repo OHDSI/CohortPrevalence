@@ -1,20 +1,3 @@
-/* create poi by year */
-/* THIS IS TEMPORARY FOR TESTING
-DROP TABLE IF EXISTS #year_interval;
-  CREATE TEMP TABLE #year_interval  (calendar_year INTEGER);
-INSERT INTO #year_interval (calendar_year)
-VALUES ( '2016'),
-('2017'),
-('2018'),
-('2019'),
-('2020'),
-('2021'),
-('2022'),
-('2023'),
-('2024');
-
-*/
-
 /* Step 3a: For yearly case, get calendar_year, start date, and end date
 TODO: include @strata param for other strata variables */
 DROP TABLE IF EXISTS #obsPopYear;
@@ -36,19 +19,4 @@ FROM(
     AND EXTRACT(YEAR FROM observation_period_end_date) >= b.calendar_year
 );
 
-/*
--- old code for SqlRender compatibilities
-DROP TABLE IF EXISTS #year_interval;
-CREATE TEMP TABLE #year_interval
-AS
-SELECT
-DISTINCT EXTRACT(YEAR FROM a) AS calendar_year
-FROM
-(
-  SELECT cohort_start_date AS a FROM @cohort_database_schema.@cohort_table
-  UNION ALL
-  SELECT cohort_end_date FROM @cohort_database_schema.@cohort_table
-)
-WHERE EXTRACT(YEAR FROM a) BETWEEN @start_year AND @end_year
-ORDER BY calendar_year;
-*/
+
