@@ -25,10 +25,11 @@ SELECT
   d.calendar_year,
   d.age,
   d.gender_concept_id,
-  COUNT(DISTINCT d.person_id) AS denominator,
-  COUNT(DISTINCT n.person_id) AS numerator,
-  COUNT(DISTINCT n.person_id) / COUNT(DISTINCT d.person_id) AS prevalence_rate
+  COUNT(DISTINCT d.subject_id) AS denominator,
+  COUNT(DISTINCT n.subject_id) AS numerator,
+  COUNT(DISTINCT n.subject_id) / COUNT(DISTINCT d.subject_id) AS prevalence_rate
 FROM #denom1 d
 LEFT JOIN #allEvents n
   ON d.person_id = n.person_id
-GROUP BY d.calendar_year, d.age, d.gender_concept_id;
+    AND d.calendar_year = n.calendar_year
+GROUP BY d.calendar_year, d.age, d.gender_concept_id; -- todo: add @strata

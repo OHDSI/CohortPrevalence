@@ -5,7 +5,7 @@ DROP TABLE IF EXISTS #obsPop;
 CREATE TEMP TABLE #obsPop
 AS
 SELECT
-o.subject_id, observation_period_start_date, observation_period_end_date, cohort_start_date, cohort_end_date, year_of_birth, gender_concept_id
+subject_id, observation_period_start_date, observation_period_end_date
 FROM
 (
     SELECT *, person_id AS subject_id,
@@ -23,18 +23,18 @@ WHERE DATEDIFF(day, observation_period_start_date, observation_period_end_date) 
 DROP TABLE IF EXISTS #obsPopMain;
 CREATE TEMP TABLE #obsPopMain
 AS
-SELECT a.person_id AS subject_id, b.cohort_definition_id,
+SELECT a.subject_id, b.cohort_definition_id,
     a.observation_period_start_date, a.observation_period_end_date,
     a.gender_concept_id, a.year_of_birth, b.cohort_start_date, b.cohort_end_date
 FROM (
   -- Add demographics from person table
-    SELECT a.person_id, observation_period_start_date, observation_period_end_date,
+    SELECT a.subject_id, observation_period_start_date, observation_period_end_date,
         gender_concept_id, year_of_birth
     FROM #obsPop a
-    INNER JOIN @cdmDatabseSchema.person p ON a.person_id = p.person_id
+    INNER JOIN @cdmDatabaseSchema.person p ON a.subject_id = p.person_id
 )a
 LEFT JOIN (
   -- Left join on cohort table to get events (cohortId NULL/ not NULL)
     SELECT * FROM @cohortDatabaseSchema.@cohortTable WHERE cohort_definition_id = @targetId
-) b ON a.person_id = b.subject_id
+) b ON a.subject_id = b.subject_id
 ;

@@ -23,6 +23,8 @@ SELECT
   cohort_start_date,
   cohort_end_date,
   calendar_year,
+  calendar_start_date,
+  calendar_end_date,
   age,
   gender_concept_id
 FROM ranked
