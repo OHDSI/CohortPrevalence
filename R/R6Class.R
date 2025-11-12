@@ -36,7 +36,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".numeratorType"]] <- numeratorType
 
       # set denominator type
-      checkmate::assert_class(x = lookBackOptions, classes = "DenominatorType")
+      checkmate::assert_class(x = denominatorType, classes = "DenominatorType")
       private[[".denominatorType"]] <- denominatorType
 
 
@@ -50,14 +50,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       # set multiplier
       checkmate::assert_integer(x = multiplier, len = 1)
-      private[[". multiplier"]] <- multiplier
+      private[[".multiplier"]] <- multiplier
 
       # set strata
       checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set population
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
 
     }
@@ -165,7 +165,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.populationCohort)
       }
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private$.populationCohort <- value
     }
 

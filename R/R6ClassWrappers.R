@@ -38,7 +38,7 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            denominatorType,
                                            minimumObservationLength = 0L,
                                            useOnlyFirstObservationPeriod = FALSE,
-                                           multiplier = 100000,
+                                           multiplier = 100000L,
                                            strata = NULL,
                                            populationCohort = NULL){
   analysisDef <- CohortPrevalenceAnalysis$new(analysisId = analysisId,
@@ -53,4 +53,40 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                strata = strata,
                                populationCohort = populationCohort)
   return(analysisDef)
+}
+
+
+makePrevalenceCohort <- function(cohortId, cohortName) {
+  prevalenceCohort <- CohortInfo$new(id = cohortId, name = cohortName)
+  return(prevalenceCohort)
+}
+
+makePopulationCohort <- function(cohortId, cohortName) {
+  populationCohort <- CohortInfo$new(id = cohortId, name = cohortName)
+  return(populationCohort)
+}
+
+makeLookBackOptions <- function(lookBackDays = 99999L, useObservedTimeOnly = FALSE) {
+  lbo <- LookBackOptions$new(
+    lookBackDays = lookBackDays,
+    useObservedTimeOnly = useObservedTimeOnly
+  )
+  return(lbo)
+}
+
+makeYearlyPrevalence <- function(range) {
+  poi <- PeriodOfInterest$new(
+    poiType = "yearly",
+    poiRange = range
+  )
+  return(poi)
+}
+
+
+makeDenominatorType <- function(denomType, sufficientDays) {
+  dt <- DenominatorType$new(
+    denomType = denomType,
+    sufficientDays = sufficientDays
+  )
+  return(dt)
 }
