@@ -16,7 +16,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           strata = NULL,
                           populationCohort = NULL) {
       # set analysisId
-      checkmate::assert_integer(x = analysisId, len = 1)
+      checkmate::assert_integerish(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
 
       # set prevalent cohort
@@ -41,7 +41,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
 
       # set minimumObservationLength
-      checkmate::assert_integer(x = minimumObservationLength, len = 1)
+      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
       private[[".minimumObservationLength"]] <- minimumObservationLength
 
       # set useOnlyFirstObservationPeriod
@@ -49,7 +49,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".useOnlyFirstObservationPeriod"]] <- useOnlyFirstObservationPeriod
 
       # set multiplier
-      checkmate::assert_integer(x = multiplier, len = 1)
+      checkmate::assert_integerish(x = multiplier, len = 1)
       private[[".multiplier"]] <- multiplier
 
       # set strata
@@ -135,7 +135,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.analysisId)
       }
-      checkmate::assert_integer(x = analysisId, len = 1)
+      checkmate::assert_integerish(x = analysisId, len = 1)
       private$.analysisId <- value
     },
 
@@ -184,7 +184,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.minimumObservationLength)
       }
-      checkmate::assert_integer(x = minimumObservationLength, len = 1)
+      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
       private$.minimumObservationLength <- value
     },
 
@@ -208,7 +208,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.multiplier)
       }
-      checkmate::assert_integer(x = multiplier, len = 1)
+      checkmate::assert_integerish(x = multiplier, len = 1)
       private$.multiplier <- value
     },
 
@@ -232,12 +232,20 @@ LookBackOptions <- R6::R6Class(
   public = list(
     initialize = function(lookBackDays, useObservedTimeOnly = FALSE) {
       # set lookBackDays
-      checkmate::assert_integer(x = lookBackDays, len = 1)
+      checkmate::assert_integerish(x = lookBackDays, len = 1)
       private[[".lookBackDays"]] <- lookBackDays
 
       # set useObservedTimeOnly
       checkmate::assert_logical(x = useObservedTimeOnly, len = 1)
       private[[".useObservedTimeOnly"]] <- useObservedTimeOnly
+    },
+
+    viewLookBackOptions = function() {
+      lbd <- self$lookBackDays
+      uoto <- self$useObservedTimeOnly
+      txt <- glue::glue("Lookback Options ==> Lookback Days: {lbd}d | Using Observed Time: {uoto}")
+      cli::cat_line(txt)
+      invisible(txt)
     }
   ),
   private = list(
@@ -251,7 +259,7 @@ LookBackOptions <- R6::R6Class(
       if (missing(value)) {
         return(private$.lookBackDays)
       }
-      checkmate::assert_integer(x = lookBackDays, len = 1)
+      checkmate::assert_integerish(x = lookBackDays, len = 1)
       private$.lookBackDays <- value
     },
 
@@ -273,7 +281,7 @@ CohortInfo <- R6::R6Class(
     #' @param name the name of the cohort definition
     initialize = function(id, name) {
 
-      checkmate::assert_integer(x = id, len = 1)
+      checkmate::assert_integerish(x = id, len = 1)
       private[[".id"]] <- id
 
       checkmate::assert_string(x = name, min.chars = 1)
@@ -309,7 +317,7 @@ PeriodOfInterest <- R6::R6Class(
   public = list(
     initialize = function(poiType, poiRange) {
 
-      checkmate::assert_integer(x = poiRange, min.len = 1)
+      checkmate::assert_integerish(x = poiRange, min.len = 1)
       private[[".poiRange"]] <- poiRange
 
       checkmate::assert_string(x = poiType, min.chars = 1)
@@ -335,7 +343,7 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiRange)
       }
-      checkmate::assert_integer(x = poiRange, min.len = 1)
+      checkmate::assert_integerish(x = poiRange, min.len = 1)
       private$.poiRange <- value
     }
   )
@@ -352,7 +360,7 @@ DenominatorType <- R6::R6Class(
       private[[".denomType"]] <- denomType
 
       if (denomType == "pd4") {
-        checkmate::assert_integer(x = sufficientDays, len = 1)
+        checkmate::assert_integerish(x = sufficientDays, len = 1)
         private[[".sufficientDays"]] <- sufficientDays
       }
     },
