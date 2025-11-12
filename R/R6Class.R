@@ -70,7 +70,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .denominatorType = NULL,
     .minimumObservationLength = NULL,
     .useOnlyFirstObservationPeriod = NULL,
-    .useObservedTimeOnly = NULL,
     .multiplier = NULL,
     .strata = NULL,
     .populationCohort = NULL
