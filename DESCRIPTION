@@ -1,6 +1,6 @@
 Package: CohortPrevalence
 Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
-Version: 0.0.0.9000
+Version: 0.0.1
 Authors@R: 
     person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut", "cre"))
     person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
