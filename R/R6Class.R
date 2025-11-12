@@ -130,7 +130,25 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         SqlRender::translate(targetDialect = executionSettings$dbms,
                              tempEmulationSchema = executionSettings$tempEmulationSchema)
       return(renderedSql)
+    },
+
+    viewAnalysisInfo = function() {
+      txt <- c(
+        glue::glue("Analysis Id ==> {self$analysisId}"),
+        glue::glue("Prevalent Cohort ==> {self$prevalentCohort$viewCohortInfo()}"),
+        self$periodOfInterest$viewPeriodOfInterest(),
+        c(glue::glue("Numerator Type ==> {self$numeratorType}"),
+          getNumText(numType = self$numeratorType)
+        ) |> glue::glue_collapse("\n"),
+        self$denominatorType$viewDenominatorType(),
+        self$lookBackOptions$viewLookBackOptions(),
+        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}")
+      ) |>
+        glue::glue_collapse("\n\n")
+      cli::cat_line(txt)
+      invisible(txt)
     }
+
   ),
   private = list(
     # formalize vars
@@ -262,8 +280,7 @@ LookBackOptions <- R6::R6Class(
       lbd <- self$lookBackDays
       uoto <- self$useObservedTimeOnly
       txt <- glue::glue("Lookback Options ==> Lookback Days: {lbd}d | Using Observed Time: {uoto}")
-      cli::cat_line(txt)
-      invisible(txt)
+      return(txt)
     }
   ),
   private = list(
@@ -316,10 +333,10 @@ CohortInfo <- R6::R6Class(
       return(cName)
     },
     #' @description print the cohort details
-    cohortDetails = function(){
+    viewCohortInfo = function(){
       id <- self$id()
       name <- self$name()
-      info <- glue::glue_col( "\t- Cohort Id: {green {id}}; Cohort Name: {green {name}}")
+      info <- glue::glue("Cohort Id: {id} | Cohort Name: {name}")
       return(info)
     }
   ),
@@ -338,8 +355,24 @@ PeriodOfInterest <- R6::R6Class(
       checkmate::assert_integerish(x = poiRange, min.len = 1)
       private[[".poiRange"]] <- poiRange
 
-      checkmate::assert_string(x = poiType, min.chars = 1)
+      checkmate::assert_choice(x = poiType, choices = c("yearly", "span"))
       private[[".poiType"]] <- poiType
+    },
+
+    viewPeriodOfInterest = function() {
+      poiType <- self$poiType
+      poiRange <- self$poiRange
+
+      if (poiType == "yearly") {
+        poiRange2 <- poiRange |> glue::glue_collapse(", ")
+      }
+
+      if (poiType == "span") {
+        poiRange2 <- poiRange |> glue::glue_collapse(" - ")
+      }
+
+      txt <- glue::glue("Period of Interest ==> type: {poiType} | Range: {poiRange2}")
+      return(txt)
     }
   ),
 
@@ -353,7 +386,7 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiType)
       }
-      checkmate::assert_string(x = poiType, min.chars = 1)
+      checkmate::assert_choice(x = poiType, choices = c("yearly", "span"))
       private$.poiType <- value
     },
 
@@ -399,6 +432,19 @@ DenominatorType <- R6::R6Class(
     getDenomType = function() {
       denomType <- private$.denomType
       return(denomType)
+    },
+
+    viewDenominatorType = function() {
+      denomType <- self$getDenomType()
+      sufficientDays <- private$.sufficientDays
+      if (denomType == "pn4") {
+        txt1 <- glue::glue("Denominator Type ==> {denomType} | Sufficient Days: {sufficientDays}")
+      } else {
+        txt1 <- glue::glue("Denominator Type ==> {denomType}")
+      }
+      txt2 <- getDenomText(denomType)
+      txt <- c(txt1, txt2) |> glue::glue_collapse("\n")
+      return(txt)
     }
   ),
   private = list(
