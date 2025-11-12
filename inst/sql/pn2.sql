@@ -3,7 +3,7 @@
 
 DROP TABLE IF EXISTS #allEvents;
 
-CREATE TEMP TABLE #allEvents AS
+CREATE TABLE #allEvents AS
 SELECT *,
   CASE WHEN cohort_start_date BETWEEN DATEADD(day, -@lookback, calendar_start_date) AND calendar_end_date THEN 1 ELSE 0 END AS case_event
 FROM #denom

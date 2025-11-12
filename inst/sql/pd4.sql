@@ -2,7 +2,7 @@
  the number of persons who contributes sufficient time in the period of interest based on at least n observable person-days in the period of interest
 */
 DROP TABLE IF EXISTS #denom;
-CREATE TEMP TABLE #denom AS
+CREATE TABLE #denom AS
 WITH qualified AS (
   SELECT *
   FROM #obsPopYear

@@ -18,7 +18,7 @@ VALUES ( '2016'),
 /* Step 3a: For yearly case, get calendar_year, start date, and end date
 TODO: include @strata param for other strata variables */
 DROP TABLE IF EXISTS #obsPopYear;
-CREATE TEMP TABLE #obsPopYear
+CREATE TABLE #obsPopYear
 AS
 SELECT subject_id, calendar_year, cohort_definition_id,
       DATEFROMPARTS(calendar_year, 1, 1) AS calendar_start_date,

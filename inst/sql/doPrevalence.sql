@@ -20,7 +20,7 @@ WHERE rn1 = 1;
 IF OBJECT_ID('#prevalence', 'U') IS NOT NULL
   DROP TABLE #prevalence;
 
-CREATE TEMP TABLE #prevalence AS
+CREATE TABLE #prevalence AS
 SELECT
   d.calendar_year,
   d.age,
