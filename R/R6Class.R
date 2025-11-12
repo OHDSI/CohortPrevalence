@@ -125,7 +125,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                                        cohort_database_schema = executionSettings$workDatabaseSchema,
                                        cohort_table = executionSettings$cohortTable,
                                        prevalent_cohort_id = self$prevalentCohort$cohortId,
-                                       use_observed_time = self$lookBackOptions$useObservedTimeOnly)
+                                       use_observed_time = self$lookBackOptions$useObservedTimeOnly,
+                                       lookback = self$lookBackOptions$lookBackDays) |>
+        SqlRender::translate(targetDialect = executionSettings$dbms,
+                             tempEmulationSchema = executionSettings$tempEmulationSchema)
       return(renderedSql)
     }
   ),
