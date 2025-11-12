@@ -1,5 +1,5 @@
 /* create poi by year */
-/* THIS IS TEMPORARY FOR TESTING */
+/* THIS IS TEMPORARY FOR TESTING
 DROP TABLE IF EXISTS #year_interval;
   CREATE TEMP TABLE #year_interval  (calendar_year INTEGER);
 INSERT INTO #year_interval (calendar_year)
@@ -12,6 +12,8 @@ VALUES ( '2016'),
 ('2022'),
 ('2023'),
 ('2024');
+
+*/
 
 /* Step 3a: For yearly case, get calendar_year, start date, and end date
 TODO: include @strata param for other strata variables */

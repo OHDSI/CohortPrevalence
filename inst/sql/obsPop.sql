@@ -13,9 +13,13 @@ FROM
     ORDER BY observation_period_start_date, observation_period_end_date)
     AS ob_row
 FROM @cdmDatabaseSchema.observation_period
-WHERE DATEDIFF(day, observation_period_start_date, observation_period_end_date) >= 0 -- add min. obs time
+WHERE DATEDIFF(day, observation_period_start_date, observation_period_end_date) >= @min_obs_time -- add min. obs time
 )
---WHERE ob_row = 1
+{@use_first_op} ? {
+/* Limit to the first observation period per person*/
+WHERE ob_row = 1
+}
+
 ;
 
 /* Step 2: Left join with cohort and person to get prevalent cases and demographics*/
@@ -34,6 +38,9 @@ FROM (
 )a
 LEFT JOIN (
   -- Left join on cohort table to get events (cohortId NULL/ not NULL)
-    SELECT * FROM @cohortDatabaseSchema.@cohortTable WHERE cohort_definition_id = @targetId
+    SELECT * FROM @cohortDatabaseSchema.@cohortTable WHERE cohort_definition_id = @prevalent_cohort_id
 ) b ON a.subject_id = b.subject_id
+{@use_observed_time} ? {
+/*Use the observed time option*/
+}
 ;

@@ -83,7 +83,7 @@ makeYearlyPrevalence <- function(range) {
 }
 
 
-makeDenominatorType <- function(denomType, sufficientDays) {
+makeDenominatorType <- function(denomType, sufficientDays = NULL) {
   dt <- DenominatorType$new(
     denomType = denomType,
     sufficientDays = sufficientDays

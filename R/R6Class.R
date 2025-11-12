@@ -60,6 +60,58 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
 
+    },
+
+    assembleSql = function(executionSettings) {
+
+      checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
+      # Step 0: if yearly prev than add the year ranges
+      if (self$periodOfInterest$poiType == "yearly") {
+        # insert range of years as a table
+        years <- tibble::tibble(
+          calendar_year = self$periodOfInterest$poiRange
+        )
+        yearRangeSql <- .insertTableSql(
+          executionSettings,
+          tableName = "yearly_interval",
+          data = years
+        )
+        # get the obs pop year sql
+        obsPopYearSql <- readr::read_file(
+          fs::path_package(package = "CohortPrevalence", "sql/obsPopYear.sql")
+        )
+
+      }
+
+      # Step 1: Get the appropriate sql files
+
+      # get the ObsPop -- this filters to eligible obs periods
+      obsPopSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", "sql/obsPop.sql")
+      )
+
+      # get the denom file
+      denomType <- self$denominatorType$getDenomType()
+      denomSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}.sql"))
+      )
+
+      # get the numerator file
+      numType <- self$numeratorType
+      numSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", glue::glue("sql/{numType}.sql"))
+      )
+
+      # get the doPrev file
+      prevSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", glue::glue("sql/doPrevalence.sql"))
+      )
+
+      allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, numSql, prevSql) |>
+        glue::glue_collapse("\n\n")
+
+      return(allSql)
+
     }
   ),
   private = list(
@@ -316,6 +368,11 @@ DenominatorType <- R6::R6Class(
         private$.sufficientDays <- sufficientDays
         cli::cat_line(glue::glue("Update sufficientDays option to {sufficientDays} days for {denomType}"))
       }
+    },
+
+    getDenomType = function() {
+      denomType <- private$.denomType
+      return(denomType)
     }
   ),
   private = list(
