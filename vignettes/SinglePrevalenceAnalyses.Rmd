@@ -1,7 +1,14 @@
 ---
 title: "Running A Single Prevalence Analysis"
-format:
-  html
+author:
+  - Kelly Li
+  - Martin Lavallee
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{How to use Cohort Prevalence}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+callout-appearance: simple
 ---
 
 ```{r setup, include=FALSE}
