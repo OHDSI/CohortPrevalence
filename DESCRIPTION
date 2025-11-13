@@ -1,11 +1,32 @@
 Package: CohortPrevalence
 Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
-Version: 0.0.0.9000
-Authors@R: 
-    person("Martin", "Lavallee", , "lavallee@ohdsi.org", role = c("aut", "cre"),
-    person("Kelly", "Li", , "kli@ohdsi.org", role = c("aut", "cre"))
+Version: 0.0.1
+Authors@R: c(
+    person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut", "cre")),
+    person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
+  )
 Description: This package calculates prevalence of a condition in a population.
 License: Apache License
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Imports: 
+    cli,
+    crayon,
+    fs,
+    purrr,
+    SqlRender,
+    snakecase,
+    DatabaseConnector,
+    dplyr,
+    glue,
+    readr,
+    tibble,
+    tidyr,
+    here,
+    methods
+Additional_repositories: https://OHDSI.github.io/drat
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

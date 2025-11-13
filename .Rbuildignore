@@ -1,2 +1,4 @@
 ^CohortPrevalence\.Rproj$
 ^\.Rproj\.user$
+hidden/
+errorReportSql.txt

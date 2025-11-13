@@ -2,7 +2,7 @@
  the number of persons who who contributes at least 1 day in the period of interest. This is the most naive denominator and what IHD uses.
 */
 DROP TABLE IF EXISTS #denom;
-CREATE TEMP TABLE #denom AS
+CREATE TABLE #denom AS
 WITH ranked AS (
   SELECT *,
     ROW_NUMBER() OVER (

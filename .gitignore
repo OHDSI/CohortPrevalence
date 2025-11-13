@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+hidden/
+config.yml
+errorReportSql.txt
+extras/test-prevalence.R
