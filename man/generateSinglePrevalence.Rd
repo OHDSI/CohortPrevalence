@@ -4,18 +4,12 @@
 \alias{generateSinglePrevalence}
 \title{Run Prevalence Analysis}
 \usage{
-generateSinglePrevalence(
-  prevalenceAnalysisClass,
-  executionSettings,
-  connection
-)
+generateSinglePrevalence(prevalenceAnalysisClass, executionSettings)
 }
 \arguments{
 \item{prevalenceAnalysisClass}{A \code{CohortPrevalenceAnalysis} R6 object with analysis settings.}
 
 \item{executionSettings}{An \code{executionSettings} R6 object with connection and schema details.}
-
-\item{connection}{A \code{DatabaseConnector} connection.}
 }
 \value{
 A results dataframe with prevalence rates and strata.

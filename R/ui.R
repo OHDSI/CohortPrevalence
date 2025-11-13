@@ -4,27 +4,42 @@
 #'
 #' @param prevalenceAnalysisClass A `CohortPrevalenceAnalysis` R6 object with analysis settings.
 #' @param executionSettings An `executionSettings` R6 object with connection and schema details.
-#' @param connection A `DatabaseConnector` connection.
 #'
 #' @return A results dataframe with prevalence rates and strata.
 #' @export
 #'
-generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings, connection) {
+generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings) {
+
+
   sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
   sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
 
+  if (is.null(executionSettings$getConnection())) {
+    executionSettings$connect()
+  }
+  cli::cat_rule(glue::glue_col("{green Analysis Description}"))
+  prevalenceAnalysisClass$viewAnalysisInfo()
+
+  # run analysis
+  cli::cat_rule(glue::glue_col("{green Execute Prevalence Analysis}"))
   DatabaseConnector::executeSql(
-    connection = connection,
+    connection = executionSettings$getConnection(),
     sql = sql2
   )
 
+  cli::cat_rule(glue::glue_col("{green Collect Prevalence Analysis}"))
   results <- DatabaseConnector::renderTranslateQuerySql(
-    connection = connection,
+    connection = executionSettings$getConnection(),
     sql = "SELECT * FROM #prevalence;",
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
     dplyr::arrange(calendarYear, age, genderConceptId) #TODO: strata params
+
+  # Add formal formatting step
+  # add clean up tables step
+
+  executionSettings$disconnect()
 
   return(results)
 }

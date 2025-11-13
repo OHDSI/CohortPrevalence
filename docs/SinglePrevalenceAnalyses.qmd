@@ -27,14 +27,14 @@ This tutorial walks you through running a `CohortPrevalence` for a single yearly
 We use the `ClinicalCharacteristics` package to specify execution settings for the analysis with information on our databases and schemas of interest, and connect to the databases using `DatabaseConnector`.
 
 ```{r}
-configBlock <- "[Add config block]"
+# Create Connection details via DatabaseConnector
 connectionDetails <- DatabaseConnector::createConnectionDetails(
-  dbms = config::get("dbms", config = configBlock),
-  user = config::get("user", config = configBlock),
-  password = config::get("password", config = configBlock),
-  connectionString = config::get("connectionString", config = configBlock)
+  dbms = "dbms",
+  user = "ulysses",
+  password = "shh_secret"
 )
 
+# create execution Settings
 executionSettings <- ClinicalCharacteristics::createExecutionSettings(
   connectionDetails = connectionDetails,
   cdmDatabaseSchema = cdmDatabaseSchema, # schema containing patient data
@@ -54,27 +54,34 @@ In this test case, we use `CapR` to generate a cohort of hypertension patients i
 ```{r}
 library(Capr)
 
+# make Capr concept set for Esse
 hypertensiveDisorder <- cs(
   descendants(316866),
   name = "Hypertensive disorder"
 )
-
+#fill out concept set details from vocabulary
 hypertensiveDisorder <- getConceptSetDetails(
   x = hypertensiveDisorder, 
   con = connection, 
-  vocabularyDatabaseSchema = executionSettings$cdmDatabaseSchema)
+  vocabularyDatabaseSchema = executionSettings$cdmDatabaseSchema
+)
 
+# make Capr cohort all by all to calculate prevalence
 cohort <- cohort(
   entry = entry(
     conditionOccurrence(conceptSet = hypertensiveDisorder),
     primaryCriteriaLimit = "All"
   ),
+  attrition = attrition(
+    expressionLimit = "All"
+  ),
   exit = exit(
-    endStrategy = observationExit()
+    endStrategy = fixedExit(index = "start", offsetDays = 0)
   )
 )
 
-json <- as.json(cohort)
+# prepare cohort for CohortGenerator
+json <- compile(cohort, pretty = TRUE)
 sql <- CirceR::buildCohortQuery(
   expression = CirceR::cohortExpressionFromJson(json),
   options = CirceR::createGenerateOptions(generateStats = FALSE)
@@ -87,6 +94,7 @@ cohortDefinitionSet <- data.frame(
   sql = sql
 )
 
+# build cohort tables for generation
 cohortTableNames <- CohortGenerator::getCohortTableNames(cohortTable = executionSettings$cohortTable)
 
 CohortGenerator::createCohortTables(
@@ -94,6 +102,8 @@ CohortGenerator::createCohortTables(
   cohortDatabaseSchema = executionSettings$workDatabaseSchema,
   cohortTableNames = cohortTableNames
 )
+
+# generate cohorts
 CohortGenerator::generateCohortSet(
   connectionDetails = connectionDetails,
   cohortDatabaseSchema = executionSettings$workDatabaseSchema,
@@ -103,12 +113,13 @@ CohortGenerator::generateCohortSet(
   cohortDefinitionSet = cohortDefinitionSet
 )
 
-# Check counts ----------------------------------
+# Check counts 
 cohortCounts <- CohortGenerator::getCohortCounts(
   connectionDetails = connectionDetails,
   cohortDatabaseSchema = executionSettings$workDatabaseSchema,
   cohortTable = cohortTableNames$cohortTable
 )
+
 cohortCounts
 ```
 
@@ -146,12 +157,12 @@ lookBackOptions <- createLookBackOptions(lookBackDays = 99999L,
                                          useObservedTimeOnly = FALSE)
 
 # Set strata options - NULL by default uses age and gender
-strata = NULL
+strata <- NULL
 
 # Set other specifications
-minimumObservationLength = 0L
-useOnlyFirstObservationPeriod = FALSE
-multiplier = 100000
+minimumObservationLength <- 0L
+useOnlyFirstObservationPeriod <- FALSE
+multiplier <- 100000
 
 prevalenceAnalysisClass <- createCohortPrevalenceAnalysis(
   analysisId = analysisId,
@@ -164,7 +175,8 @@ prevalenceAnalysisClass <- createCohortPrevalenceAnalysis(
   useOnlyFirstObservationPeriod =  useOnlyFirstObservationPeriod,
   multiplier = multiplier,
   strata = strata,
-  populationCohort = populationCohort)
+  populationCohort = NULL
+)
 ```
 
 ## Step 3: Run analyses 
@@ -174,9 +186,10 @@ Using this object, we can now run the analysis with `generateSinglePrevalence` a
 
 ```{r}
 # Results
-results <- generateSinglePrevalence(prevalenceAnalysisClass = prevalenceAnalysisClass,
-                                    executionSettings = executionSettings,
-                                    connection = connection)
+results <- generateSinglePrevalence(
+  prevalenceAnalysisClass = prevalenceAnalysisClass,
+  executionSettings = executionSettings
+)
 ```
 
 
@@ -187,14 +200,19 @@ Sometimes, we want to externally review the Sql queries used to generate the pre
 We can do this with `exportPrevalenceQuery`.
 
 ```{r}
-outputFolder <- here::here("results")
+outputFolder <- here::here("results") |>
+  fs::dir_create()
 
 # Export results to CSV format
-exportPrevalenceResults(results,
-                        outputFolder = outputFolder)
+exportPrevalenceResults(
+  results = results,
+  outputFolder = outputFolder
+)
 
 # Save SQL query
-exportPrevalenceQuery(prevalenceAnalysisClass,
-                      outputFolder = outputFolder)
+exportPrevalenceQuery(
+  prevalenceAnalysisClass = prevalenceAnalysisClass,
+  outputFolder = outputFolder
+)
 ```
 
