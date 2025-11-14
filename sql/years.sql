@@ -12,35 +12,33 @@
   lookback: The length of the lockback period in days
   
   Placeholders function 1
-  fixed_start_year: First year of the period of interest
-  fixed_end_year: Last year of the period of interest
+  year_numbers: The list of year numbers to insert in the format (year1), (year2) etc.
   
   Placeholders function 2
   fixed_start_date: first day of the period of interest in format 'YYYY-MM-DD'
   fixed_end_date: last day of the period of interest in format 'YYYY-MM-DD'
 */
 
-with year_list as (
-    select @fixed_start_year as year_number
-    union all
-    select year_number + 1
-    from year_list
-    where year_number + 1 <= @fixed_end_year
-),
-borders as (
+delete from @temp_schema.year_list;
+insert into @temp_schema.year_list values
+@year_numbers
+;
+
+delete from @temp_schema.years;
+with borders as (
 select year_number,
 cast(cast(year_number as varchar) + '-01-01' as date) as year_start,
 cast(cast(year_number as varchar) + '-12-31' as date) as year_end
-from year_list
+from @temp_schema.year_list
 )
 insert into @temp_schema.years
 select year_number, year_start, year_end,
 dateadd(day, -@lookback, year_start) as pre_start
-from borders
-option (MAXRECURSION 0);
+from borders;
 
 
-
+-- second function starts here
+delete from @temp_schema.years;
 with borders(year_start, year_end) as (
   select *
   from (values

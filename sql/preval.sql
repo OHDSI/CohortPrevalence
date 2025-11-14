@@ -21,6 +21,7 @@
   dis_range, obs_days: period prevalence
 */
 
+delete from @temp_schema.prevalence;
 with overlaps as (
   select person_id, d.year_number, overlap_days,
   case when subject_id is not null then 1 else 0 end as has_cond

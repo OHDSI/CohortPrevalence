@@ -6,6 +6,7 @@
   temp_schema: Schema containing the tables to select into
 */
 
+delete from @temp_schema.obs_days;
 with obs_sums as (
   select person_id, o.year_number,
   sum(datediff(day,

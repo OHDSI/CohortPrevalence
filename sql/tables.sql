@@ -1,3 +1,7 @@
+create table @temp_schema.year_list (
+  year_number int
+);
+
 create table @temp_schema.years (
   year_number int,
   year_start date,

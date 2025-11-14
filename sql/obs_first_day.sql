@@ -7,6 +7,7 @@
   temp_schema: Schema containing the tables to select into
 */
 
+delete from @temp_schema.obs_first_day;
 insert into @temp_schema.obs_first_day
 select person_id, o.year_number, 0 as overlap_days
 from @temp_schema.obs_periods o
