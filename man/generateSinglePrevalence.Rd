@@ -2,7 +2,7 @@
 % Please edit documentation in R/ui.R
 \name{generateSinglePrevalence}
 \alias{generateSinglePrevalence}
-\title{Run Prevalence Analysis}
+\title{Run Single Prevalence Analysis}
 \usage{
 generateSinglePrevalence(prevalenceAnalysisClass, executionSettings)
 }
@@ -15,5 +15,5 @@ generateSinglePrevalence(prevalenceAnalysisClass, executionSettings)
 A results dataframe with prevalence rates and strata.
 }
 \description{
-Runs a prevalence analysis with specified \code{CohortPrevalenceAnalysis} settings
+Runs a single prevalence analysis with specified \code{CohortPrevalenceAnalysis} settings
 }
