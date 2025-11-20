@@ -1,6 +1,42 @@
-#' Run Prevalence Analysis
+runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
+
+  # make sql
+  sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
+  sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
+
+  # run analysis
+  cli::cat_line(
+    glue::glue_col("{yellow == Execute Prevalence Analysis =============}")
+  )
+  DatabaseConnector::executeSql(
+    connection = executionSettings$getConnection(),
+    sql = sql2
+  )
+
+  cli::cat_line(
+    glue::glue_col("{yellow == Collect Prevalence Analysis =============}")
+  )
+  # pull results and prepare for save
+  results <- DatabaseConnector::renderTranslateQuerySql(
+    connection = executionSettings$getConnection(),
+    sql = "SELECT * FROM #prevalence;",
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    snakeCaseToCamelCase = TRUE
+  ) |>
+    dplyr::arrange(calendarYear, age, genderConceptId) |> #TODO: strata params
+    dplyr::mutate( # add meta info on prevalent cohort and db
+      databaseId = es$cdmSourceName,
+      cohortId = prevalenceAnalysisClass$prevalentCohort$id(),
+      cohortName = prevalenceAnalysisClass$prevalentCohort$name(),
+      .before = 1
+    )
+
+  return(results)
+}
+
+#' Run Single Prevalence Analysis
 #'
-#' Runs a prevalence analysis with specified `CohortPrevalenceAnalysis` settings
+#' Runs a single prevalence analysis with specified `CohortPrevalenceAnalysis` settings
 #'
 #' @param prevalenceAnalysisClass A `CohortPrevalenceAnalysis` R6 object with analysis settings.
 #' @param executionSettings An `executionSettings` R6 object with connection and schema details.
@@ -11,31 +47,77 @@
 generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 
 
-  sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
-  sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
+  if (is.null(executionSettings$getConnection())) {
+    executionSettings$connect()
+  }
+  analysisId <- prevalenceAnalysisClass$analysisId
+  cli::cat_boxx(
+    glue::glue_col("{yellow Prevalence Analysis id: {analysisId}}")
+  )
+  cli::cat_line(
+    glue::glue_col("{yellow == Analysis Description =============}")
+  )
+  prevalenceAnalysisClass$viewAnalysisInfo()
+
+  # run analysis
+  results <- runPrevalence(
+    prevalenceAnalysisClass = prevalenceAnalysisClass,
+    executionSettings = executionSettings
+  )
+  # TODO
+  # Add formal formatting step
+  # add clean up tables step
+
+
+  #close out and complete
+  cli::cat_line("\n\n")
+  executionSettings$disconnect()
+
+  return(results)
+}
+
+#' Run Multiple Prevalence Analyses
+#'
+#' Runs multiple prevalence analysis with a list of specified `CohortPrevalenceAnalysis` settings
+#'
+#' @param prevalenceAnalysisList A list `CohortPrevalenceAnalysis` R6 object with analysis settings.
+#' @param executionSettings An `executionSettings` R6 object with connection and schema details.
+#'
+#' @return A results dataframe with prevalence rates and strata per analysis id.
+#' @export
+#'
+generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings) {
 
   if (is.null(executionSettings$getConnection())) {
     executionSettings$connect()
   }
-  cli::cat_rule(glue::glue_col("{green Analysis Description}"))
-  prevalenceAnalysisClass$viewAnalysisInfo()
 
-  # run analysis
-  cli::cat_rule(glue::glue_col("{green Execute Prevalence Analysis}"))
-  DatabaseConnector::executeSql(
-    connection = executionSettings$getConnection(),
-    sql = sql2
-  )
+  prevResultsList <- vector('list', length = length(prevalenceAnalysisList))
+  for (i in seq_along(prevResultsList)) {
+    #pluck analysis Class
+    prevalenceAnalysisClass <- prevalenceAnalysisList[[i]]
 
-  cli::cat_rule(glue::glue_col("{green Collect Prevalence Analysis}"))
-  results <- DatabaseConnector::renderTranslateQuerySql(
-    connection = executionSettings$getConnection(),
-    sql = "SELECT * FROM #prevalence;",
-    tempEmulationSchema = executionSettings$tempEmulationSchema,
-    snakeCaseToCamelCase = TRUE
-  ) |>
-    dplyr::arrange(calendarYear, age, genderConceptId) #TODO: strata params
+    # print description
+    analysisId <- prevalenceAnalysisClass$analysisId
+    cli::cat_boxx(
+      glue::glue_col("{yellow Prevalence Analysis id: {analysisId}}")
+    )
+    cli::cat_line(
+      glue::glue_col("{yellow == Analysis Description =============}")
+    )
+    prevalenceAnalysisClass$viewAnalysisInfo()
 
+    # run analysis
+    prevResultsList[[i]] <- runPrevalence(
+      prevalenceAnalysisClass = prevalenceAnalysisClass,
+      executionSettings = executionSettings
+    ) |>
+      dplyr::mutate(
+        analysisId = prevalenceAnalysisClass$analysisId,
+        .before = 1
+      )
+  }
+  results <- do.call('rbind', prevResultsList)
   # Add formal formatting step
   # add clean up tables step
 

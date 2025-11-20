@@ -135,7 +135,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
     viewAnalysisInfo = function() {
       txt <- c(
-        glue::glue("Analysis Id ==> {self$analysisId}"),
         glue::glue("Prevalent Cohort ==> {self$prevalentCohort$viewCohortInfo()}"),
         self$periodOfInterest$viewPeriodOfInterest(),
         c(glue::glue("Numerator Type ==> {self$numeratorType}"),
@@ -313,8 +312,6 @@ LookBackOptions <- R6::R6Class(
 CohortInfo <- R6::R6Class(
   classname = "CohortInfo",
   public = list(
-    #' @param id the cohort definition id
-    #' @param name the name of the cohort definition
     initialize = function(id, name) {
 
       checkmate::assert_integerish(x = id, len = 1)
@@ -323,17 +320,14 @@ CohortInfo <- R6::R6Class(
       checkmate::assert_string(x = name, min.chars = 1)
       private[[".name"]] <- name
     },
-    #' @description get the cohort id
     id = function() {
       cId <- private$.id
       return(cId)
     },
-    #' @description get the cohort name
     name = function() {
       cName <- private$.name
       return(cName)
     },
-    #' @description print the cohort details
     viewCohortInfo = function(){
       id <- self$id()
       name <- self$name()
