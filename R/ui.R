@@ -173,7 +173,7 @@ exportPrevalenceResults <- function(results, outputFolder = NULL){
   }
   outputFile <- file.path(
     outputFolder,
-    paste0("a_", prevalenceAnalysisClass$analysisId, "_id_", prevalenceAnalysisClass$prevalentCohort$id(), ".rds")
+    paste0("a_", prevalenceAnalysisClass$analysisId, "_id_", prevalenceAnalysisClass$prevalentCohort$id(), ".csv")
     )
 
   write.csv(
