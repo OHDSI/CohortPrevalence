@@ -4,11 +4,11 @@ IF OBJECT_ID('#prevalence', 'U') IS NOT NULL
 
 CREATE TABLE #prevalence AS
 SELECT
-  calendar_year,
+  span_label,
   age,
   gender_concept_id,
   SUM(case_event) AS numerator,
   COUNT(DISTINCT subject_id) AS denominator,
   (SUM(case_event) / COUNT(DISTINCT subject_id)) * @multiplier AS prevalence_rate
 FROM #allEvents
-GROUP BY calendar_year, age, gender_concept_id;
+GROUP BY span_label, age, gender_concept_id;

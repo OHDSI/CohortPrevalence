@@ -23,7 +23,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
-    dplyr::arrange(calendarYear, age, genderConceptId) |> #TODO: strata params
+    dplyr::arrange(spanLabel, age, genderConceptId) |> #TODO: strata params
     dplyr::mutate( # add meta info on prevalent cohort and db
       databaseId = es$cdmSourceName,
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),

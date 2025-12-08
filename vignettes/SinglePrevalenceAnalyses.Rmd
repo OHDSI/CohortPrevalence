@@ -193,6 +193,29 @@ Using this object, we can now run the analysis with `generateSinglePrevalence` a
 
 ```{r}
 # Results
+# provide connection
+configBlock <- "optum_dod_202504"
+connectionDetails <- DatabaseConnector::createConnectionDetails(
+  dbms = config::get("dbms", config = configBlock),
+  user = config::get("user", config = configBlock),
+  password = config::get("password", config = configBlock),
+  connectionString = config::get("connectionString", config = configBlock)
+)
+
+# execution settings
+es <- config::get(config = configBlock) |>
+  purrr::discard_at(c("dbms", "user", "password", "connectionString"))
+
+executionSettings <- ClinicalCharacteristics::createExecutionSettings(
+  connectionDetails = connectionDetails,
+  cdmDatabaseSchema = es$cdmDatabaseSchema,
+  workDatabaseSchema = es$workDatabaseSchema,
+  tempEmulationSchema = es$tempEmulationSchema,
+  cohortTable = "cohortprev_test_cohort",
+  cdmSourceName = "Optum"
+)
+
+
 results <- generateSinglePrevalence(
   prevalenceAnalysisClass = prevalenceAnalysisClass,
   executionSettings = executionSettings

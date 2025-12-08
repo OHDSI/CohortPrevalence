@@ -6,3 +6,4 @@ hidden/
 config.yml
 errorReportSql.txt
 extras/test-prevalence.R
+results/

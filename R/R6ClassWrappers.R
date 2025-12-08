@@ -109,6 +109,38 @@ createYearlyPrevalence <- function(range) {
   return(poi)
 }
 
+#' Create a `PeriodOfInterest` object
+#'
+#' Constructs an `PeriodOfInterest` object for span prevalence analyses.
+#'
+#' @param startYears A numeric vector of start years of interest.
+#' @param endYears A numeric vector of end years of interest.
+#' @return A `PeriodOfInterest` R6 object.
+#' @export
+#'
+createSpanPrevalence <- function(startDates, endDates) {
+  spanLabel <- paste(startDates, "-", endDates)
+
+  if(is.integer(startDates)){
+    startDates <- paste0(startDates,"-01-01") |>
+      as.Date()
+  }
+
+  if(is.integer(endDates)){
+    endDates <- paste0(endDates,"-01-01") |>
+      as.Date()
+  }
+
+  range <- data.frame(calendar_start_date = startDates,
+                      calendar_end_date = endDates,
+                      span_label = spanLabel)
+  poi <- PeriodOfInterest$new(
+    poiType = "span",
+    poiRange = range
+  )
+  return(poi)
+}
+
 #' Create a `DenominatorType` object
 #'
 #' Constructs an `DenominatorType` object for denominator choice.
