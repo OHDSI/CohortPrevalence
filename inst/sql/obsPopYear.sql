@@ -16,7 +16,7 @@ FROM(
   SELECT * FROM #obsPopMain
   /* join on years of interest to get valid observation periods */
   INNER JOIN #year_interval  b
-  ON observation_period_start_date <= b.calendar_end_date
+  ON observation_period_start_date < b.calendar_end_date
   AND observation_period_end_date >= b.calendar_start_date
 );
 
