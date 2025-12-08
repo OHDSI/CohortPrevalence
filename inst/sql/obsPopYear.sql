@@ -10,7 +10,8 @@ SELECT subject_id, span_label, cohort_definition_id,
       cohort_start_date, cohort_end_date,
       /* compute age */
       EXTRACT(YEAR FROM calendar_start_date) - year_of_birth AS age,
-      gender_concept_id -- put other strata here
+      gender_concept_id AS gender,
+      race_concept_id AS race-- put other strata here
 FROM(
   SELECT * FROM #obsPopMain
   /* join on years of interest to get valid observation periods */

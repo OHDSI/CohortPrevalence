@@ -24,8 +24,7 @@ SELECT
   cohort_end_date,
   span_label,
   calendar_start_date,
-  calendar_end_date,
-  age,
-  gender_concept_id
+  calendar_end_date
+  {strata}
 FROM ranked
 WHERE rn1 = 1;

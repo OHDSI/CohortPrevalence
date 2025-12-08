@@ -53,7 +53,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set population
@@ -93,11 +93,19 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         fs::path_package(package = "CohortPrevalence", "sql/obsPop.sql")
       )
 
+      # deal with demo strata
+      if (!is.null(self$strata)) {
+        strata <- c(",", paste0(self$strata, collapse = ", ")) |> paste0(collapse = "")
+      } else {
+        strata <- ""
+      }
+
       # get the denom file
       denomType <- self$denominatorType$getDenomType()
       denomSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}.sql"))
-      )
+      ) |>
+        glue::glue()
 
       # get the numerator file
       numType <- self$numeratorType
@@ -108,7 +116,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # get the doPrev file
       prevSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/doPrevalence.sql"))
-      )
+      ) |>
+        glue::glue()
 
       allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, numSql, prevSql) |>
         glue::glue_collapse("\n\n")
@@ -145,7 +154,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         ) |> glue::glue_collapse("\n"),
         self$denominatorType$viewDenominatorType(),
         self$lookBackOptions$viewLookBackOptions(),
-        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}")
+        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}")
       ) |>
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
@@ -239,8 +249,9 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
       private$.strata <- value
+
     },
 
     multiplier = function(value) {

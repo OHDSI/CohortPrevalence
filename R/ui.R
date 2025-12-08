@@ -136,6 +136,7 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
 #' @export
 #'
 exportPrevalenceQuery <- function(prevalenceAnalysisClass,
+                                  executionSettings,
                                   outputFolder = NULL) {
   if(is.null(outputFolder)){
     outputFolder <- here::here()
