@@ -23,7 +23,6 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
-    dplyr::arrange(calendarYear, age, genderConceptId) |> #TODO: strata params
     dplyr::mutate( # add meta info on prevalent cohort and db
       databaseId = es$cdmSourceName,
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),
@@ -136,6 +135,7 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
 #' @export
 #'
 exportPrevalenceQuery <- function(prevalenceAnalysisClass,
+                                  executionSettings,
                                   outputFolder = NULL) {
   if(is.null(outputFolder)){
     outputFolder <- here::here()
