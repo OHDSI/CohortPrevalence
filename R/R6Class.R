@@ -390,7 +390,7 @@ PeriodOfInterest <- R6::R6Class(
       }
 
       if (poiType == "span") {
-        poiRange2 <- poiRange |> glue::glue_collapse(" - ")
+        poiRange2 <- poiRange$span_label |> glue::glue_collapse(", ")
       }
 
       txt <- glue::glue("Period of Interest ==> type: {poiType} | Range: {poiRange2}")

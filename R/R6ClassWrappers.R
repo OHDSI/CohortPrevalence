@@ -121,12 +121,12 @@ createYearlyPrevalence <- function(range) {
 createSpanPrevalence <- function(startDates, endDates) {
   spanLabel <- paste(startDates, "-", endDates)
 
-  if(is.integer(startDates)){
+  if(is.numeric(startDates)){
     startDates <- paste0(startDates,"-01-01") |>
       as.Date()
   }
 
-  if(is.integer(endDates)){
+  if(is.numeric(endDates)){
     endDates <- paste0(endDates,"-01-01") |>
       as.Date()
   }
