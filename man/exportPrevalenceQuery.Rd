@@ -4,7 +4,11 @@
 \alias{exportPrevalenceQuery}
 \title{Export Prevalence Query}
 \usage{
-exportPrevalenceQuery(prevalenceAnalysisClass, outputFolder = NULL)
+exportPrevalenceQuery(
+  prevalenceAnalysisClass,
+  executionSettings,
+  outputFolder = NULL
+)
 }
 \arguments{
 \item{prevalenceAnalysisClass}{A \code{CohortPrevalenceAnalysis} R6 object with analysis settings (required).}

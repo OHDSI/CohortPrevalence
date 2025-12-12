@@ -53,7 +53,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set population
@@ -69,8 +69,17 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (self$periodOfInterest$poiType == "yearly") {
         # insert range of years as a table
         years <- tibble::tibble(
-          calendar_year = self$periodOfInterest$poiRange
-        )
+          span_label = self$periodOfInterest$poiRange,
+          calendar_start_date = self$periodOfInterest$poiRange,
+          calendar_end_date = self$periodOfInterest$poiRange + 1
+        ) |>
+          dplyr::mutate(
+            calendar_start_date = as.Date(paste0(calendar_start_date, "-01-01")),
+            calendar_end_date = as.Date(paste0(calendar_end_date, "-01-01"))
+          )
+      } else {
+        years <- self$periodOfInterest$poiRange
+      }
         yearRangeSql <- .insertTableSql(
           executionSettings,
           tableName = "#year_interval",
@@ -81,7 +90,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           fs::path_package(package = "CohortPrevalence", "sql/obsPopYear.sql")
         )
 
-      }
 
       # Step 1: Get the appropriate sql files
 
@@ -90,11 +98,19 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         fs::path_package(package = "CohortPrevalence", "sql/obsPop.sql")
       )
 
+      # deal with demo strata
+      if (!is.null(self$strata)) {
+        strata <- c(",", paste0(self$strata, collapse = ", ")) |> paste0(collapse = "")
+      } else {
+        strata <- ""
+      }
+
       # get the denom file
       denomType <- self$denominatorType$getDenomType()
       denomSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}.sql"))
-      )
+      ) |>
+        glue::glue()
 
       # get the numerator file
       numType <- self$numeratorType
@@ -105,7 +121,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # get the doPrev file
       prevSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/doPrevalence.sql"))
-      )
+      ) |>
+        glue::glue()
 
       allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, numSql, prevSql) |>
         glue::glue_collapse("\n\n")
@@ -135,7 +152,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
     viewAnalysisInfo = function() {
       txt <- c(
-        glue::glue("Analysis Id ==> {self$analysisId}"),
         glue::glue("Prevalent Cohort ==> {self$prevalentCohort$viewCohortInfo()}"),
         self$periodOfInterest$viewPeriodOfInterest(),
         c(glue::glue("Numerator Type ==> {self$numeratorType}"),
@@ -143,7 +159,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         ) |> glue::glue_collapse("\n"),
         self$denominatorType$viewDenominatorType(),
         self$lookBackOptions$viewLookBackOptions(),
-        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}")
+        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}")
       ) |>
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
@@ -237,8 +254,9 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_choice(x = strata, choices = c("age", "gender", "race"), null.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
       private$.strata <- value
+
     },
 
     multiplier = function(value) {
@@ -313,8 +331,6 @@ LookBackOptions <- R6::R6Class(
 CohortInfo <- R6::R6Class(
   classname = "CohortInfo",
   public = list(
-    #' @param id the cohort definition id
-    #' @param name the name of the cohort definition
     initialize = function(id, name) {
 
       checkmate::assert_integerish(x = id, len = 1)
@@ -323,17 +339,14 @@ CohortInfo <- R6::R6Class(
       checkmate::assert_string(x = name, min.chars = 1)
       private[[".name"]] <- name
     },
-    #' @description get the cohort id
     id = function() {
       cId <- private$.id
       return(cId)
     },
-    #' @description get the cohort name
     name = function() {
       cName <- private$.name
       return(cName)
     },
-    #' @description print the cohort details
     viewCohortInfo = function(){
       id <- self$id()
       name <- self$name()
@@ -353,7 +366,15 @@ PeriodOfInterest <- R6::R6Class(
   public = list(
     initialize = function(poiRange, poiType = "yearly") {
 
-      checkmate::assert_integerish(x = poiRange, min.len = 1)
+      if (poiType == "yearly"){
+        checkmate::assert_integerish(x = poiRange, min.len = 1)
+      } else if (poiType == "span"){
+        checkmate::assert_data_frame(x = poiRange,
+                                     any.missing = FALSE)
+        checkmate::assert_date(poiRange$calendar_start_date, min.len = 1)
+        checkmate::assert_date(poiRange$calendar_end_date, min.len = 1)
+      }
+
       private[[".poiRange"]] <- poiRange
 
       checkmate::assert_choice(x = poiType, choices = c("yearly", "span"))
@@ -369,7 +390,7 @@ PeriodOfInterest <- R6::R6Class(
       }
 
       if (poiType == "span") {
-        poiRange2 <- poiRange |> glue::glue_collapse(" - ")
+        poiRange2 <- poiRange$span_label |> glue::glue_collapse(", ")
       }
 
       txt <- glue::glue("Period of Interest ==> type: {poiType} | Range: {poiRange2}")
@@ -395,7 +416,14 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiRange)
       }
-      checkmate::assert_integerish(x = poiRange, min.len = 1)
+      if (poiType == "yearly"){
+        checkmate::assert_integerish(x = poiRange, min.len = 1)
+      } else if (poiType == "span"){
+        checkmate::assert_data_frame(x = poiRange,
+                                     any.missing = FALSE)
+        checkmate::assert_date(poiRange$calendar_start_date, min.len = 1)
+        checkmate::assert_date(poiRange$calendar_end_date, min.len = 1)
+      }
       private$.poiRange <- value
     }
   )

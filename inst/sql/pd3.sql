@@ -6,7 +6,7 @@ CREATE TABLE #denom AS
 WITH ranked AS (
   SELECT *,
     ROW_NUMBER() OVER (
-      PARTITION BY subject_id, calendar_year
+      PARTITION BY subject_id, span_label
       ORDER BY cohort_start_date, calendar_start_date, observation_period_start_date
     ) AS rn1
   FROM #obsPopYear
@@ -16,10 +16,9 @@ SELECT
   cohort_definition_id,
   cohort_start_date,
   cohort_end_date,
-  calendar_year,
+  span_label,
   calendar_start_date,
-  calendar_end_date,
-  age,
-  gender_concept_id
+  calendar_end_date
+  {strata}
 FROM ranked
 WHERE rn1 = 1;

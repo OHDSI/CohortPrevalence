@@ -19,6 +19,9 @@
     <loc>/LICENSE-text.html</loc>
   </url>
   <url>
+    <loc>/news/index.html</loc>
+  </url>
+  <url>
     <loc>/reference/createCohortPrevalenceAnalysis.html</loc>
   </url>
   <url>
@@ -34,6 +37,9 @@
     <loc>/reference/createPrevalenceCohort.html</loc>
   </url>
   <url>
+    <loc>/reference/createSpanPrevalence.html</loc>
+  </url>
+  <url>
     <loc>/reference/createYearlyPrevalence.html</loc>
   </url>
   <url>
@@ -41,6 +47,9 @@
   </url>
   <url>
     <loc>/reference/exportPrevalenceResults.html</loc>
+  </url>
+  <url>
+    <loc>/reference/generateMultiplePrevalence.html</loc>
   </url>
   <url>
     <loc>/reference/generateSinglePrevalence.html</loc>
