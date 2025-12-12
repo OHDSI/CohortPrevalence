@@ -1,15 +1,15 @@
-/* Step 3a: For yearly case, get span_label, start date, and end date
+/* Step 3a: For yearly case, get calendar_year, start date, and end date
 TODO: include @strata param for other strata variables */
 DROP TABLE IF EXISTS #obsPopYear;
 CREATE TABLE #obsPopYear
 AS
-SELECT subject_id, span_label, cohort_definition_id,
-      calendar_start_date,
-      calendar_end_date,
+SELECT subject_id, calendar_year, cohort_definition_id,
+      DATEFROMPARTS(calendar_year, 1, 1) AS calendar_start_date,
+      DATEFROMPARTS(calendar_year + 1, 1, 1) AS calendar_end_date,
       observation_period_start_date, observation_period_end_date,
       cohort_start_date, cohort_end_date,
       /* compute age */
-      EXTRACT(YEAR FROM calendar_start_date) - year_of_birth AS age,
+      calendar_year - year_of_birth AS age,
       gender_concept_id AS gender,
       race_concept_id AS race-- put other strata here
 FROM(
