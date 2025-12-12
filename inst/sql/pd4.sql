@@ -12,7 +12,7 @@ WITH qualified AS (
 ranked AS (
   SELECT *,
     ROW_NUMBER() OVER (
-      PARTITION BY subject_id, calendar_year
+      PARTITION BY subject_id, span_label
       ORDER BY cohort_start_date, calendar_start_date, observation_period_start_date
     ) AS rn1
   FROM qualified
@@ -22,7 +22,7 @@ SELECT
   cohort_definition_id,
   cohort_start_date,
   cohort_end_date,
-  calendar_year,
+  span_label,
   calendar_start_date,
   calendar_end_date
   {strata}

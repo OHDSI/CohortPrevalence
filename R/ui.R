@@ -23,6 +23,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
+    dplyr::arrange(spanLabel) |>
     dplyr::mutate( # add meta info on prevalent cohort and db
       databaseId = es$cdmSourceName,
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),

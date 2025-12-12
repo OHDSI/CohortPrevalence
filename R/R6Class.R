@@ -69,8 +69,17 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (self$periodOfInterest$poiType == "yearly") {
         # insert range of years as a table
         years <- tibble::tibble(
-          calendar_year = self$periodOfInterest$poiRange
-        )
+          span_label = self$periodOfInterest$poiRange,
+          calendar_start_date = self$periodOfInterest$poiRange,
+          calendar_end_date = self$periodOfInterest$poiRange + 1
+        ) |>
+          dplyr::mutate(
+            calendar_start_date = as.Date(paste0(calendar_start_date, "-01-01")),
+            calendar_end_date = as.Date(paste0(calendar_end_date, "-01-01"))
+          )
+      } else {
+        years <- self$periodOfInterest$poiRange
+      }
         yearRangeSql <- .insertTableSql(
           executionSettings,
           tableName = "#year_interval",
@@ -81,7 +90,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           fs::path_package(package = "CohortPrevalence", "sql/obsPopYear.sql")
         )
 
-      }
 
       # Step 1: Get the appropriate sql files
 
@@ -358,7 +366,15 @@ PeriodOfInterest <- R6::R6Class(
   public = list(
     initialize = function(poiRange, poiType = "yearly") {
 
-      checkmate::assert_integerish(x = poiRange, min.len = 1)
+      if (poiType == "yearly"){
+        checkmate::assert_integerish(x = poiRange, min.len = 1)
+      } else if (poiType == "span"){
+        checkmate::assert_data_frame(x = poiRange,
+                                     any.missing = FALSE)
+        checkmate::assert_date(poiRange$calendar_start_date, min.len = 1)
+        checkmate::assert_date(poiRange$calendar_end_date, min.len = 1)
+      }
+
       private[[".poiRange"]] <- poiRange
 
       checkmate::assert_choice(x = poiType, choices = c("yearly", "span"))
@@ -400,7 +416,14 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiRange)
       }
-      checkmate::assert_integerish(x = poiRange, min.len = 1)
+      if (poiType == "yearly"){
+        checkmate::assert_integerish(x = poiRange, min.len = 1)
+      } else if (poiType == "span"){
+        checkmate::assert_data_frame(x = poiRange,
+                                     any.missing = FALSE)
+        checkmate::assert_date(poiRange$calendar_start_date, min.len = 1)
+        checkmate::assert_date(poiRange$calendar_end_date, min.len = 1)
+      }
       private$.poiRange <- value
     }
   )
