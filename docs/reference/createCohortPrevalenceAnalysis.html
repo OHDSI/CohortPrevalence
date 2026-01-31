@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.0.3</span>
       </span>
     </div>
 
@@ -68,6 +68,7 @@
 <span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  multiplier <span class="op">=</span> <span class="fl">100000L</span>,</span>
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  demographicConstraints <span class="op">=</span> <span class="fu"><a href="createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  populationCohort <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -108,20 +109,20 @@
 <dd><p>Character string. Must be one, or some of: <code>"age"</code>, <code>"gender"</code>, <code>"race"</code> (optional).</p></dd>
 
 
+<dt>demographicConstraints</dt>
+<dd><p>a <code>DemoConstraint</code> object specifying the constraints of the population.</p></dd>
+
+
 <dt>populationCohort</dt>
 <dd><p>A <code>CohortPopulation</code> object specifying the population of interest on which to compute prevalence.</p></dd>
 
 
-<dt>lookBackDays</dt>
-<dd><p>Integer used for specifying length of lookback (required).</p></dd>
+<dt>lookbackOptions</dt>
+<dd><p>A <code>LookBackOption</code> object (required).</p></dd>
 
 
 <dt>minimumObservationLength:</dt>
 <dd><p>Integer specifying minimum observation length (optional).</p></dd>
-
-
-<dt>lookbackOptions</dt>
-<dd><p>A <code>LookBackOption</code> object (required).</p></dd>
 
 </dl></div>
     <div id="value">
