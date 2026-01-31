@@ -176,7 +176,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         self$denominatorType$viewDenominatorType(),
         self$lookBackOptions$viewLookBackOptions(),
         glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
-        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}")
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
+        glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
       ) |>
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
@@ -449,7 +450,8 @@ IncidenceAnalysis <- R6::R6Class(
         glue::glue("Targt Cohort ==> {self$targetCohort$viewCohortInfo()}"),
         self$periodOfInterest$viewPeriodOfInterest(),
         glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
-        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}")
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
+        glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
       ) |>
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)

@@ -134,7 +134,7 @@ cohortCounts
 
 The first step of the analysis is to specify the cohort of prevalent interest and the periods of interest.
 In order to do so, we create the `R6` classes that define these analyses settings.
-We can select between yearly prevalence analyses or span prevalence analyses using `createYearlyPrevalence` and `createSpanPrevalence`.
+We can select between yearly prevalence analyses or span prevalence analyses using `createYearlyRange` and `createSpan`.
 Span prevalence analyses are more flexible; you can choose to input a range of starting and ending years, or specific dates (i.e. '2025-06-30' to '2026-01-01'). 
 By default, analyses where you only specify the year start and end on the first day of the year (i.e. 2016-2017 translates to '2016-01-01' to '2017-01-01').
 
@@ -146,10 +146,10 @@ In this analysis, we care about the entire population, and so we leave the `popu
 prevalentCohort <- createPrevalenceCohort(cohortId = 316866,
                                           cohortName = "Hypertension")
 # Yearly prevalence for periods 2016-2017, 2017-2018, etc.
-periodOfInterest <- createYearlyPrevalence(range = c(2016:2020))
+periodOfInterest <- createYearlyRange(range = c(2016:2020))
 
 # Span prevalence for periods of interest 2016-2019, 2018-2019, and 2020-2025.
-periodOfInterestSpan <- createSpanPrevalence(startDates = c(2016, 2018, 2020),
+periodOfInterestSpan <- createSpan(startDates = c(2016, 2018, 2020),
                                              endDates = c(2019, 2019, 2025))
 populationCohort <- NULL
 ```

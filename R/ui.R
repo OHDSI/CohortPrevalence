@@ -115,6 +115,49 @@ generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings)
   return(results)
 }
 
+
+#' Run Single Incidence Analysis
+#'
+#' Runs a single incidence analysis with specified `IncidenceAnalysis` settings
+#'
+#' @param incidenceAnalysisClass A `IncidenceAnalysis` R6 object with analysis settings.
+#' @param executionSettings An `executionSettings` R6 object with connection and schema details.
+#'
+#' @return A results dataframe with incidence rates and strata.
+#' @export
+#'
+generateSingleRassenIncidence <- function(incidenceAnalysisClass, executionSettings) {
+
+
+  if (is.null(executionSettings$getConnection())) {
+    executionSettings$connect()
+  }
+  analysisId <- incidenceAnalysisClass$analysisId
+  cli::cat_boxx(
+    glue::glue_col("{yellow Incidence Analysis id: {analysisId}}")
+  )
+  cli::cat_line(
+    glue::glue_col("{yellow == Analysis Description =============}")
+  )
+  incidenceAnalysisClass$viewAnalysisInfo()
+
+  # run analysis
+  results <- runIncidence(
+    incidenceAnalysisClass = incidenceAnalysisClass,
+    executionSettings = executionSettings
+  )
+  # TODO
+  # Add formal formatting step
+  # add clean up tables step
+
+
+  #close out and complete
+  cli::cat_line("\n\n")
+  executionSettings$disconnect()
+
+  return(results)
+}
+
 #' Run Multiple Prevalence Analyses
 #'
 #' Runs multiple prevalence analysis with a list of specified `CohortPrevalenceAnalysis` settings
