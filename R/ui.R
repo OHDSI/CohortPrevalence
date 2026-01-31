@@ -25,9 +25,48 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
   ) |>
     dplyr::arrange(spanLabel) |>
     dplyr::mutate( # add meta info on prevalent cohort and db
-      databaseId = es$cdmSourceName,
+      databaseId = executionSettings$cdmSourceName,
+      statType = "Prevalence",
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),
       cohortName = prevalenceAnalysisClass$prevalentCohort$name(),
+      .before = 1
+    )
+
+  return(results)
+}
+
+
+runIncidence <- function(incidenceAnalysisClass, executionSettings) {
+
+  # make sql
+  sql1 <- incidenceAnalysisClass$assembleSql(executionSettings)
+  sql2 <- incidenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
+
+  # run analysis
+  cli::cat_line(
+    glue::glue_col("{yellow == Execute Rassen Incidence Analysis =============}")
+  )
+  DatabaseConnector::executeSql(
+    connection = executionSettings$getConnection(),
+    sql = sql2
+  )
+
+  cli::cat_line(
+    glue::glue_col("{yellow == Collect Incidence Analysis =============}")
+  )
+  # pull results and prepare for save
+  results <- DatabaseConnector::renderTranslateQuerySql(
+    connection = executionSettings$getConnection(),
+    sql = "SELECT * FROM #incidence;",
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    snakeCaseToCamelCase = TRUE
+  ) |>
+    dplyr::arrange(spanLabel) |>
+    dplyr::mutate( # add meta info on prevalent cohort and db
+      databaseId = executionSettings$cdmSourceName,
+      statType = "Incidence Rate",
+      cohortId = incidenceAnalysisClass$targetCohort$id(),
+      cohortName = incidenceAnalysisClass$targetCohort$name(),
       .before = 1
     )
 
