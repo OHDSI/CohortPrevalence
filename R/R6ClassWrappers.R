@@ -5,7 +5,7 @@
 #' @param analysisId Unique integer analysisId to identify the analysis (required).
 #' @param prevalentCohort A `PrevalenceCohort` object specifying the cohort of interest (required).
 #' @param periodOfInterest A `PeriodOfInterest` object (required).
-#' @param lookBackDays Integer used for specifying length of lookback (required).
+#' @param lookbackOptions A `LookBackOption` object (required).
 #' @param numeratorType Character string specifying numerator type. Must be one of:
 #' \itemize{
 #'   \item `"pn1"`: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
@@ -14,9 +14,9 @@
 #' @param denominatorType A `DenominatorType` object (required).
 #' @param minimumObservationLength: Integer specifying minimum observation length (optional).
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
-#' @param lookbackOptions A `LookBackOption` object (required).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
 #' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
 #'
 #' @return A `CohortPrevalenceAnalysis` R6 object.
@@ -32,6 +32,7 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            useOnlyFirstObservationPeriod = FALSE,
                                            multiplier = 100000L,
                                            strata = NULL,
+                                           demographicConstraints = createDemographicConstraints(),
                                            populationCohort = NULL){
   analysisDef <- CohortPrevalenceAnalysis$new(analysisId = analysisId,
                                prevalentCohort = prevalentCohort,
@@ -43,7 +44,49 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
                                multiplier = multiplier,
                                strata = strata,
+                               demographicConstraints = demographicConstraints,
                                populationCohort = populationCohort)
+  return(analysisDef)
+}
+
+#' Create a `IncidenceAnalysis` object for Rassen Incidence
+#'
+#' Constructs an `IncidenceAnalysis` object with the specified settings.
+#'
+#' @param analysisId Unique integer analysisId to identify the analysis (required).
+#' @param targetCohort A `TargetCohort` object specifying the cohort of interest (required).
+#' @param periodOfInterest A `PeriodOfInterest` object (required).
+#' @param minimumObservationLength: Integer specifying minimum observation length (optional).
+#' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
+#' @param multiplier Integer specifying prevalence multiplier (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
+#' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
+#'
+#' @return A `IncidenceAnalysis` R6 object.
+#' @export
+#'
+createRassenIncidenceAnalysis <- function(analysisId,
+                                          targetCohort,
+                                          periodOfInterest,
+                                          minimumObservationLength = 0L,
+                                          useOnlyFirstObservationPeriod = FALSE,
+                                          multiplier = 100000L,
+                                          strata = NULL,
+                                          demographicConstraints = createDemographicConstraints(),
+                                          populationCohort = NULL){
+
+  analysisDef <- IncidenceAnalysis$new(
+    analysisId = analysisId,
+    targetCohort = targetCohort,
+    periodOfInterest = periodOfInterest,
+    minimumObservationLength = minimumObservationLength,
+    useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
+    multiplier = multiplier,
+    strata = strata,
+    demographicConstraints = demographicConstraints,
+    populationCohort = populationCohort
+  )
   return(analysisDef)
 }
 
@@ -60,6 +103,22 @@ createPrevalenceCohort <- function(cohortId, cohortName) {
   cohortId <- as.integer(cohortId)
   prevalenceCohort <- CohortInfo$new(id = cohortId, name = cohortName)
   return(prevalenceCohort)
+}
+
+
+#' Create a target cohort `CohortInfo` object
+#'
+#' Constructs an `CohortInfo` object for target cohort of interest
+#'
+#' @param cohortId Integer: the cohort ID within the database results schema of interest.
+#' @param cohortName Character string specifying a name for the cohort.
+#' @return A `CohortInfo` R6 object.
+#' @export
+#'
+createTargetCohort <- function(cohortId, cohortName) {
+  cohortId <- as.integer(cohortId)
+  targetCohort <- CohortInfo$new(id = cohortId, name = cohortName)
+  return(targetCohort)
 }
 
 #' Create a population cohort `CohortInfo` object
@@ -101,13 +160,14 @@ createLookBackOptions <- function(lookBackDays = 99999L, useObservedTimeOnly = F
 #' @return A `PeriodOfInterest` R6 object.
 #' @export
 #'
-createYearlyPrevalence <- function(range) {
+createYearlyRange <- function(range) {
   poi <- PeriodOfInterest$new(
     poiType = "yearly",
     poiRange = range
   )
   return(poi)
 }
+
 
 #' Create a `PeriodOfInterest` object
 #'
@@ -118,7 +178,7 @@ createYearlyPrevalence <- function(range) {
 #' @return A `PeriodOfInterest` R6 object.
 #' @export
 #'
-createSpanPrevalence <- function(startDates, endDates) {
+createSpan <- function(startDates, endDates) {
   spanLabel <- paste(startDates, "-", endDates)
 
   if(is.numeric(startDates)){
@@ -127,7 +187,7 @@ createSpanPrevalence <- function(startDates, endDates) {
   }
 
   if(is.numeric(endDates)){
-    endDates <- paste0(endDates,"-01-01") |>
+    endDates <- paste0(endDates,"-12-31") |>
       as.Date()
   }
 
@@ -139,6 +199,25 @@ createSpanPrevalence <- function(startDates, endDates) {
     poiRange = range
   )
   return(poi)
+}
+
+
+#' Create a `DemoConstraint` object
+#'
+#' Constructs an `DemoConstraint` object for prevalence analyses.
+#'
+#' @param ageMin The minimum age allowed for the population. Default is 0
+#' @param ageMax the maximum age allowed for the population. Default is 150
+#' @param genderIds the genderIds allowed. Default is 8507 - M, and 8532 - F
+#' @return A `DemoConstraint` R6 object.
+#' @export
+createDemographicConstraints <- function(ageMin = 0, ageMax = 150, genderIds = c(8507, 8532)) {
+  dc <- DemoConstraint$new(
+    ageMin = ageMin,
+    ageMax = ageMax,
+    genderIds = genderIds
+  )
+  return(dc)
 }
 
 #' Create a `DenominatorType` object

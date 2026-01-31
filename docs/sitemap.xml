@@ -25,6 +25,9 @@
     <loc>/reference/createCohortPrevalenceAnalysis.html</loc>
   </url>
   <url>
+    <loc>/reference/createDemographicConstraints.html</loc>
+  </url>
+  <url>
     <loc>/reference/createDenominatorType.html</loc>
   </url>
   <url>
@@ -37,10 +40,22 @@
     <loc>/reference/createPrevalenceCohort.html</loc>
   </url>
   <url>
+    <loc>/reference/createRassenIncidenceAnalysis.html</loc>
+  </url>
+  <url>
+    <loc>/reference/createSpan.html</loc>
+  </url>
+  <url>
     <loc>/reference/createSpanPrevalence.html</loc>
   </url>
   <url>
+    <loc>/reference/createTargetCohort.html</loc>
+  </url>
+  <url>
     <loc>/reference/createYearlyPrevalence.html</loc>
+  </url>
+  <url>
+    <loc>/reference/createYearlyRange.html</loc>
   </url>
   <url>
     <loc>/reference/exportPrevalenceQuery.html</loc>

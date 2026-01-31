@@ -6,8 +6,7 @@ CREATE TABLE #denom AS
 WITH qualified AS (
   SELECT *
   FROM #obsPopYear
-  WHERE calendar_start_date >= observation_period_start_date
-    AND DATEADD(day, @requiredDays, observation_period_start_date) <= observation_period_end_date
+  WHERE DATEDIFF(day, GREATEST(calendar_start_date, observation_period_start_date), LEAST(calendar_end_date, observation_period_end_date)) >= {sufficientDays}
 ),
 ranked AS (
   SELECT *,
@@ -28,3 +27,4 @@ SELECT
   {strata}
 FROM ranked
 WHERE rn1 = 1;
+

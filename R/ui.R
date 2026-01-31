@@ -25,9 +25,48 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
   ) |>
     dplyr::arrange(spanLabel) |>
     dplyr::mutate( # add meta info on prevalent cohort and db
-      databaseId = es$cdmSourceName,
+      databaseId = executionSettings$cdmSourceName,
+      statType = "Prevalence",
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),
       cohortName = prevalenceAnalysisClass$prevalentCohort$name(),
+      .before = 1
+    )
+
+  return(results)
+}
+
+
+runIncidence <- function(incidenceAnalysisClass, executionSettings) {
+
+  # make sql
+  sql1 <- incidenceAnalysisClass$assembleSql(executionSettings)
+  sql2 <- incidenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
+
+  # run analysis
+  cli::cat_line(
+    glue::glue_col("{yellow == Execute Rassen Incidence Analysis =============}")
+  )
+  DatabaseConnector::executeSql(
+    connection = executionSettings$getConnection(),
+    sql = sql2
+  )
+
+  cli::cat_line(
+    glue::glue_col("{yellow == Collect Incidence Analysis =============}")
+  )
+  # pull results and prepare for save
+  results <- DatabaseConnector::renderTranslateQuerySql(
+    connection = executionSettings$getConnection(),
+    sql = "SELECT * FROM #incidence;",
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    snakeCaseToCamelCase = TRUE
+  ) |>
+    dplyr::arrange(spanLabel) |>
+    dplyr::mutate( # add meta info on prevalent cohort and db
+      databaseId = executionSettings$cdmSourceName,
+      statType = "Incidence Rate",
+      cohortId = incidenceAnalysisClass$targetCohort$id(),
+      cohortName = incidenceAnalysisClass$targetCohort$name(),
       .before = 1
     )
 
@@ -62,6 +101,49 @@ generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings)
   # run analysis
   results <- runPrevalence(
     prevalenceAnalysisClass = prevalenceAnalysisClass,
+    executionSettings = executionSettings
+  )
+  # TODO
+  # Add formal formatting step
+  # add clean up tables step
+
+
+  #close out and complete
+  cli::cat_line("\n\n")
+  executionSettings$disconnect()
+
+  return(results)
+}
+
+
+#' Run Single Incidence Analysis
+#'
+#' Runs a single incidence analysis with specified `IncidenceAnalysis` settings
+#'
+#' @param incidenceAnalysisClass A `IncidenceAnalysis` R6 object with analysis settings.
+#' @param executionSettings An `executionSettings` R6 object with connection and schema details.
+#'
+#' @return A results dataframe with incidence rates and strata.
+#' @export
+#'
+generateSingleRassenIncidence <- function(incidenceAnalysisClass, executionSettings) {
+
+
+  if (is.null(executionSettings$getConnection())) {
+    executionSettings$connect()
+  }
+  analysisId <- incidenceAnalysisClass$analysisId
+  cli::cat_boxx(
+    glue::glue_col("{yellow Incidence Analysis id: {analysisId}}")
+  )
+  cli::cat_line(
+    glue::glue_col("{yellow == Analysis Description =============}")
+  )
+  incidenceAnalysisClass$viewAnalysisInfo()
+
+  # run analysis
+  results <- runIncidence(
+    incidenceAnalysisClass = incidenceAnalysisClass,
     executionSettings = executionSettings
   )
   # TODO

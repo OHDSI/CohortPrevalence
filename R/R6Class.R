@@ -14,6 +14,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           useOnlyFirstObservationPeriod = FALSE,
                           multiplier = 100000,
                           strata = NULL,
+                          demographicConstraints,
                           populationCohort = NULL) {
       # set analysisId
       checkmate::assert_integerish(x = analysisId, len = 1)
@@ -56,6 +57,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
+      # set demographic constraints
+      checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
+      private[[".demographicConstraints"]] <- demographicConstraints
+
       # set population
       checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
@@ -86,9 +91,13 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           data = years
         )
         # get the obs pop year sql
+        ageMin <- self$demographicConstraints$ageMin
+        ageMax <- self$demographicConstraints$ageMax
+        genderIds <- self$demographicConstraints$genderIds |> paste(collapse = ", ")
         obsPopYearSql <- readr::read_file(
           fs::path_package(package = "CohortPrevalence", "sql/obsPopYear.sql")
-        )
+        ) |>
+          glue::glue()
 
 
       # Step 1: Get the appropriate sql files
@@ -107,6 +116,9 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       # get the denom file
       denomType <- self$denominatorType$getDenomType()
+      if (denomType == "pd4") {
+        sufficientDays <- self$denominatorType$getSufficientDays()
+      }
       denomSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}.sql"))
       ) |>
@@ -135,18 +147,22 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
 
-      renderedSql <- SqlRender::render(sql,
-                                       cdm_database_schema = executionSettings$cdmDatabaseSchema,
-                                       min_obs_time = self$minimumObservationLength,
-                                       use_first_op = self$useOnlyFirstObservationPeriod,
-                                       cohort_database_schema = executionSettings$workDatabaseSchema,
-                                       cohort_table = executionSettings$cohortTable,
-                                       prevalent_cohort_id = self$prevalentCohort$id(),
-                                       use_observed_time = self$lookBackOptions$useObservedTimeOnly,
-                                       lookback = self$lookBackOptions$lookBackDays,
-                                       multiplier = self$multiplier) |>
-        SqlRender::translate(targetDialect = executionSettings$getDbms(),
-                             tempEmulationSchema = executionSettings$tempEmulationSchema)
+      renderedSql <- SqlRender::render(
+        sql,
+        cdm_database_schema = executionSettings$cdmDatabaseSchema,
+        min_obs_time = self$minimumObservationLength,
+        use_first_op = self$useOnlyFirstObservationPeriod,
+        cohort_database_schema = executionSettings$workDatabaseSchema,
+        cohort_table = executionSettings$cohortTable,
+        prevalent_cohort_id = self$prevalentCohort$id(),
+        use_observed_time = self$lookBackOptions$useObservedTimeOnly,
+        lookback = self$lookBackOptions$lookBackDays,
+        multiplier = self$multiplier
+      ) |>
+        SqlRender::translate(
+          targetDialect = executionSettings$getDbms(),
+          tempEmulationSchema = executionSettings$tempEmulationSchema
+        )
       return(renderedSql)
     },
 
@@ -160,7 +176,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         self$denominatorType$viewDenominatorType(),
         self$lookBackOptions$viewLookBackOptions(),
         glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
-        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}")
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
+        glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
       ) |>
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
@@ -180,6 +197,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .useOnlyFirstObservationPeriod = NULL,
     .multiplier = NULL,
     .strata = NULL,
+    .demographicConstraints = NULL,
     .populationCohort = NULL
   ),
   active = list(
@@ -267,6 +285,252 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private$.multiplier <- value
     },
 
+    populationCohort = function(value) {
+      if (missing(value)) {
+        return(private$.populationCohort)
+      }
+      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      private$.populationCohort <- value
+    },
+
+
+    demographicConstraints = function(value) {
+      if (missing(value)) {
+        return(private$.demographicConstraints)
+      }
+      checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
+      private$.demographicConstraints <- value
+    }
+
+  )
+)
+## Incidence Analysis Class -----------------
+
+IncidenceAnalysis <- R6::R6Class(
+  classname = "IncidenceAnalysis",
+  public = list(
+    initialize = function(analysisId,
+                          targetCohort,
+                          periodOfInterest,
+                          minimumObservationLength = 0L,
+                          useOnlyFirstObservationPeriod = FALSE,
+                          multiplier = 100000,
+                          strata = NULL,
+                          demographicConstraints,
+                          populationCohort = NULL) {
+
+      # set analysisId
+      checkmate::assert_integerish(x = analysisId, len = 1)
+      private[[".analysisId"]] <- analysisId
+
+      # set prevalent cohort
+      checkmate::assert_class(x = targetCohort, classes = "CohortInfo")
+      private[[".targetCohort"]] <- targetCohort
+
+      # set periodOfInterst
+      checkmate::assert_class(x = periodOfInterest, classes = "PeriodOfInterest")
+      private[[".periodOfInterest"]] <- periodOfInterest
+
+      # set minimumObservationLength
+      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
+      private[[".minimumObservationLength"]] <- minimumObservationLength
+
+      # set useOnlyFirstObservationPeriod
+      checkmate::assert_logical(x = useOnlyFirstObservationPeriod, len = 1)
+      private[[".useOnlyFirstObservationPeriod"]] <- useOnlyFirstObservationPeriod
+
+      # set multiplier
+      checkmate::assert_integerish(x = multiplier, len = 1)
+      private[[".multiplier"]] <- multiplier
+
+      # set strata
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      private[[".strata"]] <- strata
+
+      # set demographic constraints
+      checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
+      private[[".demographicConstraints"]] <- demographicConstraints
+
+      # set population
+      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      private[[".populationCohort"]] <- populationCohort
+
+    },
+
+    assembleSql = function(executionSettings) {
+
+      checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
+      # Step 0: if yearly prev than add the year ranges
+      if (self$periodOfInterest$poiType == "yearly") {
+        # insert range of years as a table
+        years <- tibble::tibble(
+          span_label = self$periodOfInterest$poiRange,
+          calendar_start_date = self$periodOfInterest$poiRange,
+          calendar_end_date = self$periodOfInterest$poiRange + 1
+        ) |>
+          dplyr::mutate(
+            calendar_start_date = as.Date(paste0(calendar_start_date, "-01-01")),
+            calendar_end_date = as.Date(paste0(calendar_end_date, "-01-01"))
+          )
+      } else {
+        years <- self$periodOfInterest$poiRange
+      }
+      yearRangeSql <- .insertTableSql(
+        executionSettings,
+        tableName = "#year_interval",
+        data = years
+      )
+      # get the obs pop year sql
+      ageMin <- self$demographicConstraints$ageMin
+      ageMax <- self$demographicConstraints$ageMax
+      genderIds <- self$demographicConstraints$genderIds |> paste(collapse = ", ")
+      obsPopYearSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", "sql/obsPopYear.sql")
+      ) |>
+        glue::glue()
+
+
+      # Step 1: Get the appropriate sql files
+
+      # get the ObsPop -- this filters to eligible obs periods
+      obsPopSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", "sql/obsPop.sql")
+      )
+
+      # deal with demo strata
+      if (!is.null(self$strata)) {
+        strata <- c(",", paste0(self$strata, collapse = ", ")) |> paste0(collapse = "")
+      } else {
+        strata <- ""
+      }
+
+      # get inc Denom
+      incDenomSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", glue::glue("sql/incDenom.sql"))
+      ) |>
+        glue::glue()
+
+      # get the doPrev file
+      incSql <- readr::read_file(
+        fs::path_package(package = "CohortPrevalence", glue::glue("sql/doIncidence.sql"))
+      ) |>
+        glue::glue()
+
+      allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, incDenomSql, incSql) |>
+        glue::glue_collapse("\n\n")
+
+      return(allSql)
+
+    },
+
+    renderAssembledSql = function(sql, executionSettings){
+
+      checkmate::assert_class(executionSettings, classes = "ExecutionSettings", null.ok = FALSE)
+
+      renderedSql <- SqlRender::render(
+        sql,
+        cdm_database_schema = executionSettings$cdmDatabaseSchema,
+        min_obs_time = self$minimumObservationLength,
+        use_first_op = self$useOnlyFirstObservationPeriod,
+        cohort_database_schema = executionSettings$workDatabaseSchema,
+        cohort_table = executionSettings$cohortTable,
+        use_observed_time = FALSE,
+        prevalent_cohort_id = self$targetCohort$id(),
+        multiplier = self$multiplier
+      ) |>
+        SqlRender::translate(
+          targetDialect = executionSettings$getDbms(),
+          tempEmulationSchema = executionSettings$tempEmulationSchema
+        )
+      return(renderedSql)
+    },
+
+    viewAnalysisInfo = function() {
+      txt <- c(
+        glue::glue("Targt Cohort ==> {self$targetCohort$viewCohortInfo()}"),
+        self$periodOfInterest$viewPeriodOfInterest(),
+        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
+        glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
+        glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
+      ) |>
+        glue::glue_collapse("\n\n")
+      cli::cat_line(txt)
+      invisible(txt)
+    }
+
+  ),
+  private = list(
+    # formalize vars
+    .analysisId = NULL,
+    .targetCohort = NULL,
+    .periodOfInterest = NULL,
+    .minimumObservationLength = NULL,
+    .useOnlyFirstObservationPeriod = NULL,
+    .multiplier = NULL,
+    .strata = NULL,
+    .demographicConstraints = NULL,
+    .populationCohort = NULL
+  ),
+  active = list(
+
+    # active fields for R6 class
+
+    analysisId = function(value) {
+      if (missing(value)) {
+        return(private$.analysisId)
+      }
+      checkmate::assert_integerish(x = analysisId, len = 1)
+      private$.analysisId <- value
+    },
+
+    targetCohort = function(value) {
+      if (missing(value)) {
+        return(private$.targetCohort)
+      }
+      checkmate::assert_class(x = targetCohort, classes = "CohortInfo")
+      private$.targetCohort <- value
+    },
+
+    periodOfInterest = function(value) {
+      if (missing(value)) {
+        return(private$.periodOfInterest)
+      }
+      checkmate::assert_class(x = periodOfInterst, classes = "PeriodOfInterest")
+      private$.periodOfInterest <- value
+    },
+
+    minimumObservationLength = function(value) {
+      if (missing(value)) {
+        return(private$.minimumObservationLength)
+      }
+      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
+      private$.minimumObservationLength <- value
+    },
+
+    useOnlyFirstObservationPeriod = function(value) {
+      if (missing(value)) {
+        return(private$.useOnlyFirstObservationPeriod)
+      }
+      checkmate::assert_logical(x = useOnlyFirstObservationPeriod , len = 1)
+      private$.useOnlyFirstObservationPeriod <- value
+    },
+
+    strata = function(value) {
+      if (missing(value)) {
+        return(private$.strata)
+      }
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      private$.strata <- value
+
+    },
+
+    multiplier = function(value) {
+      if (missing(value)) {
+        return(private$.multiplier)
+      }
+      checkmate::assert_integerish(x = multiplier, len = 1)
+      private$.multiplier <- value
+    },
 
     populationCohort = function(value) {
       if (missing(value)) {
@@ -274,6 +538,15 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private$.populationCohort <- value
+    },
+
+
+    demographicConstraints = function(value) {
+      if (missing(value)) {
+        return(private$.demographicConstraints)
+      }
+      checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
+      private$.demographicConstraints <- value
     }
 
   )
@@ -474,10 +747,66 @@ DenominatorType <- R6::R6Class(
       txt2 <- getDenomText(denomType)
       txt <- c(txt1, txt2) |> glue::glue_collapse("\n")
       return(txt)
+    },
+
+    getSufficientDays = function() {
+      private$.sufficientDays
     }
   ),
   private = list(
     .denomType = NULL,
     .sufficientDays = NULL
+  )
+)
+
+## Demographic Constraints -------------
+DemoConstraint <- R6::R6Class(
+  classname = "DemoConstraint",
+  public = list(
+    initialize = function(
+      ageMin = 0,
+      ageMax = 150,
+      genderIds = c(8532, 8507)
+    ) {
+      checkmate::assert_integerish(x = ageMin, len = 1)
+      private[[".ageMin"]] <- ageMin
+
+      checkmate::assert_integerish(x = ageMax, len = 1)
+      private[[".ageMax"]] <- ageMax
+
+      checkmate::assert_integerish(x = genderIds)
+      private[[".genderIds"]] <- genderIds
+    }
+  ),
+  private = list(
+    .ageMin = NULL,
+    .ageMax = NULL,
+    .genderIds = NULL
+  ),
+  active = list(
+
+    ageMin = function(value) {
+      if (missing(value)) {
+        return(private$.ageMin)
+      }
+      checkmate::assert_integerish(x = ageMin, len = 1)
+      private$.ageMin <- value
+    },
+
+    ageMax = function(value) {
+      if (missing(value)) {
+        return(private$.ageMax)
+      }
+      checkmate::assert_integerish(x = ageMax, len = 1)
+      private$.ageMax <- value
+    },
+
+    genderIds = function(value) {
+      if (missing(value)) {
+        return(private$.genderIds)
+      }
+      checkmate::assert_integerish(x = genderIds, len = 1)
+      private$.genderIds <- value
+    }
   )
 )
