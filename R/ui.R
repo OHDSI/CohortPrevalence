@@ -89,7 +89,7 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
     dplyr::select(
       databaseId, analysisId, statType, cohortId, cohortName, spanLabel,
       numerator, denominator, incidenceRate,
-      poi, lookBackDays, num, denom, obsPeriod, demoConAge, demoConGender
+      poi, obsPeriod, demoConAge, demoConGender
     )
 
   return(results)
