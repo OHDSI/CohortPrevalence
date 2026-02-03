@@ -13,6 +13,6 @@ FROM (
   SELECT *,
         CASE WHEN inc_event = 1 THEN DATEDIFF(day, calendar_start_date, cohort_start_date)
             ELSE DATEDIFF(day, calendar_start_date, calendar_end_date) END AS time_at_risk
-  FROM #denomIinc
+  FROM #denomInc
 )
 GROUP BY span_label{strata};

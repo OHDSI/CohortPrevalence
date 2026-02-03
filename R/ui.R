@@ -16,6 +16,9 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
   cli::cat_line(
     glue::glue_col("{yellow == Collect Prevalence Analysis =============}")
   )
+  #metaInfo
+  meta <- prevalenceAnalysisClass$tabulateAnalysisSettings()
+
   # pull results and prepare for save
   results <- DatabaseConnector::renderTranslateQuerySql(
     connection = executionSettings$getConnection(),
@@ -30,6 +33,14 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
       cohortId = prevalenceAnalysisClass$prevalentCohort$id(),
       cohortName = prevalenceAnalysisClass$prevalentCohort$name(),
       .before = 1
+    ) |>
+    dplyr::inner_join(
+      meta, by = c("cohortId", "cohortName")
+    ) |>
+    dplyr::select(
+      databaseId, analysisId, statType, cohortId, cohortName, spanLabel,
+      numerator, denominator, prevalenceRate,
+      poi, lookBackDays, num, denom, obsPeriod, demoConAge, demoConGender
     )
 
   return(results)
@@ -54,6 +65,9 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
   cli::cat_line(
     glue::glue_col("{yellow == Collect Incidence Analysis =============}")
   )
+  #metaInfo
+  meta <- incidenceAnalysisClass$tabulateAnalysisSettings()
+
   # pull results and prepare for save
   results <- DatabaseConnector::renderTranslateQuerySql(
     connection = executionSettings$getConnection(),
@@ -68,6 +82,14 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
       cohortId = incidenceAnalysisClass$targetCohort$id(),
       cohortName = incidenceAnalysisClass$targetCohort$name(),
       .before = 1
+    ) |>
+    dplyr::inner_join(
+      meta, by = c("cohortId", "cohortName")
+    ) |>
+    dplyr::select(
+      databaseId, analysisId, statType, cohortId, cohortName, spanLabel,
+      numerator, denominator, prevalenceRate,
+      poi, lookBackDays, num, denom, obsPeriod, demoConAge, demoConGender
     )
 
   return(results)
@@ -200,6 +222,56 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
       )
   }
   results <- do.call('rbind', prevResultsList)
+  # Add formal formatting step
+  # add clean up tables step
+
+  executionSettings$disconnect()
+
+  return(results)
+}
+
+#' Run Multiple Rassen Incidence Analyses
+#'
+#' Runs multiple incidence analysis with a list of specified `IncidenceAnalysis` settings
+#'
+#' @param incidenceAnalysisList A list `IncidenceAnalysis` R6 object with analysis settings.
+#' @param executionSettings An `executionSettings` R6 object with connection and schema details.
+#'
+#' @return A results dataframe with incidence rates and strata per analysis id.
+#' @export
+#'
+generateMultipleRassenIncidence <- function(incidenceAnalysisList, executionSettings) {
+
+  if (is.null(executionSettings$getConnection())) {
+    executionSettings$connect()
+  }
+
+  incResultsList <- vector('list', length = length(incidenceAnalysisList))
+  for (i in seq_along(incResultsList)) {
+    #pluck analysis Class
+    incidenceAnalysisClass <- incidenceAnalysisList[[i]]
+
+    # print description
+    analysisId <- incidenceAnalysisClass$analysisId
+    cli::cat_boxx(
+      glue::glue_col("{yellow Rassen Incidence Analysis id: {analysisId}}")
+    )
+    cli::cat_line(
+      glue::glue_col("{yellow == Analysis Description =============}")
+    )
+    incidenceAnalysisClass$viewAnalysisInfo()
+
+    # run analysis
+    incResultsList[[i]] <- runIncidence(
+      incidenceAnalysisClass = incidenceAnalysisClass,
+      executionSettings = executionSettings
+    ) |>
+      dplyr::mutate(
+        analysisId = incidenceAnalysisClass$analysisId,
+        .before = 1
+      )
+  }
+  results <- do.call('rbind', incResultsList)
   # Add formal formatting step
   # add clean up tables step
 

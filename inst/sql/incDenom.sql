@@ -2,7 +2,7 @@
 Denominator for incidence calcuation
 */
 DROP TABLE IF EXISTS #denomInc;
-CREATE TABLE #denomIinc AS
+CREATE TABLE #denomInc AS
 WITH ranked AS (
   SELECT *,
     ROW_NUMBER() OVER (

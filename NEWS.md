@@ -4,6 +4,7 @@ CohortPrevalence v0.0.3
 * fix pd4 bug
 * fix prevalence results collect bug
 * add rassen incidence calculator
+* add meta info to results output
 
 CohortPrevalence v0.0.2
 =======================
