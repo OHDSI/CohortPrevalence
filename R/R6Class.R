@@ -182,6 +182,46 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
       invisible(txt)
+    },
+
+    tabulateAnalysisSettings = function() {
+
+      # prep poi
+      if (self$periodOfInterest$poiType == "yearly") {
+        a <- min(self$periodOfInterest$poiRange)
+        b <- max(self$periodOfInterest$poiRange)
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {a}-{b}")
+      } else {
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterestSpan$poiRange$span_label}")
+      }
+
+      # prep denom
+      if (self$denominatorType$getDenomType() == "pd4") {
+        dn <- glue::glue("{self$denominatorType$getDenomType()}: {self$denominatorType$getSufficientDays()")
+      } else {
+        dn <- self$denominatorType$getDenomType()
+      }
+
+      # prep op
+      ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
+      demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
+      demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
+
+
+      tb <- tibble::tibble(
+        analysisId = self$analysisId,
+        cohortId = self$prevalentCohort$id(),
+        cohortName = self$prevalentCohort$name(),
+        poi = poi,
+        lookBackDays = glue::glue("{self$lookBackOptions$lookBackDays}d"),
+        num = self$numeratorType,
+        denom = dn,
+        obsPeriod = ope,
+        demoConAge = demoConAge,
+        demoConGender = demoConGender
+      )
+
+      return(tb)
     }
 
   ),
@@ -456,6 +496,37 @@ IncidenceAnalysis <- R6::R6Class(
         glue::glue_collapse("\n\n")
       cli::cat_line(txt)
       invisible(txt)
+    },
+
+    tabulateAnalysisSettings = function() {
+
+      # prep poi
+      if (self$periodOfInterest$poiType == "yearly") {
+        a <- min(self$periodOfInterest$poiRange)
+        b <- max(self$periodOfInterest$poiRange)
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {a}-{b}")
+      } else {
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterestSpan$poiRange$span_label}")
+      }
+
+
+      # prep op
+      ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
+      demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
+      demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
+
+
+      tb <- tibble::tibble(
+        analysisId = self$analysisId,
+        cohortId = self$targetCohort$id(),
+        cohortName = self$targetCohort$name(),
+        poi = poi,
+        obsPeriod = ope,
+        demoConAge = demoConAge,
+        demoConGender = demoConGender
+      )
+
+      return(tb)
     }
 
   ),
