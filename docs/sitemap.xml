@@ -67,7 +67,13 @@
     <loc>/reference/generateMultiplePrevalence.html</loc>
   </url>
   <url>
+    <loc>/reference/generateMultipleRassenIncidence.html</loc>
+  </url>
+  <url>
     <loc>/reference/generateSinglePrevalence.html</loc>
+  </url>
+  <url>
+    <loc>/reference/generateSingleRassenIncidence.html</loc>
   </url>
   <url>
     <loc>/reference/index.html</loc>

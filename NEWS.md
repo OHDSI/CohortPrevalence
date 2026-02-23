@@ -1,3 +1,8 @@
+CohortPrevalence v0.0.4
+=======================
+* bug fix span results - see #11
+* bug fix pd2 
+
 CohortPrevalence v0.0.3
 =======================
 * add demographic constraint to population: limit by age range or specific gender
