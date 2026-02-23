@@ -192,7 +192,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         b <- max(self$periodOfInterest$poiRange)
         poi <- glue::glue("{self$periodOfInterest$poiType}: {a}-{b}")
       } else {
-        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterestSpan$poiRange$span_label}")
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterest$poiRange$span_label}")
       }
 
       # prep denom

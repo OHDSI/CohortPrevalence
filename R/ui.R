@@ -36,11 +36,6 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     ) |>
     dplyr::inner_join(
       meta, by = c("cohortId", "cohortName")
-    ) |>
-    dplyr::select(
-      databaseId, analysisId, statType, cohortId, cohortName, spanLabel,
-      numerator, denominator, prevalenceRate,
-      poi, lookBackDays, num, denom, obsPeriod, demoConAge, demoConGender
     )
 
   return(results)
@@ -85,13 +80,7 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
     ) |>
     dplyr::inner_join(
       meta, by = c("cohortId", "cohortName")
-    ) |>
-    dplyr::select(
-      databaseId, analysisId, statType, cohortId, cohortName, spanLabel,
-      numerator, denominator, incidenceRate,
-      poi, obsPeriod, demoConAge, demoConGender
     )
-
   return(results)
 }
 
