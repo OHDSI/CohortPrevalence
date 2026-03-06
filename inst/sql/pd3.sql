@@ -3,19 +3,6 @@
 */
 DROP TABLE IF EXISTS #denom;
 CREATE TABLE #denom AS
-WITH diff AS(
-    SELECT *, ABS(DATEDIFF(day, cohort_start_date, calendar_start_date)) AS dd
-    FROM scratch_lavallem_rwesnow_schema.obsPopYear
-    {@pn == "pn1"} ? {WHERE cohort_start_date < calender_start_date}
-),
-ranked AS (
-  SELECT *,
-    ROW_NUMBER() OVER (
-      PARTITION BY subject_id, span_label
-      ORDER BY dd, observation_period_start_date
-    ) AS rn1
-  FROM diff
-)
 SELECT
   subject_id,
   cohort_definition_id,
@@ -25,7 +12,17 @@ SELECT
   calendar_start_date,
   calendar_end_date
   {strata}
-FROM ranked
+FROM (
+  SELECT *,
+    ROW_NUMBER() OVER (
+      PARTITION BY subject_id, span_label
+      ORDER BY 
+        {@pn == "pn1"} ? {CASE WHEN DATEDIFF(day, calendar_start_date, cohort_start_date) < 0 THEN 0 ELSE 1 END},
+        ABS(DATEDIFF(day, calendar_start_date, cohort_start_date)),
+        observation_period_start_date
+    ) AS rn1
+  FROM #obsPopYear
+) ranked
 WHERE rn1 = 1;
 
 
