@@ -124,12 +124,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       ) |>
         glue::glue()
 
-      # get the numerator file
-      numType <- self$numeratorType
-      numSql <- readr::read_file(
-        fs::path_package(package = "CohortPrevalence", glue::glue("sql/{numType}.sql"))
-      )
-
       # get the doPrev file
       prevSql <- readr::read_file(
         fs::path_package(package = "CohortPrevalence", glue::glue("sql/doPrevalence.sql"))
@@ -156,6 +150,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohort_table = executionSettings$cohortTable,
         prevalent_cohort_id = self$prevalentCohort$id(),
         use_observed_time = self$lookBackOptions$useObservedTimeOnly,
+        pn = self$numeratorType,
         lookback = self$lookBackOptions$lookBackDays,
         multiplier = self$multiplier
       ) |>
