@@ -90,6 +90,8 @@ createRassenIncidenceAnalysis <- function(analysisId,
   return(analysisDef)
 }
 
+
+
 #' Create a prevalence cohort `CohortInfo` object
 #'
 #' Constructs an `CohortInfo` object for target cohort of interest

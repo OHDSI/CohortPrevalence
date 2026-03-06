@@ -26,7 +26,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
-    dplyr::arrange(spanLabel) |>
+    dplyr::arrange(.data$spanLabel) |>
     dplyr::mutate( # add meta info on prevalent cohort and db
       databaseId = executionSettings$cdmSourceName,
       statType = "Prevalence",
@@ -70,7 +70,7 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
     tempEmulationSchema = executionSettings$tempEmulationSchema,
     snakeCaseToCamelCase = TRUE
   ) |>
-    dplyr::arrange(spanLabel) |>
+    dplyr::arrange(dplyr::.data$spanLabel) |>
     dplyr::mutate( # add meta info on prevalent cohort and db
       databaseId = executionSettings$cdmSourceName,
       statType = "Incidence Rate",
@@ -100,9 +100,9 @@ generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings)
   if (is.null(executionSettings$getConnection())) {
     executionSettings$connect()
   }
-  analysisId <- prevalenceAnalysisClass$analysisId
+
   cli::cat_boxx(
-    glue::glue_col("{yellow Prevalence Analysis id: {analysisId}}")
+    glue::glue_col("{yellow Prevalence Analysis id: {prevalenceAnalysisClass$analysisId}}")
   )
   cli::cat_line(
     glue::glue_col("{yellow == Analysis Description =============}")
@@ -143,9 +143,9 @@ generateSingleRassenIncidence <- function(incidenceAnalysisClass, executionSetti
   if (is.null(executionSettings$getConnection())) {
     executionSettings$connect()
   }
-  analysisId <- incidenceAnalysisClass$analysisId
+
   cli::cat_boxx(
-    glue::glue_col("{yellow Incidence Analysis id: {analysisId}}")
+    glue::glue_col("{yellow Incidence Analysis id: {incidenceAnalysisClass$analysisId}}")
   )
   cli::cat_line(
     glue::glue_col("{yellow == Analysis Description =============}")
@@ -191,9 +191,8 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
     prevalenceAnalysisClass <- prevalenceAnalysisList[[i]]
 
     # print description
-    analysisId <- prevalenceAnalysisClass$analysisId
     cli::cat_boxx(
-      glue::glue_col("{yellow Prevalence Analysis id: {analysisId}}")
+      glue::glue_col("{yellow Prevalence Analysis id: {prevalenceAnalysisClass$analysisId}}")
     )
     cli::cat_line(
       glue::glue_col("{yellow == Analysis Description =============}")
@@ -269,6 +268,7 @@ generateMultipleRassenIncidence <- function(incidenceAnalysisList, executionSett
   return(results)
 }
 
+
 #' Export Prevalence Query
 #'
 #' Exports the full SQL query of a `CohortPrevalenceAnalysis` analysis.
@@ -306,27 +306,28 @@ exportPrevalenceQuery <- function(prevalenceAnalysisClass,
 #'
 #' Saves the results of a `CohortPrevalenceAnalysis` analysis as a .csv.
 #'
-#' @param results Dataframe: Result of a `generateSinglePrevalence` analysis.
+#' @param results Dataframe: Result of a prevalence analysis.
 #' @param outputFolder Character string specifying the path to the folder where the output files will be saved. If left `NULL`, will default to current working directory (optional).
 #'
 #' @export
 #'
 exportPrevalenceResults <- function(results, outputFolder = NULL){
+
   if(is.null(outputFolder)){
     outputFolder <- here::here()
   }
-  outputFile <- file.path(
-    outputFolder,
-    paste0("a_", prevalenceAnalysisClass$analysisId, "_id_", prevalenceAnalysisClass$prevalentCohort$id(), ".csv")
-    )
+  # make a file name string with analysis id and cohort id for easy reference
+  fileName <- paste0("a_", results$analysisId[1], "_id_", results$cohortId[1], ".csv")
+  # create output file path
+  outputFile <- fs::file(outputFolder, fileName)
 
-  write.csv(
-    x = results,
-    file = outputFile,
-    quote = FALSE,
-    col.names = FALSE
+  cli::cat_bullet(
+    glue::glue_col("Save prevalence results to: {cyan {outputFile}}"),
+    bullet = "pointer",
+    bullet_col = "yellow"
   )
-  cli::cat_bullet("Saved prevalence results to ", outputFile)
+  readr::write_csv(x = results, file = outputFile)
+  
 
   invisible(results)
 }
