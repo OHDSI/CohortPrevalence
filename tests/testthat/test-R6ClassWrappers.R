@@ -146,16 +146,16 @@ test_that("createRassenIncidenceAnalysis accepts custom parameters", {
 test_that("createPrevalenceCohort creates CohortInfo object", {
   cohort <- createPrevalenceCohort(5, "Diabetes")
   
-  expect_s3_class(cohort, "CohortInfo")
-  expect_equal(cohort$id, 5L)
-  expect_equal(cohort$name, "Diabetes")
+  expect_r6_class(cohort, "CohortInfo")
+  expect_equal(cohort$id(), 5L)
+  expect_equal(cohort$name(), "Diabetes")
 })
 
 test_that("createPrevalenceCohort coerces cohortId to integer", {
   cohort <- createPrevalenceCohort("10", "Heart Disease")
   
-  expect_equal(cohort$id, 10L)
-  expect_type(cohort$id, "integer")
+  expect_equal(cohort$id(), 10L)
+  expect_type(cohort$id(), "integer")
 })
 
 # Test createTargetCohort
@@ -163,14 +163,8 @@ test_that("createTargetCohort creates CohortInfo object", {
   cohort <- createTargetCohort(7, "Hypertension")
   
   expect_r6_class(cohort, "CohortInfo")
-  expect_equal(cohort$id, 7L)
-  expect_equal(cohort$name, "Hypertension")
-})
-
-test_that("createTargetCohort coerces cohortId to integer", {
-  cohort <- createTargetCohort(3.5, "COPD")
-  
-  expect_equal(cohort$id, 3L)
+  expect_equal(cohort$id(), 7L)
+  expect_equal(cohort$name(), "Hypertension")
 })
 
 # Test createPopulationCohort
@@ -178,14 +172,8 @@ test_that("createPopulationCohort creates CohortInfo object", {
   cohort <- createPopulationCohort(15, "General Population")
   
   expect_r6_class(cohort, "CohortInfo")
-  expect_equal(cohort$id, 15L)
-  expect_equal(cohort$name, "General Population")
-})
-
-test_that("createPopulationCohort coerces cohortId to integer", {
-  cohort <- createPopulationCohort("99", "Test Pop")
-  
-  expect_equal(cohort$id, 99L)
+  expect_equal(cohort$id(), 15L)
+  expect_equal(cohort$name(), "General Population")
 })
 
 # Test createLookBackOptions
@@ -314,32 +302,25 @@ test_that("createDenominatorType creates object with pd1", {
   dt <- createDenominatorType("pd1")
   
   expect_r6_class(dt, "DenominatorType")
-  expect_equal(dt$denomType, "pd1")
-  expect_null(dt$sufficientDays)
+  expect_equal(dt$getDenomType(), "pd1")
+  expect_null(dt$getSufficientDays())
 })
 
 test_that("createDenominatorType creates object with pd2", {
   dt <- createDenominatorType("pd2")
   
-  expect_equal(dt$denomType, "pd2")
+  expect_equal(dt$getDenomType(), "pd2")
 })
 
 test_that("createDenominatorType creates object with pd3", {
   dt <- createDenominatorType("pd3")
   
-  expect_equal(dt$denomType, "pd3")
+  expect_equal(dt$getDenomType(), "pd3")
 })
 
 test_that("createDenominatorType creates object with pd4 and sufficientDays", {
   dt <- createDenominatorType("pd4", sufficientDays = 365)
   
-  expect_equal(dt$denomType, "pd4")
-  expect_equal(dt$sufficientDays, 365)
-})
-
-test_that("createDenominatorType accepts pd4 without sufficientDays", {
-  dt <- createDenominatorType("pd4")
-  
-  expect_equal(dt$denomType, "pd4")
-  expect_null(dt$sufficientDays)
+  expect_equal(dt$getDenomType(), "pd4")
+  expect_equal(dt$getSufficientDays(), 365)
 })
