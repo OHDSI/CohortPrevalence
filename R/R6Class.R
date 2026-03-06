@@ -130,7 +130,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       ) |>
         glue::glue()
 
-      allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, numSql, prevSql) |>
+      allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, prevSql) |>
         glue::glue_collapse("\n\n")
 
       return(allSql)
