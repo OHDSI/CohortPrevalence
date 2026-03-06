@@ -1,3 +1,8 @@
+CohortPrevalence v0.1.0
+=======================
+* bug fix pn2 uses events in the current poi. ensure pn1 only uses prior events
+* change sql render for pn1
+
 CohortPrevalence v0.0.4
 =======================
 * bug fix span results - see #11

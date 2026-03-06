@@ -90,6 +90,49 @@ createRassenIncidenceAnalysis <- function(analysisId,
   return(analysisDef)
 }
 
+#' Define Multiple Yearly Prevalence Analyses
+#' @param prevalentCohorts A list of `PrevalenceCohort` objects specifying the cohorts of interest.
+#' @param yearRange A numeric vector of years of interest for the period of interest.
+#' @param numeratorType Character string specifying numerator type. Can only select from: pn1 or pn2.
+#' @param denominatorTypeList A list of `DenominatorType` objects specifying the denominator types to use for the analyses. 
+#' the available denominator types are: pd1, pd2, pd3, and pd4 (with sufficientDays specified).
+#' @param lookBackDays An integer number of days for the lookback period.
+#' @return A list of `CohortPrevalenceAnalysis` objects for all combinations of settings specified in the arguments.
+#' @export
+defineMultipleYearlyPrevalenceAnalyses <- function(
+    prevalentCohorts,
+    yearRange,
+    numeratorType,
+    denominatorTypeList,
+    lookBackDays) {
+  
+  # get denomType and sufficientDays from denominatorTypeList
+  denomType  <- purrr::map_chr(denominatorTypeList, ~.x$getDenomType())
+  sufficientDays <- purrr::map_int(
+    denominatorTypeList, ~ifelse(is.null(.x$getSufficientDays()), NA_integer_, .x$getSufficientDays())
+  )
+  # turn into a table for expand_grid
+  denomTb <- tibble::tibble(denomType, sufficientDays)
+  # expand grid of all combinations of settings
+  tb <- tidyr::expand_grid(
+    prevalentCohorts, numeratorType, denomTb, lookBackDays
+  )
+  # loop through rows of table to create multiple prevalence analyses
+  prevAnalysis <- vector("list", length = nrow(tb))
+  for (i in seq_along(prevAnalysis)) {
+    prevAnalysis[[i]] <- createCohortPrevalenceAnalysis(
+      analysisId = i,
+      prevalentCohort = createPrevalenceCohort(cohortId = tb$id[i], cohortName = tb$label[i]),
+      periodOfInterest = createYearlyRange(range = yearRange),
+      lookBackOptions = createLookBackOptions(lookBackDays = tb$lookBackDays[i]),
+      numeratorType = tb$numeratorType[i],
+      denominatorType = createDenominatorType(denomType = tb$denominatorType[i], sufficientDays = NULL),
+      strata = c("age", "gender")
+    )
+  }
+  return(prevAnalysis)
+}
+
 #' Create a prevalence cohort `CohortInfo` object
 #'
 #' Constructs an `CohortInfo` object for target cohort of interest
