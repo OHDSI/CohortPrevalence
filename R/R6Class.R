@@ -5,6 +5,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
   classname = "CohortPrevalenceAnalysis",
   public = list(
     initialize = function(analysisId,
+                          analysisTag,
                           prevalentCohort,
                           periodOfInterest,
                           lookBackOptions,
@@ -19,6 +20,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # set analysisId
       checkmate::assert_integerish(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
+
+      # set analysisTag
+      checkmate::assert_string(x = analysisTag)
+      private[[".analysisTag"]] <- analysisTag
 
       # set prevalent cohort
       checkmate::assert_class(x = prevalentCohort, classes = "CohortInfo")
@@ -163,6 +168,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
     viewAnalysisInfo = function() {
       txt <- c(
+        glue::glue("Analysis Tag: {self$analysisTag}"),
         glue::glue("Prevalent Cohort ==> {self$prevalentCohort$viewCohortInfo()}"),
         self$periodOfInterest$viewPeriodOfInterest(),
         c(glue::glue("Numerator Type ==> {self$numeratorType}"),
@@ -205,6 +211,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       tb <- tibble::tibble(
         analysisId = self$analysisId,
+        analysisTag = self$analysisTag,
         cohortId = self$prevalentCohort$id(),
         cohortName = self$prevalentCohort$name(),
         poi = poi,
@@ -223,6 +230,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
   private = list(
     # formalize vars
     .analysisId = NULL,
+    .analysisTag = NULL,
     .prevalentCohort = NULL,
     .periodOfInterest = NULL,
     .lookBackOptions = NULL,
@@ -244,6 +252,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_integerish(x = analysisId, len = 1)
       private$.analysisId <- value
+    },
+
+    analysisTag = function(value) {
+      if (missing(value)) {
+        return(private$.analysisTag)
+      }
+      checkmate::assert_string(x = analysisTag)
+      private$.analysisTag <- value
     },
 
     prevalentCohort = function(value) {

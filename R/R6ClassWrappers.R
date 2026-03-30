@@ -23,6 +23,7 @@
 #' @export
 #'
 createCohortPrevalenceAnalysis <- function(analysisId,
+                                           analysisTag = NULL,
                                            prevalentCohort,
                                            periodOfInterest,
                                            lookBackOptions,
@@ -34,18 +35,27 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            strata = NULL,
                                            demographicConstraints = createDemographicConstraints(),
                                            populationCohort = NULL){
-  analysisDef <- CohortPrevalenceAnalysis$new(analysisId = analysisId,
-                               prevalentCohort = prevalentCohort,
-                               periodOfInterest = periodOfInterest,
-                               lookBackOptions = lookBackOptions,
-                               numeratorType = numeratorType,
-                               denominatorType = denominatorType,
-                               minimumObservationLength = minimumObservationLength,
-                               useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
-                               multiplier = multiplier,
-                               strata = strata,
-                               demographicConstraints = demographicConstraints,
-                               populationCohort = populationCohort)
+  if (is.null(analysisTag)) {
+    analysisTag <- glue::glue("Analysis {analysisId} | {prevalentCohort$name()}")
+  } else {
+    analysisTag <- glue::glue("{analysisTag} | {prevalentCohort$name()}")
+  }
+
+  analysisDef <- CohortPrevalenceAnalysis$new(
+    analysisId = analysisId,
+    analysisTag = analysisTag,
+    prevalentCohort = prevalentCohort,
+    periodOfInterest = periodOfInterest,
+    lookBackOptions = lookBackOptions,
+    numeratorType = numeratorType,
+    denominatorType = denominatorType,
+    minimumObservationLength = minimumObservationLength,
+    useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
+    multiplier = multiplier,
+    strata = strata,
+    demographicConstraints = demographicConstraints,
+    populationCohort = populationCohort
+  )
   return(analysisDef)
 }
 
