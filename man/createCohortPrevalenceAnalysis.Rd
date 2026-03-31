@@ -6,33 +6,27 @@
 \usage{
 createCohortPrevalenceAnalysis(
   analysisId,
+  analysisTag = NULL,
   prevalentCohort,
   periodOfInterest,
-  lookBackOptions,
-  numeratorType,
-  denominatorType,
+  prevalenceType,
   minimumObservationLength = 0L,
   useOnlyFirstObservationPeriod = FALSE,
   multiplier = 100000L,
   strata = NULL,
   demographicConstraints = createDemographicConstraints(),
-  populationCohort = NULL
+  populationCohort = NULL,
+  outputTypes = "prevalence"
 )
 }
 \arguments{
 \item{analysisId}{Unique integer analysisId to identify the analysis (required).}
 
-\item{prevalentCohort}{A \code{PrevalenceCohort} object specifying the cohort of interest (required).}
+\item{prevalentCohort}{A \code{CohortInfo} object specifying the cohort of interest (required).}
 
 \item{periodOfInterest}{A \code{PeriodOfInterest} object (required).}
 
-\item{numeratorType}{Character string specifying numerator type. Must be one of:
-\itemize{
-\item \code{"pn1"}: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
-\item \code{"pn2"}: patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time
-}}
-
-\item{denominatorType}{A \code{DenominatorType} object (required).}
+\item{prevalenceType}{A \code{PrevalenceType} object (required).}
 
 \item{useOnlyFirstObservationPeriod}{Logical: \code{TRUE} to restrict analysis to the first observation period (optional).}
 
@@ -42,9 +36,9 @@ createCohortPrevalenceAnalysis(
 
 \item{demographicConstraints}{a \code{DemoConstraint} object specifying the constraints of the population.}
 
-\item{populationCohort}{A \code{CohortPopulation} object specifying the population of interest on which to compute prevalence.}
+\item{populationCohort}{A \code{CohortInfo} object specifying the population of interest on which to compute prevalence.}
 
-\item{lookbackOptions}{A \code{LookBackOption} object (required).}
+\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"} and/or \code{"drugs"} for simultaneous generation using shared base tables.}
 
 \item{minimumObservationLength:}{Integer specifying minimum observation length (optional).}
 }

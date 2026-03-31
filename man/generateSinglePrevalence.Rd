@@ -12,7 +12,7 @@ generateSinglePrevalence(prevalenceAnalysisClass, executionSettings)
 \item{executionSettings}{An \code{executionSettings} R6 object with connection and schema details.}
 }
 \value{
-A results dataframe with prevalence rates and strata.
+A named list of results dataframes: $prevalence, $incidence (if requested), $drugUsage (if requested).
 }
 \description{
 Runs a single prevalence analysis with specified \code{CohortPrevalenceAnalysis} settings

@@ -12,8 +12,9 @@ createPopulationCohort(cohortId, cohortName)
 \item{cohortName}{Character string specifying a name for the cohort.}
 }
 \value{
-A \code{CohortInfo} R6 object.
+A \code{CohortInfo} R6 object with cohortType='population'.
 }
 \description{
-Constructs an \code{CohortInfo} object for population of interest.
+Constructs a \code{CohortInfo} object for the denominator population cohort.
+Population cohorts do not require CIRCE JSON validation.
 }

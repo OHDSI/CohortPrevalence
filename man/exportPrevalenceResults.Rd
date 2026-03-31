@@ -2,15 +2,24 @@
 % Please edit documentation in R/ui.R
 \name{exportPrevalenceResults}
 \alias{exportPrevalenceResults}
-\title{Export Prevalence Query}
+\title{Export Prevalence Results}
 \usage{
-exportPrevalenceResults(results, outputFolder = NULL)
+exportPrevalenceResults(
+  resultList,
+  executionSettings = NULL,
+  outputFolder = NULL
+)
 }
 \arguments{
-\item{results}{Dataframe: Result of a \code{generateSinglePrevalence} analysis.}
+\item{resultList}{A named list containing $prevalence, $incidence, $drugUsage tables (required).}
+
+\item{executionSettings}{An \code{ExecutionSettings} R6 object with database details (optional, for metadata).}
 
 \item{outputFolder}{Character string specifying the path to the folder where the output files will be saved. If left \code{NULL}, will default to current working directory (optional).}
 }
+\value{
+Invisibly returns the result list that was exported.
+}
 \description{
-Saves the results of a \code{CohortPrevalenceAnalysis} analysis as a .csv.
+Exports results from a prevalence analysis to CSV files in the specified folder.
 }

@@ -41,7 +41,4 @@ LEFT JOIN (
   -- Left join on cohort table to get events (cohortId NULL/ not NULL)
     SELECT * FROM @cohort_database_schema.@cohort_table WHERE cohort_definition_id = @prevalent_cohort_id
 ) b ON a.subject_id = b.subject_id
-{@use_observed_time} ? {
-/*Use the observed time option*/
-}
 ;

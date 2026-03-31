@@ -113,3 +113,45 @@ prepDrugConceptSets <- function(drugConceptSets) {
   return(csList)
 
 }
+# Build prevalence aggregation SQL
+buildPrevalenceAggSQL <- function(strata) {
+  glue::glue(
+    "-- Do prevalence
+     IF OBJECT_ID('#prevalence', 'U') IS NOT NULL
+       DROP TABLE #prevalence;
+
+     CREATE TABLE #prevalence AS
+     SELECT
+       cohort_definition_id
+       ,span_label{strata}
+       ,SUM(case_event) AS numerator
+       ,COUNT(DISTINCT subject_id) AS denominator
+       ,(SUM(case_event) / COUNT(DISTINCT subject_id)) * @multiplier AS prevalence_rate
+     FROM #allEvents
+     GROUP BY cohort_definition_id, span_label{strata};"
+  )
+}
+
+# Build incidence aggregation SQL
+buildIncidenceAggSQL <- function(strata) {
+  glue::glue(
+    "-- Do incidence
+     IF OBJECT_ID('#incidence', 'U') IS NOT NULL
+       DROP TABLE #incidence;
+
+     CREATE TABLE #incidence AS
+     SELECT
+       cohort_definition_id
+       ,span_label{strata}
+       ,SUM(inc_event) AS numerator
+       ,SUM(time_at_risk) / 365.25 AS denominator
+       ,(SUM(inc_event) / SUM(time_at_risk) / 365.25) * @multiplier AS incidence_rate
+     FROM (
+       SELECT *,
+             CASE WHEN inc_event = 1 THEN DATEDIFF(day, calendar_start_date, cohort_start_date)
+                 ELSE DATEDIFF(day, calendar_start_date, calendar_end_date) END AS time_at_risk
+       FROM #denomInc
+     )
+     GROUP BY cohort_definition_id, span_label{strata};"
+  )
+}

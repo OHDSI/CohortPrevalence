@@ -12,7 +12,8 @@ generateMultiplePrevalence(prevalenceAnalysisList, executionSettings)
 \item{executionSettings}{An \code{executionSettings} R6 object with connection and schema details.}
 }
 \value{
-A results dataframe with prevalence rates and strata per analysis id.
+A named list of results dataframes: $prevalence, $incidence (if requested), $drugUsage (if requested).
+Each dataframe contains results from all analyses, combined with analysisId column.
 }
 \description{
 Runs multiple prevalence analysis with a list of specified \code{CohortPrevalenceAnalysis} settings
