@@ -2,7 +2,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 
   cli::cat_line()
   cli::cat_bullet("Assembling SQL...", bullet = "info")
-  
+
   tryCatch({
     sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
     cli::cli_alert_success("SQL assembled successfully")
@@ -10,7 +10,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
     cli::cli_alert_danger("Failed to assemble SQL: {e$message}")
     stop(e)
   })
-  
+
   tryCatch({
     sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
     cli::cli_alert_success("SQL rendered and translated successfully")
@@ -21,7 +21,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 
   cli::cat_line()
   cli::cat_rule(glue::glue("Executing Analysis {prevalenceAnalysisClass$analysisId}"))
-  
+
   tryCatch({
     DatabaseConnector::executeSql(
       connection = executionSettings$getConnection(),
@@ -35,14 +35,14 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 
   cli::cat_line()
   cli::cat_bullet("Collecting results...", bullet = "info")
-  
+
   tryCatch({
     results <- prevalenceAnalysisClass$collectResults(
       connection = executionSettings$getConnection(),
       executionSettings = executionSettings
     )
     cli::cli_alert_success("Results collected successfully")
-    
+
     # Summary of collected tables
     outputTypes <- paste(names(results), collapse = ", ")
     cli::cli_alert_info("Result tables collected: {outputTypes}")
@@ -73,8 +73,9 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
   cli::cat_line(
     glue::glue("== Collect Incidence Analysis =============")
   )
-  #metaInfo
-  meta <- incidenceAnalysisClass$tabulateAnalysisSettings()
+
+  # Get metaInfo
+  metaInfo <- incidenceAnalysisClass$tabulateAnalysisSettings()
 
   # pull results and prepare for save
   results <- DatabaseConnector::renderTranslateQuerySql(
@@ -84,17 +85,20 @@ runIncidence <- function(incidenceAnalysisClass, executionSettings) {
     snakeCaseToCamelCase = TRUE
   ) |>
     dplyr::arrange(dplyr::.data$spanLabel) |>
-    dplyr::mutate( # add meta info on prevalent cohort and db
+    dplyr::mutate(
+      analysisId = incidenceAnalysisClass$analysisId,
       databaseId = executionSettings$cdmSourceName,
       statType = "Incidence Rate",
-      cohortId = incidenceAnalysisClass$targetCohort$id(),
-      cohortName = incidenceAnalysisClass$targetCohort$name(),
       .before = 1
-    ) |>
-    dplyr::inner_join(
-      meta, by = c("cohortId", "cohortName")
     )
-  return(results)
+
+  # Return as list with metaInfo as separate table
+  resultList <- list(
+    incidence = results,
+    metaInfo = metaInfo
+  )
+
+  return(resultList)
 }
 
 #' Run Single Prevalence Analysis
@@ -128,10 +132,10 @@ generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings)
     glue::glue("Analysis {prevalenceAnalysisClass$analysisId}: {prevalenceAnalysisClass$analysisTag}"),
     col = "cyan"
   )
-  
+
   cli::cat_line()
   cli::cat_rule("Analysis Configuration")
-  
+
   tryCatch({
     prevalenceAnalysisClass$viewAnalysisInfo()
   }, error = function(e) {
@@ -139,7 +143,7 @@ generateSinglePrevalence <- function(prevalenceAnalysisClass, executionSettings)
   })
 
   cli::cat_line()
-  
+
   # Run analysis
   tryCatch({
     resultList <- runPrevalence(
@@ -245,14 +249,30 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
 
   # Determine which output types are requested (use first analysis as reference)
   outputTypes <- prevalenceAnalysisList[[1]]$outputTypes
-  
+
   resultList <- list()
-  
+
   # Initialize result storage for each output type
-  prevResultsList <- if ("prevalence" %in% outputTypes) list() else NULL
-  incResultsList <- if ("incidence" %in% outputTypes) list() else NULL
-  drugResultsList <- if ("drugs" %in% outputTypes) list() else NULL
-  
+  if ("prevalence" %in% outputTypes) {
+    prevResultsList <- list()
+  } else {
+    prevResultsList <- NULL
+  }
+
+  if ("incidence" %in% outputTypes) {
+    incResultsList <- list()
+  } else {
+    incResultsList <- NULL
+  }
+
+  if ("drugs" %in% outputTypes) {
+    drugResultsList <- list()
+  } else {
+    drugResultsList <- NULL
+  }
+
+  metaInfoList <- list()
+
   for (i in seq_along(prevalenceAnalysisList)) {
     tryCatch({
       prevalenceAnalysisClass <- prevalenceAnalysisList[[i]]
@@ -262,7 +282,7 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
         glue::glue("Analysis {i} of {length(prevalenceAnalysisList)}: ID {prevalenceAnalysisClass$analysisId}"),
         col = "cyan"
       )
-      
+
       cli::cat_rule("Configuration", line = 1)
       prevalenceAnalysisClass$viewAnalysisInfo()
 
@@ -272,48 +292,57 @@ generateMultiplePrevalence <- function(prevalenceAnalysisList, executionSettings
         prevalenceAnalysisClass = prevalenceAnalysisClass,
         executionSettings = executionSettings
       )
-      
+
       # Organize results by type
       if ("prevalence" %in% outputTypes && !is.null(analysisResults$prevalence)) {
-        prevResultsList[[i]] <- analysisResults$prevalence |>
-          dplyr::mutate(analysisId = prevalenceAnalysisClass$analysisId, .before = 1)
+        prevResultsList[[i]] <- analysisResults$prevalence
         cli::cli_alert_success("Prevalence results: {nrow(analysisResults$prevalence)} rows")
       }
-      
+
       if ("incidence" %in% outputTypes && !is.null(analysisResults$incidence)) {
-        incResultsList[[i]] <- analysisResults$incidence |>
-          dplyr::mutate(analysisId = prevalenceAnalysisClass$analysisId, .before = 1)
+        incResultsList[[i]] <- analysisResults$incidence
         cli::cli_alert_success("Incidence results: {nrow(analysisResults$incidence)} rows")
       }
-      
+
       if ("drugs" %in% outputTypes && !is.null(analysisResults$drugUsage)) {
-        drugResultsList[[i]] <- analysisResults$drugUsage |>
-          dplyr::mutate(analysisId = prevalenceAnalysisClass$analysisId, .before = 1)
+        drugResultsList[[i]] <- analysisResults$drugUsage
         cli::cli_alert_success("Drug results: {nrow(analysisResults$drugUsage)} rows")
+      }
+
+      # Capture metaInfo if present
+      if (!is.null(analysisResults$metaInfo)) {
+        metaInfoList[[i]] <- analysisResults$metaInfo
       }
     }, error = function(e) {
       cli::cli_alert_danger("Analysis {i} failed: {e$message}")
       stop(e)
     })
   }
-  
+
   cli::cat_line()
   cli::cat_rule("Combining Results")
-  
+
   # Combine results by type
   if ("prevalence" %in% outputTypes) {
     resultList$prevalence <- do.call('rbind', prevResultsList)
     cli::cli_alert_success("Combined prevalence: {nrow(resultList$prevalence)} total rows")
   }
-  
+
   if ("incidence" %in% outputTypes) {
     resultList$incidence <- do.call('rbind', incResultsList)
     cli::cli_alert_success("Combined incidence: {nrow(resultList$incidence)} total rows")
   }
-  
+
   if ("drugs" %in% outputTypes) {
     resultList$drugUsage <- do.call('rbind', drugResultsList)
     cli::cli_alert_success("Combined drugs: {nrow(resultList$drugUsage)} total rows")
+  }
+
+  # Combine and deduplicate metaInfo
+  if (length(metaInfoList) > 0) {
+    resultList$metaInfo <- do.call('rbind', metaInfoList) |>
+      dplyr::distinct()
+    cli::cli_alert_success("Combined metaInfo: {nrow(resultList$metaInfo)} unique analyses")
   }
 
   # Disconnect
@@ -397,37 +426,37 @@ generateMultipleRassenIncidence <- function(incidenceAnalysisList, executionSett
 exportPrevalenceQuery <- function(prevalenceAnalysisClass,
                                   executionSettings,
                                   outputFolder = NULL) {
-  
+
   checkmate::assert_class(prevalenceAnalysisClass, classes = "CohortPrevalenceAnalysis")
   checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
-  
+
   if(is.null(outputFolder)){
     outputFolder <- here::here()
   }
-  
+
   checkmate::assert_directory_exists(outputFolder)
-  
+
   cli::cat_line()
   cli::cat_rule("Exporting SQL Query")
-  
+
   tryCatch({
     cli::cli_alert_info("Assembling SQL...")
     sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
-    
+
     cli::cli_alert_info("Rendering SQL...")
     sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
-    
+
     outputFile <- file.path(
       outputFolder,
       paste0("a_", prevalenceAnalysisClass$analysisId, "_id_", prevalenceAnalysisClass$prevalentCohort$id(), ".sql")
     )
-    
+
     cli::cli_alert_info("Writing to file: {outputFile}")
     readr::write_file(x = sql2, file = outputFile)
-    
+
     cli::cli_alert_success("SQL query exported successfully")
     cli::cli_alert_info("File size: {format(file.size(outputFile), units = 'auto')}")
-    
+
     invisible(sql2)
   }, error = function(e) {
     cli::cli_alert_danger("Failed to export SQL: {e$message}")
@@ -449,89 +478,89 @@ exportPrevalenceQuery <- function(prevalenceAnalysisClass,
 exportPrevalenceResults <- function(resultList,
                                      executionSettings = NULL,
                                      outputFolder = NULL) {
-  
+
   checkmate::assert_list(resultList)
-  
+
   if(is.null(outputFolder)){
     outputFolder <- here::here()
   }
-  
+
   checkmate::assert_directory_exists(outputFolder)
-  
+
   cli::cat_line()
   cli::cat_rule("Exporting Analysis Results")
-  
+
   outputFiles <- list()
-  
+
   tryCatch({
     # Export prevalence results if present
     if(!is.null(resultList$prevalence) && nrow(resultList$prevalence) > 0) {
       cli::cli_alert_info("Processing prevalence results ({nrow(resultList$prevalence)} rows)...")
-      
+
       # Create filename with timestamp for uniqueness
       analysisId <- if("analysisId" %in% names(resultList$prevalence)) {
         resultList$prevalence$analysisId[1]
       } else {
         format(Sys.time(), "%Y%m%d_%H%M%S")
       }
-      
+
       prevalenceFile <- file.path(
         outputFolder,
         paste0("prevalence_", analysisId, ".csv")
       )
-      
+
       readr::write_csv(resultList$prevalence, file = prevalenceFile)
       outputFiles$prevalence <- prevalenceFile
       cli::cli_alert_success("Exported prevalence to {basename(prevalenceFile)}")
     }
-    
+
     # Export incidence results if present
     if(!is.null(resultList$incidence) && nrow(resultList$incidence) > 0) {
       cli::cli_alert_info("Processing incidence results ({nrow(resultList$incidence)} rows)...")
-      
+
       analysisId <- if("analysisId" %in% names(resultList$incidence)) {
         resultList$incidence$analysisId[1]
       } else {
         format(Sys.time(), "%Y%m%d_%H%M%S")
       }
-      
+
       incidenceFile <- file.path(
         outputFolder,
         paste0("incidence_", analysisId, ".csv")
       )
-      
+
       readr::write_csv(resultList$incidence, file = incidenceFile)
       outputFiles$incidence <- incidenceFile
       cli::cli_alert_success("Exported incidence to {basename(incidenceFile)}")
     }
-    
+
     # Export drug usage results if present
     if(!is.null(resultList$drugUsage) && nrow(resultList$drugUsage) > 0) {
       cli::cli_alert_info("Processing drug usage results ({nrow(resultList$drugUsage)} rows)...")
-      
+
       analysisId <- if("analysisId" %in% names(resultList$drugUsage)) {
         resultList$drugUsage$analysisId[1]
       } else {
         format(Sys.time(), "%Y%m%d_%H%M%S")
       }
-      
+
       drugFile <- file.path(
         outputFolder,
         paste0("drug_usage_", analysisId, ".csv")
       )
-      
+
       readr::write_csv(resultList$drugUsage, file = drugFile)
       outputFiles$drugUsage <- drugFile
       cli::cli_alert_success("Exported drug usage to {basename(drugFile)}")
     }
-    
+
     if(length(outputFiles) > 0) {
       cli::cli_alert_success("All results exported successfully to {outputFolder}")
       cli::cli_alert_info("Exported {length(outputFiles)} result file(s)")
     } else {
       cli::cli_alert_warning("No results to export")
     }
-    
+
     invisible(resultList)
   }, error = function(e) {
     cli::cli_alert_danger("Failed to export results: {e$message}")

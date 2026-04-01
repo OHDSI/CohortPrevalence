@@ -41,28 +41,17 @@
 StandardizationReference <- R6::R6Class(
   "StandardizationReference",
   public = list(
-    #' @field name Name of the reference population
-    name = NULL,
-    #' @field country Country or region
-    country = NULL,
-    #' @field year Year of reference (numeric)
-    year = NULL,
-    #' @field source Source/citation
-    source = NULL,
-    #' @field doi DOI or URL
-    doi = NULL,
-
     #' @description Create a new StandardizationReference
     #'
     #' @param name Character. Name of reference (e.g., "USA Census 2020")
     #' @param country Character. Country/region name
     #' @param year Integer. Reference year
     #' @param source Character. Data source description
-    #' @param doi Character. DOI or URL to source
+    #' @param reference Character. URL or reference to access the source data
     #' @param data Data frame with columns: age, gender, population
     #'
     #' @return A new StandardizationReference object
-    initialize = function(name, country, year, source, data, doi = NULL) {
+    initialize = function(name, country, year, source, data, reference = NULL) {
       # Validate inputs
       if (!is.data.frame(data)) {
         stop("'data' must be a data frame")
@@ -89,41 +78,41 @@ StandardizationReference <- R6::R6Class(
         stop("Population column must be numeric and non-negative")
       }
 
-      # Store metadata
-      self$name <- name
-      self$country <- country
-      self$year <- as.integer(year)
-      self$source <- source
-      self$doi <- doi
+      # Store metadata in private fields
+      private$.name <- name
+      private$.country <- country
+      private$.year <- as.integer(year)
+      private$.source <- source
+      private$.reference <- reference
 
       # Calculate weights and store data
-      private$data <- data %>%
+      private$.data <- data |>
         dplyr::mutate(
           age = as.character(age),
           gender = as.character(gender),
           population = as.numeric(population)
-        ) %>%
+        ) |>
         dplyr::mutate(
           weight = population / sum(population)
-        ) %>%
+        ) |>
         dplyr::arrange(gender, age)
     },
 
     #' @description View the reference population data
     viewReference = function() {
-      cat("\n=== ", self$name, " ===\n", sep = "")
-      cat("Country:  ", self$country, "\n", sep = "")
-      cat("Year:     ", self$year, "\n", sep = "")
-      cat("Source:   ", self$source, "\n", sep = "")
-      if (!is.null(self$doi)) {
-        cat("DOI:      ", self$doi, "\n", sep = "")
+      cat("\n=== ", private$.name, " ===\n", sep = "")
+      cat("Country:  ", private$.country, "\n", sep = "")
+      cat("Year:     ", private$.year, "\n", sep = "")
+      cat("Source:   ", private$.source, "\n", sep = "")
+      if (!is.null(private$.reference)) {
+        cat("Reference:", private$.reference, "\n", sep = " ")
       }
       cat("\nData (first 10 rows):\n")
-      print(head(private$data, 10))
+      print(head(private$.data, 10))
       cat(
-        "\nTotal rows: ", nrow(private$data),
+        "\nTotal rows: ", nrow(private$.data),
         " | Total population: ",
-        format(sum(private$data$population), big.mark = ","),
+        format(sum(private$.data$population), big.mark = ","),
         "\n\n",
         sep = ""
       )
@@ -132,36 +121,36 @@ StandardizationReference <- R6::R6Class(
     #' @description Get the full reference data frame
     #' @return Data frame with columns: age, gender, population, weight
     getData = function() {
-      private$data
+      private$.data
     },
 
     #' @description Get total population
     #' @return Numeric value
     getTotalPopulation = function() {
-      sum(private$data$population)
+      sum(private$.data$population)
     },
 
     #' @description Get unique ages
     #' @return Character vector of age values
     getAgeValues = function() {
-      sort(unique(private$data$age))
+      sort(unique(private$.data$age))
     },
 
     #' @description Get unique genders
     #' @return Character vector of gender values
     getGenderValues = function() {
-      sort(unique(private$data$gender))
+      sort(unique(private$.data$gender))
     },
 
     #' @description Get metadata as list
-    #' @return List with name, country, year, source, doi
+    #' @return List with name, country, year, source, reference
     getMetadata = function() {
       list(
-        name = self$name,
-        country = self$country,
-        year = self$year,
-        source = self$source,
-        doi = self$doi
+        name = private$.name,
+        country = private$.country,
+        year = private$.year,
+        source = private$.source,
+        reference = private$.reference
       )
     },
 
@@ -172,7 +161,7 @@ StandardizationReference <- R6::R6Class(
     #'
     #' @return Data frame filtered and re-normalized to bounds
     getFilteredReference = function(ageMin = NULL, ageMax = NULL) {
-      result <- private$data
+      result <- private$.data
 
       # Convert ages to numeric for comparison
       if (!is.null(ageMin) || !is.null(ageMax)) {
@@ -188,7 +177,7 @@ StandardizationReference <- R6::R6Class(
       }
 
       # Re-normalize weights to filtered subset
-      result <- result %>%
+      result <- result |>
         dplyr::mutate(
           weight = population / sum(population)
         )
@@ -202,26 +191,26 @@ StandardizationReference <- R6::R6Class(
     #'
     #' @return Data frame with ages >= threshold collapsed and weights re-normalized
     getAgetruncatedReference = function(rightTruncation) {
-      result <- private$data %>%
+      result <- private$.data |>
         dplyr::mutate(
           age_numeric = suppressWarnings(as.numeric(gsub("\\+", "", age)))
-        ) %>%
+        ) |>
         dplyr::mutate(
           age = dplyr::case_when(
             is.na(age_numeric) ~ age,  # Keep "100+" as is if not convertible
             age_numeric >= rightTruncation ~ paste0(rightTruncation, "+"),
             TRUE ~ age
           )
-        ) %>%
-        dplyr::select(-age_numeric) %>%
-        dplyr::group_by(age, gender) %>%
+        ) |>
+        dplyr::select(-age_numeric) |>
+        dplyr::group_by(age, gender) |>
         dplyr::summarise(
           population = sum(population),
           .groups = "drop"
-        ) %>%
+        ) |>
         dplyr::mutate(
           weight = population / sum(population)
-        ) %>%
+        ) |>
         dplyr::arrange(gender, age)
 
       result
@@ -235,23 +224,23 @@ StandardizationReference <- R6::R6Class(
     #'
     #' @return Data frame with both transformations applied
     getAdjustedReference = function(ageMin = NULL, ageMax = NULL, rightTruncation = NULL) {
-      result <- private$data
+      result <- private$.data
 
       # First apply age truncation if specified
       if (!is.null(rightTruncation)) {
-        result <- result %>%
+        result <- result |>
           dplyr::mutate(
             age_numeric = suppressWarnings(as.numeric(gsub("\\+", "", age)))
-          ) %>%
+          ) |>
           dplyr::mutate(
             age = dplyr::case_when(
               is.na(age_numeric) ~ age,
               age_numeric >= rightTruncation ~ paste0(rightTruncation, "+"),
               TRUE ~ age
             )
-          ) %>%
-          dplyr::select(-age_numeric) %>%
-          dplyr::group_by(age, gender) %>%
+          ) |>
+          dplyr::select(-age_numeric) |>
+          dplyr::group_by(age, gender) |>
           dplyr::summarise(
             population = sum(population),
             .groups = "drop"
@@ -272,7 +261,7 @@ StandardizationReference <- R6::R6Class(
       }
 
       # Re-normalize weights
-      result <- result %>%
+      result <- result |>
         dplyr::mutate(
           weight = population / sum(population)
         )
@@ -282,7 +271,53 @@ StandardizationReference <- R6::R6Class(
   ),
 
   private = list(
-    #' @field data Internal storage for reference data frame
-    data = NULL
+    .data = NULL,
+    .name = NULL,
+    .country = NULL,
+    .year = NULL,
+    .source = NULL,
+    .reference = NULL
+  ),
+
+  active = list(
+    #' @field name Name of the reference population (active)
+    name = function(value) {
+      if (missing(value)) {
+        return(private$.name)
+      }
+      private$.name <- value
+    },
+
+    #' @field country Country or region (active)
+    country = function(value) {
+      if (missing(value)) {
+        return(private$.country)
+      }
+      private$.country <- value
+    },
+
+    #' @field year Year of reference (numeric) (active)
+    year = function(value) {
+      if (missing(value)) {
+        return(private$.year)
+      }
+      private$.year <- as.integer(value)
+    },
+
+    #' @field source Source/citation (active)
+    source = function(value) {
+      if (missing(value)) {
+        return(private$.source)
+      }
+      private$.source <- value
+    },
+
+    #' @field reference URL or reference to access source data (active)
+    reference = function(value) {
+      if (missing(value)) {
+        return(private$.reference)
+      }
+      private$.reference <- value
+    }
   )
 )

@@ -10,53 +10,47 @@ library(tidyr)
 library(usethis)
 
 # Note: USA Census 2020 data is publicly available
-# For this proof-of-concept, we'll create representative population data
-# In production, download actual data from Census Bureau
+# Retrieved via Census API using tidycensus package
+# Accesses 2020 Decennial Census (DHC) data by sex and single-year age
 
 # Create USA Census 2020 reference population
 # Based on actual 2020 Census age-sex distribution
-# Reference: https://www.census.gov/data/tables/2020/dec/2020-apportionment.html
+# Reference: https://data.census.gov/table/DECENNIALDHC2020.PCT12?q=PCT12:+SEX+BY+SINGLE-YEAR+AGE
 
-usa_2020_data <- data.frame(
-  age = c(
-    # Males (0-102)
-    "0", "1", "2", "3", "4",
-    "5", "6", "7", "8", "9",
-    "10-14", "15-19", "20-24", "25-29", "30-34",
-    "35-39", "40-44", "45-49", "50-54", "55-59",
-    "60-64", "65-69", "70-74", "75-79", "80-84",
-    "85-89", "90-94", "95-99", "100+",
-    # Females (0-102)
-    "0", "1", "2", "3", "4",
-    "5", "6", "7", "8", "9",
-    "10-14", "15-19", "20-24", "25-29", "30-34",
-    "35-39", "40-44", "45-49", "50-54", "55-59",
-    "60-64", "65-69", "70-74", "75-79", "80-84",
-    "85-89", "90-94", "95-99", "100+"
-  ),
-  gender = c(
-    # Males
-    rep("Male", 29),
-    # Females
-    rep("Female", 29)
-  ),
-  population = c(
-    # Male age distribution (representative 2020 Census percentages)
-    1915000, 1927000, 1946000, 1957000, 1962000,  # ages 0-4
-    1976000, 1990000, 2003000, 2015000, 2027000,  # ages 5-9
-    11268000, 11362000, 11458000, 11553000, 11649000,  # ages 10-14, 15-19, ... (5-year bands)
-    11745000, 11841000, 11937000, 12033000, 12129000,
-    12225000, 12321000, 12417000, 10000000, 8000000,
-    6500000, 4500000, 2500000, 800000,
-    # Female age distribution (representative 2020 Census percentages)
-    1825000, 1837000, 1856000, 1867000, 1872000,  # ages 0-4
-    1886000, 1900000, 1913000, 1925000, 1937000,  # ages 5-9
-    10745000, 10841000, 10937000, 11033000, 11129000,  # ages 10-14, 15-19, ...
-    11225000, 11321000, 11417000, 11513000, 11609000,
-    11705000, 11801000, 11897000, 10200000, 8500000,
-    7200000, 5500000, 3500000, 1300000
+
+# Code to get 2020 census data via tidycensus
+
+# load vars for census
+var2020 <- tidycensus::load_variables(year = 2020, dataset = "dhc") |>
+  dplyr::filter(concept == "SEX BY SINGLE-YEAR AGE")
+
+pctNames <- var2020$name
+
+# retrieve from API
+census2020Weights <- tidycensus::get_decennial(geography = "us", year = 2020, sumfile = "dhc", variables = pctNames)|>
+  dplyr::left_join(var2020, by = c("variable" = "name"))
+
+# get ages
+nms <- c(3:105, 107:209) |> stringr::str_pad(width = 3, pad = "0", side = "left")
+varsToKeep <- paste0("PCT12_", nms, "N")
+
+
+# format
+usa_2020_data <- census2020Weights |>
+  dplyr::filter(
+    variable %in% varsToKeep
+  ) |>
+  dplyr::mutate(
+    gender = dplyr::case_when(
+      variable %in% c(varsToKeep[1:103]) ~ "Male",
+      TRUE ~ "Female"
+    ),
+    age = stringr::str_pad(0:102, width = 3, pad = "0", side = "left") |> rep(times = 2)
+  ) |>
+  dplyr::select(
+    age, gender, population = value
   )
-)
+
 
 # Validate
 cat("USA Census 2020 - Data Check:\n")
@@ -73,8 +67,8 @@ usa_census_2020 <- StandardizationReference$new(
   name = "USA Census 2020",
   country = "United States",
   year = 2020L,
-  source = "US Census Bureau - 2020 Decennial Census",
-  doi = "https://www.census.gov/data/tables/2020/dec/2020-apportionment.html",
+  source = "US Census Bureau - 2020 Decennial Census (DHC via Census API)",
+  reference = "https://api.census.gov/data/2020/dec/dhc",
   data = usa_2020_data
 )
 

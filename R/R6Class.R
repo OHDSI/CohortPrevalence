@@ -247,6 +247,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
       
       resultList <- list()
+      
+      # Create metaInfo table
       metaInfo <- self$tabulateAnalysisSettings()
       
       # Collect prevalence results
@@ -259,12 +261,12 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         ) |>
           dplyr::arrange(.data$spanLabel) |>
           dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
             databaseId = executionSettings$cdmSourceName,
             statType = "Prevalence",
             .before = 1
-          ) |>
-          dplyr::inner_join(
-            metaInfo, by = c("cohortDefinitionId" = "cohortId")
           )
         resultList$prevalence <- prevResults
       }
@@ -279,12 +281,12 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         ) |>
           dplyr::arrange(.data$spanLabel) |>
           dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
             databaseId = executionSettings$cdmSourceName,
             statType = "Incidence Rate",
             .before = 1
-          ) |>
-          dplyr::inner_join(
-            metaInfo, by = c("cohortDefinitionId" = "cohortId")
           )
         resultList$incidence <- incResults
       }
@@ -299,15 +301,18 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         ) |>
           dplyr::arrange(.data$spanLabel) |>
           dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
             databaseId = executionSettings$cdmSourceName,
             statType = "Drug Usage",
             .before = 1
-          ) |>
-          dplyr::inner_join(
-            metaInfo, by = c("targetId" = "cohortId")
           )
         resultList$drugUsage <- drugResults
       }
+      
+      # Add metaInfo as separate table in resultList
+      resultList$metaInfo <- metaInfo
       
       return(resultList)
     }
@@ -419,6 +424,15 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
       private$.demographicConstraints <- value
+    },
+
+    outputTypes = function(value) {
+      if (missing(value)) {
+        return(private$.outputTypes)
+      }
+      checkmate::assert_character(x = outputTypes, min.len = 1)
+      checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
+      private$.outputTypes <- value
     }
 
   )

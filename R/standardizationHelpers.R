@@ -9,7 +9,7 @@
 #' @param year Integer. Reference year
 #' @param source Character. Data source description or citation
 #' @param data Data frame with columns: age, gender, population
-#' @param doi Character. DOI or URL (optional)
+#' @param reference Character. URL or reference to access the source data (optional)
 #'
 #' @return StandardizationReference object
 #'
@@ -36,14 +36,14 @@
 #' }
 #'
 #' @export
-createStandardizationReference <- function(name, country, year, source, data, doi = NULL) {
+createStandardizationReference <- function(name, country, year, source, data, reference = NULL) {
   StandardizationReference$new(
     name = name,
     country = country,
     year = year,
     source = source,
     data = data,
-    doi = doi
+    reference = reference
   )
 }
 
@@ -55,7 +55,7 @@ createStandardizationReference <- function(name, country, year, source, data, do
 #' @param country Character. Country or region
 #' @param year Integer. Reference year
 #' @param source Character. Data source description
-#' @param doi Character. DOI or URL (optional)
+#' @param reference Character. URL or reference to access the source data (optional)
 #' @param encoding Character. File encoding (default: "UTF-8")
 #'
 #' @return StandardizationReference object
@@ -82,7 +82,7 @@ importStandardizationReference <- function(
     country,
     year,
     source,
-    doi = NULL,
+    reference = NULL,
     encoding = "UTF-8") {
 
   if (!file.exists(filepath)) {
@@ -97,7 +97,7 @@ importStandardizationReference <- function(
     year = year,
     source = source,
     data = data,
-    doi = doi
+    reference = reference
   )
 }
 
@@ -250,7 +250,7 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
     country = "United States",
     year = as.integer(year),
     source = "US Census Bureau American Community Survey",
-    doi = "https://www.census.gov/programs-surveys/acs",
+    reference = "https://www.census.gov/programs-surveys/acs",
     data = acs_processed  # placeholder
   )
 
@@ -263,5 +263,5 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
     cli::cli_alert_success("Cached to {cache_file}")
   }
 
-  acs_ref
+  return(acs_ref)
 }

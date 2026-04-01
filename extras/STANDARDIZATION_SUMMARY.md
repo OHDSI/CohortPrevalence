@@ -209,6 +209,8 @@ exportPrevalenceResults(res_with_std, es)
 
 ### 7. Documentation & Education
 
+**DO NOT IMPLEMENT PLEASE**
+
 #### Vignette: `vignettes/standardization.Rmd`
 -Introduction to direct method standardization
 - When to use which reference population

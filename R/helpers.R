@@ -122,13 +122,12 @@ buildPrevalenceAggSQL <- function(strata) {
 
      CREATE TABLE #prevalence AS
      SELECT
-       cohort_definition_id
-       ,span_label{strata}
+       span_label{strata}
        ,SUM(case_event) AS numerator
        ,COUNT(DISTINCT subject_id) AS denominator
        ,(SUM(case_event) / COUNT(DISTINCT subject_id)) * @multiplier AS prevalence_rate
      FROM #allEvents
-     GROUP BY cohort_definition_id, span_label{strata};"
+     GROUP BY span_label{strata};"
   )
 }
 
@@ -141,8 +140,7 @@ buildIncidenceAggSQL <- function(strata) {
 
      CREATE TABLE #incidence AS
      SELECT
-       cohort_definition_id
-       ,span_label{strata}
+       span_label{strata}
        ,SUM(inc_event) AS numerator
        ,SUM(time_at_risk) / 365.25 AS denominator
        ,(SUM(inc_event) / SUM(time_at_risk) / 365.25) * @multiplier AS incidence_rate
@@ -152,6 +150,6 @@ buildIncidenceAggSQL <- function(strata) {
                  ELSE DATEDIFF(day, calendar_start_date, calendar_end_date) END AS time_at_risk
        FROM #denomInc
      )
-     GROUP BY cohort_definition_id, span_label{strata};"
+     GROUP BY span_label{strata};"
   )
 }

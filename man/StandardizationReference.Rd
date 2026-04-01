@@ -41,27 +41,18 @@ methods for accessing and manipulating reference data.
 }
 
 }
-\section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{name}}{Name of the reference population}
-
-\item{\code{country}}{Country or region}
-
-\item{\code{year}}{Year of reference (numeric)}
-
-\item{\code{source}}{Source/citation}
-
-\item{\code{doi}}{DOI or URL}
-
-\item{\code{data}}{Internal storage for reference data frame}
-}
-\if{html}{\out{</div>}}
-}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{data}}{Internal storage for reference data frame}
+\item{\code{name}}{Name of the reference population (active)}
+
+\item{\code{country}}{Country or region (active)}
+
+\item{\code{year}}{Year of reference (numeric) (active)}
+
+\item{\code{source}}{Source/citation (active)}
+
+\item{\code{doi}}{DOI or URL (active)}
 }
 \if{html}{\out{</div>}}
 }

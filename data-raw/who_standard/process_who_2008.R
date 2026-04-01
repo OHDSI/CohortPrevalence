@@ -50,7 +50,7 @@ who_world_standard <- StandardizationReference$new(
   country = "World",
   year = 2008L,
   source = "World Health Organization - Standard Populations",
-  doi = "https://www.who.int/data/mortality_burden_disease/global_burden_disease_study2019",
+  reference = "https://www.who.int/data/mortality_burden_disease/global_burden_disease_study2019",
   data = who_2008_data
 )
 
