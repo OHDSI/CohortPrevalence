@@ -9,37 +9,49 @@ library(dplyr)
 library(usethis)
 
 # WHO 2008 World Standard Population
-# 7 age groups (not single-year like Census data)
-# This is the "classic" WHO standard used in international comparisons
-# Source: https://www.who.int/data/mortality_burden_disease/global_burden_disease_study2019
+# 21 age groups (5-year intervals: 0-4, 5-9, ..., 95-99, 100+)
+# This is the WHO 2000-2025 world standard used in international comparisons
+# Reference: SEER standardized values from Discussion Paper 31: Age Standardization of Rates: A New WHO Standard
+# Official WHO standard population weights per 1,000,000 total population.
 
 who_2008_data <- data.frame(
   age = c(
-    "0-4", "5-14", "15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85+"
+    "0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49",
+    "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90-94", "95-99", "100+"
   ),
   gender = "Combined",  # WHO standard is not sex-stratified
   population = c(
-    # WHO 2008 standard weights (per 100,000 total population)
-    # These are the official WHO proportions
-    8860,   # 0-4
-    8690,   # 5-14
-    8860,   # 15-24
-    8920,   # 25-34
-    8940,   # 35-44
-    8820,   # 45-54
-    8270,   # 55-64
-    7470,   # 65-74
-    5920,   # 75-84
-    1860    # 85+
+    # WHO World Standard Population (2000-2025) - per 1,000,000 total population
+    # Source: SEER standardized values from Discussion Paper 31: Age Standardization of Rates: A New WHO Standard
+    88569,    # 0-4
+    86870,    # 5-9
+    85970,    # 10-14
+    84670,    # 15-19
+    82171,    # 20-24
+    79272,    # 25-29
+    76073,    # 30-34
+    71475,    # 35-39
+    65877,    # 40-44
+    60379,    # 45-49
+    53681,    # 50-54
+    45484,    # 55-59
+    37187,    # 60-64
+    29590,    # 65-69
+    22092,    # 70-74
+    15195,    # 75-79
+    9097,     # 80-84
+    4398,     # 85-89
+    1500,     # 90-94
+    400,      # 95-99
+    50        # 100+
   )
 )
 
 # Validate
 cat("WHO World Standard 2008 - Data Check:\n")
 total_weight <- sum(who_2008_data$population)
-cat("Total Weight: ", total_weight, "\n")
-cat("Expected (100,000): ✓\n")
-cat("Age groups: ", nrow(who_2008_data), "\n")
+cat("Total Weight: ", format(total_weight, big.mark = ","), " (expected 1,000,000)\n")
+cat("Number of age groups: ", nrow(who_2008_data), "\n")
 cat("Population distribution:\n")
 print(who_2008_data)
 cat("\n")
@@ -49,8 +61,8 @@ who_world_standard <- StandardizationReference$new(
   name = "WHO World Standard 2008",
   country = "World",
   year = 2008L,
-  source = "World Health Organization - Standard Populations",
-  reference = "https://www.who.int/data/mortality_burden_disease/global_burden_disease_study2019",
+  source = "World Health Organization - Standard Populations (Ahmad et al. 2001)",
+  reference = "https://seer.cancer.gov/stdpopulations/world.who.html",
   data = who_2008_data
 )
 
