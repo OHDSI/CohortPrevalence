@@ -15,7 +15,7 @@ FROM (
   SELECT *
   FROM #denom
   WHERE cohort_definition_id IS NOT NULL
-  AND cohort_start_date BETWEEN DATEADD (day, -{lookBack}, calendar_start_date) AND calendar_end_date
+  AND cohort_start_date BETWEEN DATEADD (day, -@lookBack, calendar_start_date) AND calendar_end_date
 ) t
 JOIN @cdm_database_schema.drug_exposure d ON t.subject_id = d.person_id
 JOIN #Codeset cc
@@ -32,7 +32,7 @@ WITH T1 AS (
   SELECT cohort_definition_id AS target_id, span_label, COUNT(DISTINCT subject_id) AS tot_year
   FROM #denom
   WHERE cohort_definition_id IS NOT NULL
-  AND cohort_start_date BETWEEN DATEADD (day, -{lookBack}, calendar_start_date) AND calendar_end_date
+  AND cohort_start_date BETWEEN DATEADD (day, -@lookBack, calendar_start_date) AND calendar_end_date
   GROUP BY cohort_definition_id, span_label
 ),
 T2 AS (

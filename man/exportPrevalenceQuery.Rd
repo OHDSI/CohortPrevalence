@@ -13,7 +13,12 @@ exportPrevalenceQuery(
 \arguments{
 \item{prevalenceAnalysisClass}{A \code{CohortPrevalenceAnalysis} R6 object with analysis settings (required).}
 
+\item{executionSettings}{An \code{ExecutionSettings} R6 object with database details (required).}
+
 \item{outputFolder}{Character string specifying the path to the folder where the output files will be saved. If left \code{NULL}, will default to current working directory (optional).}
+}
+\value{
+Invisibly returns the rendered SQL string.
 }
 \description{
 Exports the full SQL query of a \code{CohortPrevalenceAnalysis} analysis.
