@@ -28,6 +28,19 @@ Replaces separate generateSinglePrevalence and generateMultiplePrevalence functi
 This function consolidates analysis execution and result collection into a single workflow.
 Results include prevalence, incidence, and drug usage data as configured in the analysis objects.
 SQL queries are captured with SHA256 checksums for reproducibility verification.
+
+When running multiple analyses from a \code{CohortPrevalenceExperiment}, use the experiment's
+\code{define()} method to obtain the analysis list, then pass it to this function:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{exp <- CohortPrevalenceExperiment$new(...)$
+  addCohorts(...)$
+  addPrevalenceTypes(...)$
+  # ... configure dimensions ...
+  validate()
+
+analyses <- exp$define()
+results <- generatePrevalence(analyses, executionSettings)
+}\if{html}{\out{</div>}}
 \subsection{Result Tracking}{
 \itemize{
 \item prevalence data frame: Main prevalence estimates

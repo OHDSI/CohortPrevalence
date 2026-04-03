@@ -1,6 +1,6 @@
 Package: CohortPrevalence
 Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
-Version: 0.1.0
+Version: 1.0.0
 Authors@R: c(
     person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut")),
     person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
@@ -22,9 +22,11 @@ Imports:
     glue,
     here,
     jsonlite,
+    lubridate,
     methods,
     purrr,
     readr,
+    rlang,
     snakecase,
     SqlRender,
     DatabaseConnector,
@@ -33,7 +35,10 @@ Imports:
 Additional_repositories: https://OHDSI.github.io/drat
 Suggests: 
     knitr,
+    plotly,
+    reactable,
     rmarkdown,
+    shiny,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3

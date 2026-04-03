@@ -12,7 +12,8 @@ Results are stored as CSV files in a directory bundle with a manifest.json file
 tracking provenance, standardization parameters, and execution metadata.
 \subsection{Active Fields}{
 \itemize{
-\item \code{prevalence}: Data frame with prevalence results (read/write)
+\item \code{prevalence}: Data frame with crude (unadjusted) prevalence results (read/write)
+\item \code{stdPrev}: Data frame with standardized prevalence results (read/write)
 \item \code{incidence}: Data frame with incidence results (read/write)
 \item \code{drugUsage}: Data frame with drug usage results (read/write)
 \item \code{metaInfo}: Data frame with analysis metadata (read/write)
@@ -48,6 +49,8 @@ tracking provenance, standardization parameters, and execution metadata.
 \item{\code{drugUsage}}{Data frame with drug usage results}
 
 \item{\code{metaInfo}}{Data frame with analysis metadata}
+
+\item{\code{stdPrev}}{Data frame with standardized prevalence results}
 
 \item{\code{standardizationApplied}}{List of standardization parameters (read-only)}
 }

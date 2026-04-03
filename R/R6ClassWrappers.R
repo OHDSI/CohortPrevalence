@@ -36,6 +36,8 @@ createPrevalenceType <- function(prevalenceType, lookBackDays) {
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `CohortInfo` object specifying the population of interest on which to compute prevalence.
 #' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"` and/or `"drugs"` for simultaneous generation using shared base tables.
+#'   **Warning**: The `"drugs"` output type is experimental and should be used with caution. Results may be subject to future changes.
+#' @param drugConceptSets Optional list of Capr ConceptSetItems. Required if `"drugs"` is in `outputTypes`, otherwise ignored.
 #'
 #' @return A `CohortPrevalenceAnalysis` R6 object.
 #' @export
@@ -51,7 +53,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            strata = NULL,
                                            demographicConstraints = createDemographicConstraints(),
                                            populationCohort = NULL,
-                                           outputTypes = "prevalence"){
+                                           outputTypes = "prevalence",
+                                           drugConceptSets = NULL){
   if (is.null(analysisTag)) {
     analysisTag <- glue::glue("Analysis {analysisId} | {prevalentCohort$name()}")
   } else {
@@ -70,7 +73,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
     strata = strata,
     demographicConstraints = demographicConstraints,
     populationCohort = populationCohort,
-    outputTypes = outputTypes
+    outputTypes = outputTypes,
+    drugConceptSets = drugConceptSets
   )
   return(analysisDef)
 }

@@ -16,7 +16,8 @@ createCohortPrevalenceAnalysis(
   strata = NULL,
   demographicConstraints = createDemographicConstraints(),
   populationCohort = NULL,
-  outputTypes = "prevalence"
+  outputTypes = "prevalence",
+  drugConceptSets = NULL
 )
 }
 \arguments{
@@ -38,7 +39,10 @@ createCohortPrevalenceAnalysis(
 
 \item{populationCohort}{A \code{CohortInfo} object specifying the population of interest on which to compute prevalence.}
 
-\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"} and/or \code{"drugs"} for simultaneous generation using shared base tables.}
+\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"} and/or \code{"drugs"} for simultaneous generation using shared base tables.
+\strong{Warning}: The \code{"drugs"} output type is experimental and should be used with caution. Results may be subject to future changes.}
+
+\item{drugConceptSets}{Optional list of Capr ConceptSetItems. Required if \code{"drugs"} is in \code{outputTypes}, otherwise ignored.}
 
 \item{minimumObservationLength:}{Integer specifying minimum observation length (optional).}
 }

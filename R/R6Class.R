@@ -15,7 +15,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           strata = NULL,
                           demographicConstraints,
                           populationCohort = NULL,
-                          outputTypes = "prevalence") {
+                          outputTypes = "prevalence",
+                          drugConceptSets = NULL) {
       # set analysisId
       checkmate::assert_integerish(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
@@ -65,6 +66,26 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_character(x = outputTypes, min.len = 1)
       checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
       private[[".outputTypes"]] <- outputTypes
+
+      # set drugConceptSets - required if "drugs" is in outputTypes
+      if ("drugs" %in% outputTypes) {
+        checkmate::assert_list(x = drugConceptSets, min.len = 1,
+                              .var.name = "drugConceptSets must be a non-empty list when 'drugs' is in outputTypes")
+        # Validate each item has the expected Capr ConceptSetItem structure (@id and @Name slots)
+        for (i in seq_along(drugConceptSets)) {
+          item <- drugConceptSets[[i]]
+          if (!methods::isS4(item) || !methods::hasSlots(item, c("id", "Name"))) {
+            stop("Each item in drugConceptSets must be a Capr ConceptSetItem with @id and @Name slots")
+          }
+        }
+      } else {
+        # If "drugs" not in outputTypes, drugConceptSets should be NULL
+        if (!is.null(drugConceptSets)) {
+          cli::cli_alert_warning("drugConceptSets ignored: 'drugs' not in outputTypes")
+          drugConceptSets <- NULL
+        }
+      }
+      private[[".drugConceptSets"]] <- drugConceptSets
 
     },
 
@@ -146,10 +167,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       
       if ("drugs" %in% private$.outputTypes) {
-        drugSql <- readr::read_file(
-          fs::path_package(package = "CohortPrevalence", "sql/drugCalendar.sql")
-        ) |>
-          glue::glue()
+        drugSql <- prepDrugConceptSetQuery(drugConceptSets = self$drugConceptSets, executionSettings = executionSettings)
         
         sqlComponents <- c(sqlComponents, drugSql)
       }
@@ -331,7 +349,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .strata = NULL,
     .demographicConstraints = NULL,
     .populationCohort = NULL,
-    .outputTypes = NULL
+    .outputTypes = NULL,
+    .drugConceptSets = NULL
   ),
   active = list(
     # active fields for R6 class
@@ -433,6 +452,22 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_character(x = outputTypes, min.len = 1)
       checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
       private$.outputTypes <- value
+    },
+
+    drugConceptSets = function(value) {
+      if (missing(value)) {
+        return(private$.drugConceptSets)
+      }
+      if (!is.null(value)) {
+        checkmate::assert_list(x = value, min.len = 1)
+        for (i in seq_along(value)) {
+          item <- value[[i]]
+          if (!methods::isS4(item) || !methods::hasSlots(item, c("id", "Name"))) {
+            stop("Each item in drugConceptSets must be a Capr ConceptSetItem with @id and @Name slots")
+          }
+        }
+      }
+      private$.drugConceptSets <- value
     }
 
   )

@@ -71,6 +71,20 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' Results include prevalence, incidence, and drug usage data as configured in the analysis objects.
 #' SQL queries are captured with SHA256 checksums for reproducibility verification.
 #'
+#' When running multiple analyses from a `CohortPrevalenceExperiment`, use the experiment's
+#' `define()` method to obtain the analysis list, then pass it to this function:
+#'
+#' ```r
+#' exp <- CohortPrevalenceExperiment$new(...)$
+#'   addCohorts(...)$
+#'   addPrevalenceTypes(...)$
+#'   # ... configure dimensions ...
+#'   validate()
+#' 
+#' analyses <- exp$define()
+#' results <- generatePrevalence(analyses, executionSettings)
+#' ```
+#'
 #' ## Result Tracking
 #' - prevalence data frame: Main prevalence estimates
 #' - incidence data frame: Incidence rates if requested

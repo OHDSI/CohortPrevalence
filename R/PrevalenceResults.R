@@ -4,12 +4,15 @@
 #' Container for prevalence analysis results with standardization capabilities.
 #' Manages export/import with full provenance tracking via manifest file.
 #'
+#' @importFrom rlang %||%
+#'
 #' @details
 #' Results are stored as CSV files in a directory bundle with a manifest.json file
 #' tracking provenance, standardization parameters, and execution metadata.
 #'
 #' ## Active Fields
-#' - `prevalence`: Data frame with prevalence results (read/write)
+#' - `prevalence`: Data frame with crude (unadjusted) prevalence results (read/write)
+#' - `stdPrev`: Data frame with standardized prevalence results (read/write)
 #' - `incidence`: Data frame with incidence results (read/write)
 #' - `drugUsage`: Data frame with drug usage results (read/write)
 #' - `metaInfo`: Data frame with analysis metadata (read/write)
@@ -43,6 +46,7 @@ PrevalenceResults <- R6::R6Class(
                          metaInfo = NULL,
                          executionId = NULL) {
       private$.prevalence <- prevalence
+      private$.stdPrev <- NULL
       private$.incidence <- incidence
       private$.drugUsage <- drugUsage
       private$.metaInfo <- metaInfo
@@ -100,6 +104,14 @@ PrevalenceResults <- R6::R6Class(
           readr::write_csv(private$.drugUsage, file = drugFile)
           exportedFiles$drugUsage <- list(path = "drug_usage.csv", rows = nrow(private$.drugUsage))
           cli::cli_alert_success("Exported drug usage ({nrow(private$.drugUsage)} rows)")
+        }
+
+        # Export standardized prevalence if available
+        if (!is.null(private$.stdPrev) && nrow(private$.stdPrev) > 0) {
+          stdprevFile <- file.path(bundlePath, "standardized_prevalence.csv")
+          readr::write_csv(private$.stdPrev, file = stdprevFile)
+          exportedFiles$stdPrev <- list(path = "standardized_prevalence.csv", rows = nrow(private$.stdPrev))
+          cli::cli_alert_success("Exported standardized prevalence ({nrow(private$.stdPrev)} rows)")
         }
 
         # Export metaInfo
@@ -168,10 +180,9 @@ PrevalenceResults <- R6::R6Class(
       cli::cat_rule("Standardizing Prevalence")
 
       # Call standardization function
-      result_df <- standardizePrevalence(
+      result_df <- standardize_prevalence(
         prevalenceData = private$.prevalence,
         referencePopulation = referencePopulation,
-        metaInfo = private$.metaInfo,
         ageMin = ageMin,
         ageMax = ageMax,
         ageRightTruncation = ageRightTruncation
@@ -179,17 +190,11 @@ PrevalenceResults <- R6::R6Class(
 
       cli::cli_alert_success("Standardization complete ({nrow(result_df)} rows)")
 
-      # Create new PrevalenceResults with standardized data
-      new_results <- PrevalenceResults$new(
-        prevalence = result_df,
-        incidence = private$.incidence,
-        drugUsage = private$.drugUsage,
-        metaInfo = private$.metaInfo,
-        executionId = private$.executionId
-      )
+      # Store standardized prevalence in stdPrev field
+      private$.stdPrev <- result_df
 
       # Track standardization parameters
-      new_results$standardizationApplied <- list(
+      private$.standardizationApplied <- list(
         reference = referencePopulation$name,
         reference_year = referencePopulation$year,
         ageMin = ageMin,
@@ -198,7 +203,7 @@ PrevalenceResults <- R6::R6Class(
         appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
       )
 
-      return(new_results)
+      invisible(self)
     },
 
     #' @description Validate data integrity and relationships
@@ -207,24 +212,49 @@ PrevalenceResults <- R6::R6Class(
       cli::cat_line()
       cli::cli_alert_info("Validating results...")
 
-      # Check prevalence structure
+      # Check crude prevalence structure (if present)
       if (!is.null(private$.prevalence)) {
-        required_cols <- c("analysisId", "spanLabel", "totalNum", "totalDenom", "crudeStat", "stdStat")
-        missing <- setdiff(required_cols, colnames(private$.prevalence))
-        if (length(missing) > 0) {
-          stop("Prevalence missing columns: ", paste(missing, collapse = ", "))
+        # Crude prevalence should have stratified data
+        if (nrow(private$.prevalence) > 0) {
+          required_cols <- c("analysisId", "spanLabel")
+          missing <- setdiff(required_cols, colnames(private$.prevalence))
+          if (length(missing) > 0) {
+            stop("Prevalence missing required columns: ", paste(missing, collapse = ", "))
+          }
         }
       }
 
-      # Check metaInfo if present
-      if (!is.null(private$.metaInfo) && !is.null(private$.prevalence)) {
+      # Check standardized prevalence structure (if present)
+      if (!is.null(private$.stdPrev)) {
+        if (nrow(private$.stdPrev) > 0) {
+          required_cols <- c("analysisId", "spanLabel", "totalNum", "totalDenom", "crudeStat", "stdStat")
+          missing <- setdiff(required_cols, colnames(private$.stdPrev))
+          if (length(missing) > 0) {
+            stop("Standardized prevalence missing columns: ", paste(missing, collapse = ", "))
+          }
+        }
+      }
+
+      # Check metaInfo if present - should match either prevalence or stdPrev
+      if (!is.null(private$.metaInfo)) {
         meta_ids <- unique(private$.metaInfo$analysisId)
-        prev_ids <- unique(private$.prevalence$analysisId)
-        unmatched <- setdiff(prev_ids, meta_ids)
-        if (length(unmatched) > 0) {
-          cli::cli_alert_warning(
-            "{length(unmatched)} analysisId(s) in prevalence not found in metaInfo"
-          )
+        
+        data_to_check <- if (!is.null(private$.stdPrev) && nrow(private$.stdPrev) > 0) {
+          private$.stdPrev
+        } else if (!is.null(private$.prevalence) && nrow(private$.prevalence) > 0) {
+          private$.prevalence
+        } else {
+          NULL
+        }
+        
+        if (!is.null(data_to_check)) {
+          data_ids <- unique(data_to_check$analysisId)
+          unmatched <- setdiff(data_ids, meta_ids)
+          if (length(unmatched) > 0) {
+            cli::cli_alert_warning(
+              "{length(unmatched)} analysisId(s) in data not found in metaInfo"
+            )
+          }
         }
       }
 
@@ -239,7 +269,11 @@ PrevalenceResults <- R6::R6Class(
       cat("Execution ID:", private$.executionId, "\n")
 
       if (!is.null(private$.prevalence)) {
-        cat("Prevalence: ", nrow(private$.prevalence), " rows\n", sep = "")
+        cat("Prevalence (crude): ", nrow(private$.prevalence), " rows\n", sep = "")
+      }
+
+      if (!is.null(private$.stdPrev)) {
+        cat("Prevalence (standardized): ", nrow(private$.stdPrev), " rows\n", sep = "")
       }
 
       if (!is.null(private$.incidence)) {
@@ -305,6 +339,11 @@ PrevalenceResults <- R6::R6Class(
       private$.executedQueries[[as.character(analysisId)]] <- sql_string
       invisible(self)
     }
+    
+    # Future method for interactive exploration (e.g., Shiny app)
+    # explore = function() {
+    #   shiny_explore_prevalence_results(self)
+    # }
   ),
 
   active = list(
@@ -344,6 +383,15 @@ PrevalenceResults <- R6::R6Class(
       }
     },
 
+    #' @field stdPrev Data frame with standardized prevalence results
+    stdPrev = function(value) {
+      if (missing(value)) {
+        return(private$.stdPrev)
+      } else {
+        private$.stdPrev <- value
+      }
+    },
+
     #' @field standardizationApplied List of standardization parameters (read-only)
     standardizationApplied = function(value) {
       if (missing(value)) {
@@ -356,6 +404,7 @@ PrevalenceResults <- R6::R6Class(
 
   private = list(
     .prevalence = NULL,
+    .stdPrev = NULL,
     .incidence = NULL,
     .drugUsage = NULL,
     .metaInfo = NULL,
@@ -413,6 +462,7 @@ loadPrevalenceResults <- function(bundlePath) {
 
     # Load data files
     prevalence <- NULL
+    stdPrev <- NULL
     incidence <- NULL
     drugUsage <- NULL
     metaInfo <- NULL
@@ -423,6 +473,14 @@ loadPrevalenceResults <- function(bundlePath) {
         show_col_types = FALSE
       )
       cli::cli_alert_success("Loaded prevalence ({nrow(prevalence)} rows)")
+    }
+
+    if ("stdPrev" %in% names(manifest$files)) {
+      stdPrev <- readr::read_csv(
+        file.path(bundlePath, manifest$files$stdPrev$path),
+        show_col_types = FALSE
+      )
+      cli::cli_alert_success("Loaded standardized prevalence ({nrow(stdPrev)} rows)")
     }
 
     if ("incidence" %in% names(manifest$files)) {
@@ -484,6 +542,11 @@ loadPrevalenceResults <- function(bundlePath) {
       executionId = manifest$execution_id
     )
 
+    # Restore standardized prevalence if present
+    if (!is.null(stdPrev)) {
+      results$stdPrev <- stdPrev
+    }
+
     # Restore standardization info if present
     if (length(manifest$standardization_applied) > 0) {
       results$standardizationApplied <- manifest$standardization_applied
@@ -524,10 +587,6 @@ loadPrevalenceResults <- function(bundlePath) {
 #' @param referencePopulation StandardizationReference object defining
 #'   the standard population for weighting
 #'
-#' @param metaInfo Data frame (optional) with analysis metadata. If provided,
-#'   must have column "analysisId" to join on. Additional columns (analysisTag,
-#'   poi, prevalenceType) will be added to output. Default: NULL
-#'
 #' @param ageMin Numeric. Minimum age for filtering reference population.
 #'   If NULL (default), no lower bound applied.
 #'
@@ -564,13 +623,11 @@ loadPrevalenceResults <- function(bundlePath) {
 #'   - stdStat: Numeric, age-sex standardized prevalence rate (per 100,000)
 #'   - reference_name: Character, name of the reference population used
 #'   - reference_year: Integer, year of the reference population
-#'   - analysisTag: Character (if metaInfo provided), descriptive tag for analysis
-#'   - poi: Character (if metaInfo provided), population of interest
-#'   - prevalenceType: Character (if metaInfo provided), type of prevalence measured
-standardizePrevalence <- function(
+#'
+#' @keywords internal
+standardize_prevalence <- function(
     prevalenceData,
     referencePopulation,
-    metaInfo = NULL,
     ageMin = NULL,
     ageMax = NULL,
     ageRightTruncation = NULL) {
@@ -592,21 +649,6 @@ standardizePrevalence <- function(
       "prevalenceData must be output from CohortPrevalence functions. Missing columns: ",
       paste(missing_cols, collapse = ", ")
     )
-  }
-
-  # Validate metaInfo if provided
-  if (!is.null(metaInfo)) {
-    if (!is.data.frame(metaInfo)) {
-      stop("metaInfo must be a data frame or NULL")
-    }
-    required_meta_cols <- c("analysisId", "analysisTag", "poi", "prevalenceType")
-    missing_meta_cols <- setdiff(required_meta_cols, colnames(metaInfo))
-    if (length(missing_meta_cols) > 0) {
-      stop(
-        "metaInfo must contain columns: ",
-        paste(missing_meta_cols, collapse = ", ")
-      )
-    }
   }
 
   # Get adjusted reference population
@@ -681,16 +723,6 @@ standardizePrevalence <- function(
       reference_name = referencePopulation$name,
       reference_year = referencePopulation$year
     )
-
-  # Join metaInfo if provided
-  if (!is.null(metaInfo)) {
-    standardized_data <- standardized_data |>
-      dplyr::left_join(
-        metaInfo |> dplyr::select(analysisId, analysisTag, poi, prevalenceType),
-        by = "analysisId",
-        relationship = "many-to-one"
-      )
-  }
 
   # Return results
   return(standardized_data)

@@ -153,3 +153,27 @@ buildIncidenceAggSQL <- function(strata) {
      GROUP BY span_label{strata};"
   )
 }
+
+
+prepDrugConceptSetQuery <- function(drugConceptSets, executionSettings) {
+
+  csDropSql <- "DROP TABLE IF EXISTS #Codeset;" |>
+    SqlRender::translate(
+      targetDialect = executionSettings$getDbms(),
+      tempEmulationSchema = executionSettings$tempEmulationSchema
+    )
+
+  cs_query <- .bindCodesetQueries(drugConceptSets, codesetTable = "#Codeset") |>
+      SqlRender::render(
+        vocabulary_database_schema = executionSettings$cdmDatabaseSchema
+      ) |>
+      SqlRender::translate(
+        targetDialect = executionSettings$getDbms(),
+        tempEmulationSchema = executionSettings$tempEmulationSchema
+      )
+
+  drugSql <- readr::read_file(fs::path_package(package = "CohortPrevalence", "sql/drugCalendar.sql")) 
+  finalSql <- c(csDropSql, cs_query, drugCountSql) |>
+    glue::glue_collapse("\n\n")
+  return(finalSql)
+} 
