@@ -4,7 +4,14 @@
 \alias{createStandardizationReference}
 \title{Helper Functions for Standardization Reference Management}
 \usage{
-createStandardizationReference(name, country, year, source, data, doi = NULL)
+createStandardizationReference(
+  name,
+  country,
+  year,
+  source,
+  data,
+  reference = NULL
+)
 }
 \arguments{
 \item{name}{Character. Name of the reference population}
@@ -17,7 +24,7 @@ createStandardizationReference(name, country, year, source, data, doi = NULL)
 
 \item{data}{Data frame with columns: age, gender, population}
 
-\item{doi}{Character. DOI or URL (optional)}
+\item{reference}{Character. URL or reference to access the source data (optional)}
 }
 \value{
 StandardizationReference object

@@ -13,20 +13,23 @@ RoxygenNote: 7.3.2
 Depends: 
     R (>= 4.1.0)
 Imports: 
+    checkmate,
     cli,
     crayon,
-    fs,
-    purrr,
-    SqlRender,
-    snakecase,
-    DatabaseConnector,
+    digest,
     dplyr,
+    fs,
     glue,
-    readr,
-    tibble,
-    tidyr,
     here,
-    methods
+    jsonlite,
+    methods,
+    purrr,
+    readr,
+    snakecase,
+    SqlRender,
+    DatabaseConnector,
+    tibble,
+    tidyr
 Additional_repositories: https://OHDSI.github.io/drat
 Suggests: 
     knitr,

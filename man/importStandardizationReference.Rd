@@ -10,7 +10,7 @@ importStandardizationReference(
   country,
   year,
   source,
-  doi = NULL,
+  reference = NULL,
   encoding = "UTF-8"
 )
 }
@@ -25,7 +25,7 @@ importStandardizationReference(
 
 \item{source}{Character. Data source description}
 
-\item{doi}{Character. DOI or URL (optional)}
+\item{reference}{Character. URL or reference to access the source data (optional)}
 
 \item{encoding}{Character. File encoding (default: "UTF-8")}
 }
