@@ -149,12 +149,13 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Validate each item is either YearlyRange or Span
       for (i in seq_along(poi_list)) {
         obj <- poi_list[[i]]
-        is_yearly <- inherits(obj, "YearlyRange") || all(c("years") %in% names(obj))
-        is_span <- inherits(obj, "Span") || all(c("start", "end") %in% names(obj))
+        is_poi <- inherits(obj, "PeriodOfInterest")
+        #is_yearly <- obj$poiType == "yearly"
+        #is_span <- obj$poiType == "span"
 
-        if (!is_yearly && !is_span) {
+        if (!is_poi) {
           stop(
-            "Item ", i, " in poi_list is not recognized as YearlyRange or Span. ",
+            "Item ", i, " in poi_list is not recognized as PeriodOfInterest Class. ",
             "Use createYearlyRange() or createSpan() to create objects."
           )
         }
@@ -296,7 +297,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
         row <- spec[i, ]
 
         # Reconstruct POI object from spec row
-        poi_obj <- if (row$poiType == "YearlyRange") {
+        poi_obj <- if (row$poiType == "yearly") {
           # Extract years from poiLabel (format: "2015-2024")
           year_parts <- as.numeric(strsplit(row$poiLabel, "-")[[1]])
           createYearlyRange(year_parts[1]:year_parts[2])
@@ -351,44 +352,38 @@ CohortPrevalenceExperiment <- R6::R6Class(
     .expandPeriodsOfInterest = function() {
       poi_spec <- tibble::tibble(
         poiType = character(),
-        poiStart = as.Date(character()),
-        poiEnd = as.Date(character()),
         poiLabel = character()
       )
 
       for (i in seq_along(private$.periodsOfInterest)) {
         poi <- private$.periodsOfInterest[[i]]
-
+        is_yearly <- poi$poiType == "yearly"
+        is_span <- poi$poiType == "span"
         # Check if YearlyRange
-        if (inherits(poi, "YearlyRange") || all(c("years") %in% names(poi))) {
-          years <- if (inherits(poi, "YearlyRange")) {
-            poi$years
-          } else {
-            poi$years
-          }
-
-          # Treat yearly range as SINGLE POI unit
-          poi_spec <- rbind(poi_spec, tibble::tibble(
-            poiType = "YearlyRange",
-            poiStart = as.Date(paste0(min(years), "-01-01")),
-            poiEnd = as.Date(paste0(max(years), "-12-31")),
-            poiLabel = paste0(min(years), "-", max(years))
-          ))
-
-        } else if (inherits(poi, "Span") || all(c("start", "end") %in% names(poi))) {
-          start_date <- if (inherits(poi, "Span")) poi$start else as.Date(poi$start)
-          end_date <- if (inherits(poi, "Span")) poi$end else as.Date(poi$end)
-
-          poi_spec <- rbind(poi_spec, tibble::tibble(
-            poiType = "Span",
-            poiStart = as.Date(start_date),
-            poiEnd = as.Date(end_date),
-            poiLabel = paste0(lubridate::year(start_date), "_", lubridate::month(start_date), "-", lubridate::year(end_date), "_", lubridate::month(end_date))
-          ))
+        if (is_yearly) {
+           a <- min(poi$poiRange)
+           b <- max(poi$poiRange)
+           poiLabel <- glue::glue("{a}-{b}")
+           poi_spec <- rbind(
+            poi_spec, 
+            tibble::tibble(
+             poiType = "yearly",
+             poiLabel = poiLabel
+            )
+           )
+        } else {
+          poiLabel <- glue::glue("{poi$poiRange$span_label}")
+          poi_spec <- rbind(
+            poi_spec, 
+            tibble::tibble(
+             poiType = "span",
+             poiLabel = poiLabel
+            )
+           )
         }
       }
 
-      poi_spec
+      return(poi_spec)
     },
 
     # Create expanded specification tibble
@@ -426,7 +421,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
           cohortId, cohortName, circeJsonPath,
           prevalenceType, lookBackDays,
           ageMin, ageMax, genderIds,
-          poiType, poiStart, poiEnd, poiLabel,
+          poiType, poiLabel,
           strata, outputTypes
         )
 

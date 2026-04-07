@@ -147,7 +147,7 @@ PrevalenceResults <- R6::R6Class(
         }
 
         # Create and write manifest
-        manifest <- private$.createManifest(exportedFiles, bundlePath)
+        manifest <- private$.createManifest(exportedFiles)
         manifestFile <- file.path(bundlePath, "manifest.json")
         jsonlite::write_json(manifest, manifestFile, pretty = TRUE)
         cli::cli_alert_success("Manifest created")
@@ -414,10 +414,10 @@ PrevalenceResults <- R6::R6Class(
     .executedQueries = NULL,
 
     # Create manifest JSON for provenance tracking
-    .createManifest = function(exportedFiles, bundlePath) {
+    .createManifest = function(exportedFiles) {
       list(
         export_date = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ"),
-        cohortprevalence_version = utils::packageVersion("CohortPrevalence"),
+        cohortprevalence_version = as.character(utils::packageVersion("CohortPrevalence")),
         r_version = paste0(R.version$major, ".", R.version$minor),
         execution_id = private$.executionId,
         files = exportedFiles,
