@@ -1,3 +1,10 @@
+CohortPrevalence v1.0.1
+=======================
+
+## Main Bug fix
+- add R6 as import for package
+- correct bugs in prevalence
+
 CohortPrevalence v1.0.0
 =======================
 
