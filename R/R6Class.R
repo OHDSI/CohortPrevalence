@@ -5,40 +5,37 @@ CohortPrevalenceAnalysis <- R6::R6Class(
   classname = "CohortPrevalenceAnalysis",
   public = list(
     initialize = function(analysisId,
+                          analysisTag,
                           prevalentCohort,
                           periodOfInterest,
-                          lookBackOptions,
-                          numeratorType,
-                          denominatorType,
+                          prevalenceType,
                           minimumObservationLength = 0L,
                           useOnlyFirstObservationPeriod = FALSE,
                           multiplier = 100000,
                           strata = NULL,
                           demographicConstraints,
-                          populationCohort = NULL) {
+                          populationCohort = NULL,
+                          outputTypes = "prevalence",
+                          drugConceptSets = NULL) {
       # set analysisId
       checkmate::assert_integerish(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
+
+      # set analysisTag
+      checkmate::assert_string(x = analysisTag)
+      private[[".analysisTag"]] <- analysisTag
 
       # set prevalent cohort
       checkmate::assert_class(x = prevalentCohort, classes = "CohortInfo")
       private[[".prevalentCohort"]] <- prevalentCohort
 
-      # set periodOfInterst
+      # set periodOfInterest
       checkmate::assert_class(x = periodOfInterest, classes = "PeriodOfInterest")
       private[[".periodOfInterest"]] <- periodOfInterest
 
-      # set lookBackOptions
-      checkmate::assert_class(x = lookBackOptions, classes = "LookBackOptions")
-      private[[".lookBackOptions"]] <- lookBackOptions
-
-      # set numeratorType
-      checkmate::assert_choice(x = numeratorType, choices = c("pn1", "pn2"))
-      private[[".numeratorType"]] <- numeratorType
-
-      # set denominator type
-      checkmate::assert_class(x = denominatorType, classes = "DenominatorType")
-      private[[".denominatorType"]] <- denominatorType
+      # set prevalenceType
+      checkmate::assert_class(x = prevalenceType, classes = "PrevalenceType")
+      private[[".prevalenceType"]] <- prevalenceType
 
 
       # set minimumObservationLength
@@ -64,6 +61,31 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # set population
       checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
+
+      # set outputTypes (defaults to "prevalence", can include "incidence" and/or "drugs")
+      checkmate::assert_character(x = outputTypes, min.len = 1)
+      checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
+      private[[".outputTypes"]] <- outputTypes
+
+      # set drugConceptSets - required if "drugs" is in outputTypes
+      if ("drugs" %in% outputTypes) {
+        checkmate::assert_list(x = drugConceptSets, min.len = 1,
+                              .var.name = "drugConceptSets must be a non-empty list when 'drugs' is in outputTypes")
+        # Validate each item has the expected Capr ConceptSetItem structure (@id and @Name slots)
+        for (i in seq_along(drugConceptSets)) {
+          item <- drugConceptSets[[i]]
+          if (!methods::isS4(item) || !methods::hasSlots(item, c("id", "Name"))) {
+            stop("Each item in drugConceptSets must be a Capr ConceptSetItem with @id and @Name slots")
+          }
+        }
+      } else {
+        # If "drugs" not in outputTypes, drugConceptSets should be NULL
+        if (!is.null(drugConceptSets)) {
+          cli::cli_alert_warning("drugConceptSets ignored: 'drugs' not in outputTypes")
+          drugConceptSets <- NULL
+        }
+      }
+      private[[".drugConceptSets"]] <- drugConceptSets
 
     },
 
@@ -114,23 +136,43 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         strata <- ""
       }
 
-      # get the denom file
-      denomType <- self$denominatorType$getDenomType()
-      if (denomType == "pd4") {
-        sufficientDays <- self$denominatorType$getSufficientDays()
+      # get the denom file based on denominator type and cohort pattern
+      denomType <- self$prevalenceType$getDenominatorType()
+      cohortPattern <- self$prevalentCohort$getCircePattern()
+      
+      # Start with base SQL (always needed)
+      sqlComponents <- c(yearRangeSql, obsPopSql, obsPopYearSql)
+      
+      # Add output-specific SQL based on outputTypes
+      if ("prevalence" %in% private$.outputTypes) {
+        denomSql <- readr::read_file(
+          fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}_{cohortPattern}.sql"))
+        ) |>
+          glue::glue()
+        
+        prevSql <- buildPrevalenceAggSQL(strata)
+        
+        sqlComponents <- c(sqlComponents, denomSql, prevSql)
       }
-      denomSql <- readr::read_file(
-        fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}.sql"))
-      ) |>
-        glue::glue()
+      
+      if ("incidence" %in% private$.outputTypes) {
+        incDenomSql <- readr::read_file(
+          fs::path_package(package = "CohortPrevalence", "sql/incDenom.sql")
+        ) |>
+          glue::glue()
+        
+        incSql <- buildIncidenceAggSQL(strata)
+        
+        sqlComponents <- c(sqlComponents, incDenomSql, incSql)
+      }
+      
+      if ("drugs" %in% private$.outputTypes) {
+        drugSql <- prepDrugConceptSetQuery(drugConceptSets = self$drugConceptSets, executionSettings = executionSettings)
+        
+        sqlComponents <- c(sqlComponents, drugSql)
+      }
 
-      # get the doPrev file
-      prevSql <- readr::read_file(
-        fs::path_package(package = "CohortPrevalence", glue::glue("sql/doPrevalence.sql"))
-      ) |>
-        glue::glue()
-
-      allSql <- c(yearRangeSql, obsPopSql, obsPopYearSql, denomSql, prevSql) |>
+      allSql <- sqlComponents |>
         glue::glue_collapse("\n\n")
 
       return(allSql)
@@ -149,9 +191,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
         prevalent_cohort_id = self$prevalentCohort$id(),
-        use_observed_time = self$lookBackOptions$useObservedTimeOnly,
-        pn = self$numeratorType,
-        lookback = self$lookBackOptions$lookBackDays,
+        lookback = self$prevalenceType$lookBackDays,
         multiplier = self$multiplier
       ) |>
         SqlRender::translate(
@@ -163,13 +203,11 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
     viewAnalysisInfo = function() {
       txt <- c(
+        glue::glue("Analysis Tag: {self$analysisTag}"),
         glue::glue("Prevalent Cohort ==> {self$prevalentCohort$viewCohortInfo()}"),
         self$periodOfInterest$viewPeriodOfInterest(),
-        c(glue::glue("Numerator Type ==> {self$numeratorType}"),
-          getNumText(numType = self$numeratorType)
-        ) |> glue::glue_collapse("\n"),
-        self$denominatorType$viewDenominatorType(),
-        self$lookBackOptions$viewLookBackOptions(),
+        self$prevalenceType$viewPrevalenceType(),
+        glue::glue("Output Types ==> {paste0(private$.outputTypes, collapse = ', ')}"),
         glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
         glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
         glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
@@ -191,49 +229,128 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
 
       # prep denom
-      if (self$denominatorType$getDenomType() == "pd4") {
-        dn <- glue::glue("{self$denominatorType$getDenomType()}: {self$denominatorType$getSufficientDays()")
-      } else {
-        dn <- self$denominatorType$getDenomType()
-      }
+      denomType <- self$prevalenceType$getDenominatorType()
+      dn <- denomType
 
       # prep op
       ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
       demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
       demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
-
+      
+      # prep outputTypes
+      outputs <- paste0(private$.outputTypes, collapse = ", ")
 
       tb <- tibble::tibble(
         analysisId = self$analysisId,
+        analysisTag = self$analysisTag,
         cohortId = self$prevalentCohort$id(),
         cohortName = self$prevalentCohort$name(),
         poi = poi,
-        lookBackDays = glue::glue("{self$lookBackOptions$lookBackDays}d"),
-        num = self$numeratorType,
-        denom = dn,
+        prevalenceType = self$prevalenceType$getPrevalenceLabel(),
+        lookBackDays = glue::glue("{self$prevalenceType$lookBackDays}d"),
+        numerator = self$prevalenceType$getNumeratorType(),
+        denominator = dn,
         obsPeriod = ope,
+        outputTypes = outputs,
         demoConAge = demoConAge,
         demoConGender = demoConGender
       )
 
       return(tb)
+    },
+
+    collectResults = function(connection, executionSettings) {
+      
+      checkmate::assert_class(connection, classes = "DatabaseConnectorConnection")
+      checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
+      
+      resultList <- list()
+      
+      # Create metaInfo table
+      metaInfo <- self$tabulateAnalysisSettings()
+      
+      # Collect prevalence results
+      if ("prevalence" %in% private$.outputTypes) {
+        prevResults <- DatabaseConnector::renderTranslateQuerySql(
+          connection = connection,
+          sql = "SELECT * FROM #prevalence;",
+          tempEmulationSchema = executionSettings$tempEmulationSchema,
+          snakeCaseToCamelCase = TRUE
+        ) |>
+          dplyr::arrange(.data$spanLabel) |>
+          dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
+            databaseId = executionSettings$cdmSourceName,
+            statType = "Prevalence",
+            .before = 1
+          )
+        resultList$prevalence <- prevResults
+      }
+      
+      # Collect incidence results  
+      if ("incidence" %in% private$.outputTypes) {
+        incResults <- DatabaseConnector::renderTranslateQuerySql(
+          connection = connection,
+          sql = "SELECT * FROM #incidence;",
+          tempEmulationSchema = executionSettings$tempEmulationSchema,
+          snakeCaseToCamelCase = TRUE
+        ) |>
+          dplyr::arrange(.data$spanLabel) |>
+          dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
+            databaseId = executionSettings$cdmSourceName,
+            statType = "Incidence Rate",
+            .before = 1
+          )
+        resultList$incidence <- incResults
+      }
+      
+      # Collect drug usage results
+      if ("drugs" %in% private$.outputTypes) {
+        drugResults <- DatabaseConnector::renderTranslateQuerySql(
+          connection = connection,
+          sql = "SELECT * FROM #drug_cal_res;",
+          tempEmulationSchema = executionSettings$tempEmulationSchema,
+          snakeCaseToCamelCase = TRUE
+        ) |>
+          dplyr::arrange(.data$spanLabel) |>
+          dplyr::mutate(
+            analysisId = self$analysisId,
+            cohortId = self$prevalentCohort$id(),
+            cohortName = self$prevalentCohort$name(),
+            databaseId = executionSettings$cdmSourceName,
+            statType = "Drug Usage",
+            .before = 1
+          )
+        resultList$drugUsage <- drugResults
+      }
+      
+      # Add metaInfo as separate table in resultList
+      resultList$metaInfo <- metaInfo
+      
+      return(resultList)
     }
 
   ),
   private = list(
     # formalize vars
     .analysisId = NULL,
+    .analysisTag = NULL,
     .prevalentCohort = NULL,
     .periodOfInterest = NULL,
-    .lookBackOptions = NULL,
-    .numeratorType = NULL,
-    .denominatorType = NULL,
+    .prevalenceType = NULL,
     .minimumObservationLength = NULL,
     .useOnlyFirstObservationPeriod = NULL,
     .multiplier = NULL,
     .strata = NULL,
     .demographicConstraints = NULL,
-    .populationCohort = NULL
+    .populationCohort = NULL,
+    .outputTypes = NULL,
+    .drugConceptSets = NULL
   ),
   active = list(
     # active fields for R6 class
@@ -244,6 +361,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_integerish(x = analysisId, len = 1)
       private$.analysisId <- value
+    },
+
+    analysisTag = function(value) {
+      if (missing(value)) {
+        return(private$.analysisTag)
+      }
+      checkmate::assert_string(x = analysisTag)
+      private$.analysisTag <- value
     },
 
     prevalentCohort = function(value) {
@@ -258,33 +383,16 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.periodOfInterest)
       }
-      checkmate::assert_class(x = periodOfInterst, classes = "PeriodOfInterest")
+      checkmate::assert_class(x = periodOfInterest, classes = "PeriodOfInterest")
       private$.periodOfInterest <- value
     },
 
-    lookBackOptions = function(value) {
+    prevalenceType = function(value) {
       if (missing(value)) {
-        return(private$.lookBackOptions)
+        return(private$.prevalenceType)
       }
-      checkmate::assert_class(x = lookBackOptions, classes = "LookBackOptions")
-      private$.lookBackOptions <- value
-    },
-
-
-    numeratorType = function(value) {
-      if (missing(value)) {
-        return(private$.numeratorType)
-      }
-      checkmate::assert_choice(x = numeratorType, choices = c("pn1", "pn2"))
-      private$.numeratorType <- value
-    },
-
-    denominatorType = function(value) {
-      if (missing(value)) {
-        return(private$.denominatorType)
-      }
-      checkmate::assert_class(x = denominatorType, classes = "DenominatorType")
-      private$.denominatorType <- value
+      checkmate::assert_class(x = prevalenceType, classes = "PrevalenceType")
+      private$.prevalenceType <- value
     },
 
     minimumObservationLength = function(value) {
@@ -335,6 +443,31 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
       private$.demographicConstraints <- value
+    },
+
+    outputTypes = function(value) {
+      if (missing(value)) {
+        return(private$.outputTypes)
+      }
+      checkmate::assert_character(x = outputTypes, min.len = 1)
+      checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
+      private$.outputTypes <- value
+    },
+
+    drugConceptSets = function(value) {
+      if (missing(value)) {
+        return(private$.drugConceptSets)
+      }
+      if (!is.null(value)) {
+        checkmate::assert_list(x = value, min.len = 1)
+        for (i in seq_along(value)) {
+          item <- value[[i]]
+          if (!methods::isS4(item) || !methods::hasSlots(item, c("id", "Name"))) {
+            stop("Each item in drugConceptSets must be a Capr ConceptSetItem with @id and @Name slots")
+          }
+        }
+      }
+      private$.drugConceptSets <- value
     }
 
   )
@@ -469,7 +602,6 @@ IncidenceAnalysis <- R6::R6Class(
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
-        use_observed_time = FALSE,
         prevalent_cohort_id = self$targetCohort$id(),
         multiplier = self$multiplier
       ) |>
@@ -501,7 +633,7 @@ IncidenceAnalysis <- R6::R6Class(
         b <- max(self$periodOfInterest$poiRange)
         poi <- glue::glue("{self$periodOfInterest$poiType}: {a}-{b}")
       } else {
-        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterestSpan$poiRange$span_label}")
+        poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterest$poiRange$span_label}")
       }
 
 
@@ -620,48 +752,119 @@ IncidenceAnalysis <- R6::R6Class(
 
 # SubClasses ------
 
-## Lookback options --------------
-LookBackOptions <- R6::R6Class(
-  classname = "LookBackOptions",
+## PrevalenceType Class ----------------
+PrevalenceType <- R6::R6Class(
+  classname = "PrevalenceType",
   public = list(
-    initialize = function(lookBackDays, useObservedTimeOnly = FALSE) {
-      # set lookBackDays
-      checkmate::assert_integerish(x = lookBackDays, len = 1)
+    initialize = function(prevalenceType, lookBackDays) {
+      
+      # Validate prevalenceType is one of the valid options
+      validTypes <- c(
+        "point_prevalence",      # pn1 + pd1
+        "period_prevalence_pd2", # pn2 + pd2
+        "period_prevalence_pd3", # pn2 + pd3
+        "period_prevalence_pd4"  # pn2 + pd4
+      )
+      checkmate::assert_choice(x = prevalenceType, choices = validTypes)
+      private[[".prevalenceType"]] <- prevalenceType
+      
+      # Validate lookBackDays - any non-negative integer, or Inf for complete lookback
+      checkmate::assert_integerish(x = lookBackDays, len = 1, lower = 0)
       private[[".lookBackDays"]] <- lookBackDays
-
-      # set useObservedTimeOnly
-      checkmate::assert_logical(x = useObservedTimeOnly, len = 1)
-      private[[".useObservedTimeOnly"]] <- useObservedTimeOnly
+      
     },
-
-    viewLookBackOptions = function() {
-      lbd <- self$lookBackDays
-      uoto <- self$useObservedTimeOnly
-      txt <- glue::glue("Lookback Options ==> Lookback Days: {lbd}d | Using Observed Time: {uoto}")
+    
+    # Getter: returns the numerator type (pn1 or pn2)
+    getNumeratorType = function() {
+      if (private$.prevalenceType == "point_prevalence") {
+        return("pn1")
+      } else {
+        return("pn2")
+      }
+    },
+    
+    # Getter: returns the denominator type (pd1, pd2, pd3, or pd4)
+    getDenominatorType = function() {
+      denomMap <- list(
+        "point_prevalence" = "pd1",
+        "period_prevalence_pd2" = "pd2",
+        "period_prevalence_pd3" = "pd3",
+        "period_prevalence_pd4" = "pd4"
+      )
+      denomType <- denomMap[[private$.prevalenceType]]  
+      return(denomType)
+    },
+    
+    # Getter: returns human-readable prevalence type label
+    getPrevalenceLabel = function() {
+      labelMap <- list(
+        "point_prevalence" = "Point Prevalence",
+        "period_prevalence_pd2" = "Period Prevalence (all time observed)",
+        "period_prevalence_pd3" = "Period Prevalence (continuous observation)",
+        "period_prevalence_pd4" = "Period Prevalence (sufficient days)"
+      )
+      return(labelMap[[private$.prevalenceType]])
+    },
+    
+    # Getter: returns human-readable lookback label
+    getLookbackLabel = function() {
+      lbd <- private$.lookBackDays
+      if (lbd == 0) {
+        return("No lookback (events during POI only)")
+      } else if (lbd == 365) {
+        return("1-year lookback")
+      } else if (lbd == 1095) {
+        return("3-year lookback")
+      } else if (is.infinite(lbd)) {
+        return("Complete historical lookback")
+      } else {
+        return(glue::glue("{lbd}-day lookback"))
+      }
+    },
+    
+    # View method: display full prevalence type configuration
+    viewPrevalenceType = function() {
+      prevalenceLabel <- self$getPrevalenceLabel()
+      lookbackLabel <- self$getLookbackLabel()
+      numerator <- self$getNumeratorType()
+      denominator <- self$getDenominatorType()
+      
+      txt <- c(
+        glue::glue("Prevalence Type ==> {prevalenceLabel}"),
+        glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
+        glue::glue("  Lookback: {lookbackLabel}")
+      ) |> glue::glue_collapse("\n")
+      
       return(txt)
     }
+    
   ),
   private = list(
-    .lookBackDays = NULL,
-    .useObservedTimeOnly = NULL
+    .prevalenceType = NULL,
+    .lookBackDays = NULL
   ),
-
   active = list(
-
+    
+    prevalenceType = function(value) {
+      if (missing(value)) {
+        return(private$.prevalenceType)
+      }
+      validTypes <- c(
+        "point_prevalence",
+        "period_prevalence_pd2",
+        "period_prevalence_pd3",
+        "period_prevalence_pd4"
+      )
+      checkmate::assert_choice(x = value, choices = validTypes)
+      private$.prevalenceType <- value
+    },
+    
     lookBackDays = function(value) {
       if (missing(value)) {
         return(private$.lookBackDays)
       }
-      checkmate::assert_integerish(x = lookBackDays, len = 1)
+      checkmate::assert_integerish(x = value, len = 1, lower = 0)
       private$.lookBackDays <- value
-    },
-
-    useObservedTimeOnly = function(value) {
-      if (missing(value)) {
-        return(private$.useObservedTimeOnly)
-      }
-      checkmate::assert_logical(x = useObservedTimeOnly, len = 1)
-      private$.useObservedTimeOnly <- value
     }
   )
 )
@@ -670,13 +873,57 @@ LookBackOptions <- R6::R6Class(
 CohortInfo <- R6::R6Class(
   classname = "CohortInfo",
   public = list(
-    initialize = function(id, name) {
+    initialize = function(id, name, cohortType = "prevalent", circeJsonPath = NULL) {
 
       checkmate::assert_integerish(x = id, len = 1)
       private[[".id"]] <- id
 
       checkmate::assert_string(x = name, min.chars = 1)
       private[[".name"]] <- name
+
+      # Validate cohort type
+      checkmate::assert_choice(x = cohortType, choices = c("prevalent", "population"))
+      private[[".cohortType"]] <- cohortType
+
+      # CIRCE validation only required for prevalent cohorts
+      if (cohortType == "prevalent") {
+        if (is.null(circeJsonPath)) {
+          stop(glue::glue("circeJsonPath is required for {cohortType} cohorts"))
+        }
+        
+        tryCatch(
+          {
+            checkmate::assert_file_exists(circeJsonPath)
+            validationResult <- self$validateCirceJson(circeJsonPath)
+            
+            cli::cli_alert_success(
+              glue::glue("✓ CIRCE validation passed for '{name}' (ID: {id})")
+            )
+            cli::cli_alert_info(
+              glue::glue("  Pattern: {validationResult$patternLabel}")
+            )
+            
+            private[[".circePattern"]] <- validationResult$pattern
+            private[[".circePatternLabel"]] <- validationResult$patternLabel
+          },
+          error = function(e) {
+            cli::cli_alert_danger(
+              glue::glue("✗ CIRCE validation failed for '{name}' (ID: {id})")
+            )
+            cli::cli_alert_info(glue::glue("  Error: {e$message}"))
+            stop(e)
+          },
+          warning = function(w) {
+            cli::cli_alert_warning(
+              glue::glue("⚠ Warning during CIRCE validation for '{name}' (ID: {id}): {w$message}")
+            )
+          }
+        )
+      } else {
+        # Population cohorts don't need CIRCE validation
+        private[[".circePattern"]] <- NA_character_
+        private[[".circePatternLabel"]] <- "N/A (Population denominator)"
+      }
     },
     id = function() {
       cId <- private$.id
@@ -686,16 +933,70 @@ CohortInfo <- R6::R6Class(
       cName <- private$.name
       return(cName)
     },
+    getCohortType = function() {
+      return(private$.cohortType)
+    },
     viewCohortInfo = function(){
       id <- self$id()
       name <- self$name()
-      info <- glue::glue("Cohort Id: {id} | Cohort Name: {name}")
+      cohortType <- private$.cohortType
+      patternLabel <- private$.circePatternLabel
+      info <- glue::glue("Cohort Id: {id} | Name: {name} | Type: {cohortType} | Pattern: {patternLabel}")
       return(info)
+    },
+    
+    getCircePattern = function() {
+      return(private$.circePattern)
+    },
+    
+    validateCirceJson = function(circeJsonPath) {
+      # Read and parse CIRCE JSON file
+      tryCatch(
+        {
+          circeJson <- jsonlite::read_json(circeJsonPath)
+        },
+        error = function(e) {
+          stop(glue::glue("Failed to parse CIRCE JSON: {e$message}"))
+        }
+      )
+      
+      # Extract key components with safe access
+      pcl <- tryCatch(circeJson$PrimaryCriteria$PrimaryCriteriaLimit$Type, error = function(e) NULL)
+      el <- tryCatch(circeJson$ExpressionLimit$Type, error = function(e) NULL)
+      es <- tryCatch(circeJson$EndStrategy, error = function(e) NULL)
+      hasDateOffset <- !is.null(es) && !is.null(es$DateOffset)
+      
+      # Pattern 1: ERA (First/First/No EndStrategy)
+      # Pattern 2: OCCURRENCE (All/All/DateOffset)
+      isPattern1 <- (pcl == "First" && el == "First" && is.null(es))
+      isPattern2 <- (pcl == "All" && el == "All" && hasDateOffset)
+      isValid <- isPattern1 || isPattern2
+      
+      if (!isValid) {
+        stop(
+          "Invalid CIRCE cohort definition for ", self$name(), ".\n",
+          "Pattern 1 (ERA): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy\n",
+          "Pattern 2 (OCCURRENCE): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy\n",
+          "Found: PrimaryCriteriaLimit='", pcl, "', ExpressionLimit='", el, "', ",
+          "EndStrategy=", if (is.null(es)) "NULL" else "Present"
+        )
+      }
+      ll <- list(
+        isValid = isValid,
+        pattern = if (isPattern1) "era" else "occurrence",
+        patternLabel = if (isPattern1) "ERA (Interval Overlap)" else "OCCURRENCE (Point-in-Time)",
+        details = list(primaryCriteriaLimit = pcl, expressionLimit = el, hasDateOffset = hasDateOffset)
+      )
+      
+      invisible(ll)
     }
   ),
   private = list(
     .id = NULL,
-    .name = NULL
+    .name = NULL,
+    .cohortType = NULL,
+    .circePattern = NULL,
+    .circePatternLabel = NULL
   )
 )
 
@@ -747,7 +1048,7 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiType)
       }
-      checkmate::assert_choice(x = poiType, choices = c("yearly", "span"))
+      checkmate::assert_choice(x = value, choices = c("yearly", "span"))
       private$.poiType <- value
     },
 
@@ -755,74 +1056,18 @@ PeriodOfInterest <- R6::R6Class(
       if (missing(value)) {
         return(private$.poiRange)
       }
-      if (poiType == "yearly"){
-        checkmate::assert_integerish(x = poiRange, min.len = 1)
-      } else if (poiType == "span"){
-        checkmate::assert_data_frame(x = poiRange,
+      if (self$poiType == "yearly"){
+        checkmate::assert_integerish(x = value, min.len = 1)
+      } else if (self$poiType == "span"){
+        checkmate::assert_data_frame(x = value,
                                      any.missing = FALSE)
-        checkmate::assert_date(poiRange$calendar_start_date, min.len = 1)
-        checkmate::assert_date(poiRange$calendar_end_date, min.len = 1)
+        checkmate::assert_date(value$calendar_start_date, min.len = 1)
+        checkmate::assert_date(value$calendar_end_date, min.len = 1)
       }
       private$.poiRange <- value
     }
   )
 
-)
-
-## Denominator Type -------------
-DenominatorType <- R6::R6Class(
-  classname = "DenominatorType",
-  public = list(
-    initialize = function(denomType, sufficientDays) {
-      # set denominatorType
-      checkmate::assert_choice(x = denomType, choices = c("pd1", "pd2", "pd3", "pd4"))
-      private[[".denomType"]] <- denomType
-
-      if (denomType == "pd4") {
-        checkmate::assert_integerish(x = sufficientDays, len = 1)
-        private[[".sufficientDays"]] <- sufficientDays
-      }
-    },
-    # TODO add more defensive programming to prevent suffientDays to non pd4
-    updateDenominatorType = function(denomType, sufficientDays) {
-      checkmate::assert_choice(x = denomType, choices = c("pd1", "pd2", "pd3", "pd4"))
-      private$.denomType <- denomType
-      if (denomType != "pd4") {
-        private$.sufficientDays <- NULL
-        cli::cat_line(glue::glue("Remove sufficientDays option for {denomType}"))
-      }
-      if (denomType == "pd4") {
-        private$.sufficientDays <- sufficientDays
-        cli::cat_line(glue::glue("Update sufficientDays option to {sufficientDays} days for {denomType}"))
-      }
-    },
-
-    getDenomType = function() {
-      denomType <- private$.denomType
-      return(denomType)
-    },
-
-    viewDenominatorType = function() {
-      denomType <- self$getDenomType()
-      sufficientDays <- private$.sufficientDays
-      if (denomType == "pn4") {
-        txt1 <- glue::glue("Denominator Type ==> {denomType} | Sufficient Days: {sufficientDays}")
-      } else {
-        txt1 <- glue::glue("Denominator Type ==> {denomType}")
-      }
-      txt2 <- getDenomText(denomType)
-      txt <- c(txt1, txt2) |> glue::glue_collapse("\n")
-      return(txt)
-    },
-
-    getSufficientDays = function() {
-      private$.sufficientDays
-    }
-  ),
-  private = list(
-    .denomType = NULL,
-    .sufficientDays = NULL
-  )
 )
 
 ## Demographic Constraints -------------
@@ -855,7 +1100,7 @@ DemoConstraint <- R6::R6Class(
       if (missing(value)) {
         return(private$.ageMin)
       }
-      checkmate::assert_integerish(x = ageMin, len = 1)
+      checkmate::assert_integerish(x = value, len = 1)
       private$.ageMin <- value
     },
 
@@ -863,7 +1108,7 @@ DemoConstraint <- R6::R6Class(
       if (missing(value)) {
         return(private$.ageMax)
       }
-      checkmate::assert_integerish(x = ageMax, len = 1)
+      checkmate::assert_integerish(x = value, len = 1)
       private$.ageMax <- value
     },
 
@@ -871,7 +1116,7 @@ DemoConstraint <- R6::R6Class(
       if (missing(value)) {
         return(private$.genderIds)
       }
-      checkmate::assert_integerish(x = genderIds, len = 1)
+      checkmate::assert_integerish(x = value)
       private$.genderIds <- value
     }
   )

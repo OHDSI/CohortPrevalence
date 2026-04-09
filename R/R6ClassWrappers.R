@@ -1,51 +1,81 @@
+#' Create a `PrevalenceType` object
+#'
+#' Constructs a `PrevalenceType` object specifying the prevalence type and lookback period.
+#'
+#' @param prevalenceType Character string specifying prevalence type. Must be one of:
+#' \itemize{
+#'   \item `"point_prevalence"`: Status on a specific day (pn1 + pd1)
+#'   \item `"period_prevalence_pd2"`: All time observed during period (pn2 + pd2)
+#'   \item `"period_prevalence_pd3"`: Continuous observation (pn2 + pd3)
+#'   \item `"period_prevalence_pd4"`: Sufficient days observed (pn2 + pd4)
+#' }
+#' @param lookBackDays Integer number of days for lookback window. Can be 0, any positive integer, or Inf for complete lookback.
+#' @return A `PrevalenceType` R6 object.
+#' @export
+#'
+createPrevalenceType <- function(prevalenceType, lookBackDays) {
+  pt <- PrevalenceType$new(
+    prevalenceType = prevalenceType,
+    lookBackDays = lookBackDays
+  )
+  return(pt)
+}
+
 #' Create a `CohortPrevalenceAnalysis` object
 #'
 #' Constructs an `CohortPrevalenceAnalysis` object with the specified settings.
 #'
 #' @param analysisId Unique integer analysisId to identify the analysis (required).
-#' @param prevalentCohort A `PrevalenceCohort` object specifying the cohort of interest (required).
+#' @param prevalentCohort A `CohortInfo` object specifying the cohort of interest (required).
 #' @param periodOfInterest A `PeriodOfInterest` object (required).
-#' @param lookbackOptions A `LookBackOption` object (required).
-#' @param numeratorType Character string specifying numerator type. Must be one of:
-#' \itemize{
-#'   \item `"pn1"`: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
-#'   \item `"pn2"`: patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time
-#' }
-#' @param denominatorType A `DenominatorType` object (required).
+#' @param prevalenceType A `PrevalenceType` object (required).
 #' @param minimumObservationLength: Integer specifying minimum observation length (optional).
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
 #' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
-#' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
+#' @param populationCohort A `CohortInfo` object specifying the population of interest on which to compute prevalence.
+#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"` and/or `"drugs"` for simultaneous generation using shared base tables.
+#'   **Warning**: The `"drugs"` output type is experimental and should be used with caution. Results may be subject to future changes.
+#' @param drugConceptSets Optional list of Capr ConceptSetItems. Required if `"drugs"` is in `outputTypes`, otherwise ignored.
 #'
 #' @return A `CohortPrevalenceAnalysis` R6 object.
 #' @export
 #'
 createCohortPrevalenceAnalysis <- function(analysisId,
+                                           analysisTag = NULL,
                                            prevalentCohort,
                                            periodOfInterest,
-                                           lookBackOptions,
-                                           numeratorType,
-                                           denominatorType,
+                                           prevalenceType,
                                            minimumObservationLength = 0L,
                                            useOnlyFirstObservationPeriod = FALSE,
                                            multiplier = 100000L,
                                            strata = NULL,
                                            demographicConstraints = createDemographicConstraints(),
-                                           populationCohort = NULL){
-  analysisDef <- CohortPrevalenceAnalysis$new(analysisId = analysisId,
-                               prevalentCohort = prevalentCohort,
-                               periodOfInterest = periodOfInterest,
-                               lookBackOptions = lookBackOptions,
-                               numeratorType = numeratorType,
-                               denominatorType = denominatorType,
-                               minimumObservationLength = minimumObservationLength,
-                               useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
-                               multiplier = multiplier,
-                               strata = strata,
-                               demographicConstraints = demographicConstraints,
-                               populationCohort = populationCohort)
+                                           populationCohort = NULL,
+                                           outputTypes = "prevalence",
+                                           drugConceptSets = NULL){
+  if (is.null(analysisTag)) {
+    analysisTag <- glue::glue("Analysis {analysisId} | {prevalentCohort$name()}")
+  } else {
+    analysisTag <- glue::glue("{analysisTag} | {prevalentCohort$name()}")
+  }
+
+  analysisDef <- CohortPrevalenceAnalysis$new(
+    analysisId = analysisId,
+    analysisTag = analysisTag,
+    prevalentCohort = prevalentCohort,
+    periodOfInterest = periodOfInterest,
+    prevalenceType = prevalenceType,
+    minimumObservationLength = minimumObservationLength,
+    useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
+    multiplier = multiplier,
+    strata = strata,
+    demographicConstraints = demographicConstraints,
+    populationCohort = populationCohort,
+    outputTypes = outputTypes,
+    drugConceptSets = drugConceptSets
+  )
   return(analysisDef)
 }
 
@@ -94,65 +124,43 @@ createRassenIncidenceAnalysis <- function(analysisId,
 
 #' Create a prevalence cohort `CohortInfo` object
 #'
-#' Constructs an `CohortInfo` object for target cohort of interest
+#' Constructs a `CohortInfo` object for the prevalence numerator cohort with CIRCE validation.
 #'
 #' @param cohortId Integer: the cohort ID within the database results schema of interest.
 #' @param cohortName Character string specifying a name for the cohort.
-#' @return A `CohortInfo` R6 object.
+#' @param circeJsonPath Character string path to the CIRCE JSON file (required). Must follow one of two patterns:
+#'   \itemize{
+#'     \item ERA (Chronic): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy
+#'     \item OCCURRENCE (Code Events): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy
+#'   }
+#' @return A `CohortInfo` R6 object with cohortType='prevalent'.
 #' @export
 #'
-createPrevalenceCohort <- function(cohortId, cohortName) {
+createPrevalenceCohort <- function(cohortId, cohortName, circeJsonPath) {
   cohortId <- as.integer(cohortId)
-  prevalenceCohort <- CohortInfo$new(id = cohortId, name = cohortName)
+  prevalenceCohort <- CohortInfo$new(id = cohortId, name = cohortName, cohortType = "prevalent", circeJsonPath = circeJsonPath)
   return(prevalenceCohort)
 }
 
 
-#' Create a target cohort `CohortInfo` object
-#'
-#' Constructs an `CohortInfo` object for target cohort of interest
-#'
-#' @param cohortId Integer: the cohort ID within the database results schema of interest.
-#' @param cohortName Character string specifying a name for the cohort.
-#' @return A `CohortInfo` R6 object.
-#' @export
-#'
-createTargetCohort <- function(cohortId, cohortName) {
-  cohortId <- as.integer(cohortId)
-  targetCohort <- CohortInfo$new(id = cohortId, name = cohortName)
-  return(targetCohort)
-}
-
 #' Create a population cohort `CohortInfo` object
 #'
-#' Constructs an `CohortInfo` object for population of interest.
+#' Constructs a `CohortInfo` object for the denominator population cohort.
+#' Population cohorts do not require CIRCE JSON validation.
 #'
 #' @param cohortId Integer: the cohort ID within the database results schema of interest.
 #' @param cohortName Character string specifying a name for the cohort.
-#' @return A `CohortInfo` R6 object.
+#'
+#' @return A `CohortInfo` R6 object with cohortType='population'.
 #' @export
 #'
 createPopulationCohort <- function(cohortId, cohortName) {
-  populationCohort <- CohortInfo$new(id = cohortId, name = cohortName)
+  cohortId <- as.integer(cohortId)
+  populationCohort <- CohortInfo$new(id = cohortId, name = cohortName, cohortType = "population")
   return(populationCohort)
 }
 
-#' Create a `LookBackOptions` object
-#'
-#' Constructs an `LookBackOptions` object with the specified settings.
-#'
-#' @param lookBackDays An integer number of days for the lookback period.
-#' @param useObservedTimeOnly Logical: `TRUE` restricts the lookback period to only using observed periods.
-#' @return A `LookBackOptions` R6 object.
-#' @export
-#'
-createLookBackOptions <- function(lookBackDays = 99999L, useObservedTimeOnly = FALSE) {
-  lbo <- LookBackOptions$new(
-    lookBackDays = lookBackDays,
-    useObservedTimeOnly = useObservedTimeOnly
-  )
-  return(lbo)
-}
+
 
 #' Create a `PeriodOfInterest` object
 #'

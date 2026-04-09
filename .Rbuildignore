@@ -2,3 +2,4 @@
 ^\.Rproj\.user$
 hidden/
 errorReportSql.txt
+data-raw/
