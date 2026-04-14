@@ -896,12 +896,22 @@ CohortInfo <- R6::R6Class(
             checkmate::assert_file_exists(circeJsonPath)
             validationResult <- self$validateCirceJson(circeJsonPath)
             
-            cli::cli_alert_success(
-              glue::glue("✓ CIRCE validation passed for '{name}' (ID: {id})")
-            )
-            cli::cli_alert_info(
-              glue::glue("  Pattern: {validationResult$patternLabel}")
-            )
+            # Check if validation had a warning (non-standard pattern)
+            if (validationResult$warning) {
+              cli::cli_alert_warning(
+                glue::glue("⚠ Non-standard CIRCE pattern detected for '{name}' (ID: {id})")
+              )
+              cli::cli_alert_info(
+                glue::glue("  Pattern: {validationResult$patternLabel}")
+              )
+            } else {
+              cli::cli_alert_success(
+                glue::glue("✓ CIRCE validation passed for '{name}' (ID: {id})")
+              )
+              cli::cli_alert_info(
+                glue::glue("  Pattern: {validationResult$patternLabel}")
+              )
+            }
             
             private[[".circePattern"]] <- validationResult$pattern
             private[[".circePatternLabel"]] <- validationResult$patternLabel
@@ -912,11 +922,6 @@ CohortInfo <- R6::R6Class(
             )
             cli::cli_alert_info(glue::glue("  Error: {e$message}"))
             stop(e)
-          },
-          warning = function(w) {
-            cli::cli_alert_warning(
-              glue::glue("⚠ Warning during CIRCE validation for '{name}' (ID: {id}): {w$message}")
-            )
           }
         )
       } else {
@@ -972,19 +977,33 @@ CohortInfo <- R6::R6Class(
       isPattern2 <- (pcl == "All" && el == "All" && hasDateOffset)
       isValid <- isPattern1 || isPattern2
       
+      # If pattern is invalid, issue a warning and default to "era"
+      hasWarning <- FALSE
       if (!isValid) {
-        stop(
-          "Invalid CIRCE cohort definition for ", self$name(), ".\n",
-          "Pattern 1 (ERA): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy\n",
-          "Pattern 2 (OCCURRENCE): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy\n",
+        hasWarning <- TRUE
+        warning(
+          "Non-standard CIRCE cohort definition for ", self$name(), ".\n",
+          "Expected Pattern 1 (ERA): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy\n",
+          "Or Pattern 2 (OCCURRENCE): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy\n",
           "Found: PrimaryCriteriaLimit='", pcl, "', ExpressionLimit='", el, "', ",
-          "EndStrategy=", if (is.null(es)) "NULL" else "Present"
+          "EndStrategy=", if (is.null(es)) "NULL" else "Present", "\n",
+          "Defaulting to 'era' pattern for initialization."
         )
       }
+      
       ll <- list(
         isValid = isValid,
-        pattern = if (isPattern1) "era" else "occurrence",
-        patternLabel = if (isPattern1) "ERA (Interval Overlap)" else "OCCURRENCE (Point-in-Time)",
+        pattern = if (isValid) {
+          if (isPattern1) "era" else "occurrence"
+        } else {
+          "era"
+        },
+        patternLabel = if (isValid) {
+          if (isPattern1) "ERA (Interval Overlap)" else "OCCURRENCE (Point-in-Time)"
+        } else {
+          "ERA (Interval Overlap) - DEFAULT (non-standard pattern detected)"
+        },
+        warning = hasWarning,
         details = list(primaryCriteriaLimit = pcl, expressionLimit = el, hasDateOffset = hasDateOffset)
       )
       

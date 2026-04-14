@@ -714,7 +714,7 @@ standardize_prevalence <- function(
     dplyr::summarize(
       totalNum = sum(numerator),
       totalDenom = sum(denominator),
-      crudeStat = sum(stat),
+      crudeStat = (totalNum / totalDenom) * 100000,
       stdStat = sum(stdValue),
       .groups = "keep"
     ) |>

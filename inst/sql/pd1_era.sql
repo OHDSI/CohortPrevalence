@@ -38,8 +38,8 @@ DROP TABLE IF EXISTS #allEvents;
 CREATE TABLE #allEvents AS
 SELECT *,
   CASE WHEN 
-    cohort_start_date <= calendar_end_date
-    AND cohort_end_date >= DATEADD(day, -@lookback, calendar_start_date)
+    cohort_start_date <= calendar_start_date
+    AND cohort_start_date >= DATEADD(day, -@lookback, calendar_start_date)
   THEN 1 ELSE 0 END AS case_event
 FROM #denom
 ;
