@@ -23,7 +23,7 @@ createCohortPrevalenceAnalysis(
 \arguments{
 \item{analysisId}{Unique integer analysisId to identify the analysis (required).}
 
-\item{prevalentCohort}{A \code{CohortInfo} object specifying the cohort of interest (required).}
+\item{prevalentCohort}{A \code{TargetCohort} object specifying the cohort of interest (required).}
 
 \item{periodOfInterest}{A \code{PeriodOfInterest} object (required).}
 
@@ -37,7 +37,7 @@ createCohortPrevalenceAnalysis(
 
 \item{demographicConstraints}{a \code{DemoConstraint} object specifying the constraints of the population.}
 
-\item{populationCohort}{A \code{CohortInfo} object specifying the population of interest on which to compute prevalence.}
+\item{populationCohort}{A \code{PopulationCohort} object specifying the population of interest on which to compute prevalence.}
 
 \item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"} and/or \code{"drugs"} for simultaneous generation using shared base tables.
 \strong{Warning}: The \code{"drugs"} output type is experimental and should be used with caution. Results may be subject to future changes.}

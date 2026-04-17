@@ -1,3 +1,19 @@
+CohortPrevalence v1.0.2
+=======================
+
+## Method Changes
+
+* Correction for pd1_era.sql `cohort_start_date <= calendar_start_date` to ensure only looking for events prior to Day 1
+
+## API Changes
+
+* `CohortInfo` R6 class has been removed. It has been replaced by two purpose-specific classes:
+    * `TargetCohort` — for the prevalence numerator and incidence target cohort. Accepts an explicit `calculationMode` parameter (`"era"` or `"occurrence"`). CIRCE JSON validation only runs when `calculationMode = "occurrence"`, allowing non-CIRCE and derived cohorts to work without a JSON file.
+    * `PopulationCohort` — for the denominator population cohort. No JSON or mode required.
+* `createPrevalenceCohort()` has been renamed to `createTargetCohort()`. The new signature is `createTargetCohort(cohortId, cohortName, calculationMode = "era", circeJsonPath = NULL)`.
+* `createPopulationCohort()` now constructs a `PopulationCohort` object instead of a `CohortInfo` object. The function signature is unchanged.
+
+
 CohortPrevalence v1.0.1
 =======================
 
