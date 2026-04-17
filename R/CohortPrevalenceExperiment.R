@@ -30,7 +30,8 @@
 #' exp$addCohorts(tibble::tibble(
 #'   cohortId = c(1, 2, 3),
 #'   cohortName = c("CKD A", "CKD B", "CKD C"),
-#'   circeJsonPath = c(path1, path2, path3)
+#'   calculationMode = c("era", "era", "occurrence"),
+#'   circeJsonPath = c(NA, NA, path3)
 #' ))
 #'
 #' exp$addPrevalenceTypes(list(
@@ -77,19 +78,47 @@ CohortPrevalenceExperiment <- R6::R6Class(
     },
 
     #' @description Add cohort definitions
-    #' @param cohorts Tibble with columns: cohortId (numeric), cohortName (character), circeJsonPath (character)
+    #' @param cohorts Tibble with columns:
+    #'   - `cohortId` (numeric, required): cohort ID in the results schema
+    #'   - `cohortName` (character, required): display name
+    #'   - `calculationMode` (character, optional): `"era"` (default) or `"occurrence"`
+    #'   - `circeJsonPath` (character, optional): path to CIRCE JSON. Required for rows where `calculationMode = "occurrence"`
     #' @return Invisibly returns self for method chaining
     addCohorts = function(cohorts) {
       checkmate::assert_tibble(cohorts)
       checkmate::assert_names(
         colnames(cohorts),
-        must.include = c("cohortId", "cohortName", "circeJsonPath")
+        must.include = c("cohortId", "cohortName")
       )
       checkmate::assert_numeric(cohorts$cohortId, any.missing = FALSE)
       checkmate::assert_character(cohorts$cohortName, any.missing = FALSE)
-      checkmate::assert_character(cohorts$circeJsonPath, any.missing = FALSE)
       checkmate::assert_true(length(unique(cohorts$cohortId)) == nrow(cohorts),
                             .var.name = "cohortIds must be unique")
+
+      # Default calculationMode to "era" if not supplied
+      if (!"calculationMode" %in% colnames(cohorts)) {
+        cohorts$calculationMode <- "era"
+      }
+      checkmate::assert_character(cohorts$calculationMode, any.missing = FALSE)
+      checkmate::assert_subset(cohorts$calculationMode, choices = c("era", "occurrence"))
+
+      # Default circeJsonPath to NA if not supplied
+      if (!"circeJsonPath" %in% colnames(cohorts)) {
+        cohorts$circeJsonPath <- NA_character_
+      }
+
+      # Validate: occurrence rows must have a circeJsonPath
+      occurrence_rows <- cohorts$calculationMode == "occurrence"
+      if (any(occurrence_rows)) {
+        missing_json <- occurrence_rows & is.na(cohorts$circeJsonPath)
+        if (any(missing_json)) {
+          stop(
+            "circeJsonPath is required for cohorts with calculationMode = 'occurrence'. ",
+            "Missing for cohort(s): ",
+            paste(cohorts$cohortName[missing_json], collapse = ", ")
+          )
+        }
+      }
 
       private$.cohorts <- cohorts
       cli::cli_alert_success("Added {nrow(cohorts)} cohort(s)")
@@ -308,10 +337,11 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
         analyses[[i]] <- createCohortPrevalenceAnalysis(
           analysisId = row$analysisId,
-          prevalentCohort = createPrevalenceCohort(
+          prevalentCohort = createTargetCohort(
             cohortId = row$cohortId,
             cohortName = row$cohortName,
-            circeJsonPath = row$circeJsonPath
+            calculationMode = row$calculationMode,
+            circeJsonPath = ifelse(is.na(row$circeJsonPath), NULL, row$circeJsonPath)
           ),
           periodOfInterest = poi_obj,
           prevalenceType = createPrevalenceType(
@@ -418,7 +448,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
         ) |>
         dplyr::select(
           analysisId,
-          cohortId, cohortName, circeJsonPath,
+          cohortId, cohortName, calculationMode, circeJsonPath,
           prevalenceType, lookBackDays,
           ageMin, ageMax, genderIds,
           poiType, poiLabel,
