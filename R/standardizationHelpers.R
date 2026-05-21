@@ -164,24 +164,31 @@ listStandardizationReferences <- function() {
 #' Fetch USA ACS Reference Population On-Demand
 #'
 #' @param year Integer. ACS year (e.g., 2020, 2021, 2022)
+#' @param survey Character. Survey type: "acs5" (default) or "acs1"
+#' @param census_api_key Character. Census API key. If NULL (default), uses CENSUS_API_KEY 
+#'   environment variable. Warns if neither provided.
 #' @param cache Logical. Cache locally after download? (default: TRUE)
 #'
 #' @return StandardizationReference object
 #'
 #' @details
-#' Fetches American Community Survey (ACS) estimates from tidyCensus API.
-#' Requires tidyCensus package and valid Census API key (via Sys.setenv).
+#' Fetches American Community Survey (ACS) estimates from Census API.
+#' Requires tidyCensus package and valid Census API key.
 #'
-#' Note: ACS provides 5-year estimates for most age groups (depends on year).
+#' Note: ACS provides age-grouped estimates (not single-year).
 #' First call downloads; subsequent calls use cached version if cache=TRUE.
 #'
 #' @examples
 #' \dontrun{
-#'   # Set up Census API key (one-time)
+#'   # Option 1: Set Census API key once via environment variable
 #'   # Sys.setenv(CENSUS_API_KEY = "your_key_here")
-#'
-#'   # Fetch 2020 ACS
 #'   acs_2020 <- fetchACSReference(2020)
+#'
+#'   # Option 2: Provide key directly to function
+#'   acs_2020 <- fetchACSReference(2020, census_api_key = "your_key_here")
+#'
+#'   # Option 3: Fetch multiple years
+#'   acs_2021_2023 <- fetchACSReference(years = 2021:2023)
 #'
 #'   # Use in standardization
 #'   result <- standardizePrevalence(
@@ -191,7 +198,7 @@ listStandardizationReferences <- function() {
 #' }
 #'
 #' @export
-fetchACSReference <- function(year = 2020, cache = TRUE) {
+fetchACSReference <- function(year = 2020, survey = "acs5", census_api_key = NULL, cache = TRUE) {
   # Check if tidyCensus is available
   if (!requireNamespace("tidycensus", quietly = TRUE)) {
     stop(
@@ -200,19 +207,25 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
     )
   }
 
-  # Check for Census API key
-  api_key <- Sys.getenv("CENSUS_API_KEY")
+  # Determine API key to use
+  api_key <- if (is.null(census_api_key)) {
+    Sys.getenv("CENSUS_API_KEY")
+  } else {
+    census_api_key
+  }
+
+  # Warn if no API key available
   if (api_key == "") {
-    stop(
-      "Census API key not found. Set with: ",
-      "Sys.setenv(CENSUS_API_KEY = 'your_key')\n",
+    cli::cli_alert_warning(
+      "No Census API key provided. Census API requests may be rate-limited. ",
+      "Set with: Sys.setenv(CENSUS_API_KEY = 'your_key') or pass census_api_key parameter. ",
       "Get a free key at: https://api.census.gov/data/key_signup.html"
     )
   }
 
   # Cache location
   cache_dir <- file.path(rappdirs::user_cache_dir("CohortPrevalence"), "acs")
-  cache_file <- file.path(cache_dir, paste0("usa_acs_", year, ".rds"))
+  cache_file <- file.path(cache_dir, paste0("usa_acs_", survey, "_", year, ".rds"))
 
   # Check if cached
   if (cache && file.exists(cache_file)) {
@@ -222,36 +235,31 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
 
   cli::cli_alert_info("Fetching ACS {year} from Census API...")
 
-  # Fetch ACS population data
-  # Variables: B01001_001 = Total population, B01001_026 = Total female
-  # Split by age groups (depends on ACS table structure)
+  # Fetch ACS population data (B01001: Sex by Age)
   acs_pop <- tidycensus::get_acs(
     geography = "us",
     table = "B01001",
     year = year,
-    survey = "acs5",
-    cache_table = TRUE
+    survey = survey,
+    cache_table = TRUE,
+    key = if (api_key != "") api_key else NULL
   )
 
-  # Process into reference format
-  # This is simplified; actual implementation would need to
-  # - Map B01001_* variables to age-gender groups
-  # - Handle 5-year age band groupings
-  # - Aggregate to national totals
+  # Add year column for tracking
+  acs_pop <- acs_pop |>
+    dplyr::mutate(year = year)
 
-  acs_processed <- acs_pop |>
-    dplyr::select(variable, estimate) |>
-    dplyr::rename(population = estimate)
-  # ... actual processing code here ...
+  # Transform to tidy format with age, gender, population, weight, year
+  acs_tidy <- map_acs_b01001_to_age_sex(acs_pop)
 
-  # Create StandardizationReference
+  # Create StandardizationReference with transformed data
   acs_ref <- StandardizationReference$new(
-    name = paste0("USA ACS ", year),
+    name = paste0("USA ACS ", survey, " ", year),
     country = "United States",
     year = as.integer(year),
     source = "US Census Bureau American Community Survey",
     reference = "https://www.census.gov/programs-surveys/acs",
-    data = acs_processed  # placeholder
+    data = acs_tidy
   )
 
   # Cache if requested
