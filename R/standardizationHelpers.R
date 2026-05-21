@@ -239,8 +239,8 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
   # - Handle 5-year age band groupings
   # - Aggregate to national totals
 
-  acs_processed <- acs_pop %>%
-    dplyr::select(variable, estimate) %>%
+  acs_processed <- acs_pop |>
+    dplyr::select(variable, estimate) |>
     dplyr::rename(population = estimate)
   # ... actual processing code here ...
 
@@ -264,4 +264,136 @@ fetchACSReference <- function(year = 2020, cache = TRUE) {
   }
 
   return(acs_ref)
+}
+
+
+#' B01001 Census Variable Mapping and Transformation
+#'
+#' Helper functions to transform raw ACS data (B01001: Sex by Age table)
+#' into tidy format (age, gender, population, year).
+#'
+#' @details
+#' The B01001 table from Census API contains:
+#' - B01001_001: Total population
+#' - B01001_002-026: Male age groups (25 groups)
+#' - B01001_027-051: Female age groups (25 groups)
+#'
+#' Both ACS1 (1-year estimates) and ACS5 (5-year estimates) use this structure.
+#' Age groups are: Under 5, 5-9, 10-14, 15-17, 18-19, 20, 21, 22-24, 25-29,
+#' 30-34, 35-39, 40-44, 45-49, 50-54, 55-59, 60-61, 62-64, 65-66, 67-69,
+#' 70-74, 75-79, 80-84, 85+
+
+#' B01001 Variable-to-Age-Gender Mapping
+#'
+#' @return Data frame with columns: variable, age, gender
+#'   - variable: B01001_* variable code
+#'   - age: Age group label (e.g., "Under 5", "5-9", "20", "85+")
+#'   - gender: "Male" or "Female"
+get_b01001_mapping <- function() {
+  # Age group labels (25 groups per gender)
+  age_groups <- c(
+    "Under 5", "5-9", "10-14", "15-17", "18-19",
+    "20", "21", "22-24", "25-29", "30-34",
+    "35-39", "40-44", "45-49", "50-54", "55-59",
+    "60-61", "62-64", "65-66", "67-69", "70-74",
+    "75-79", "80-84", "85+"
+  )
+
+  # Male variables: B01001_002 through B01001_026 (25 variables)
+  male_vars <- paste0("B01001_", stringr::str_pad(2:26, width = 3, pad = "0", side = "left"))
+
+  # Female variables: B01001_027 through B01001_051 (25 variables)
+  female_vars <- paste0("B01001_", stringr::str_pad(27:51, width = 3, pad = "0", side = "left"))
+
+  # Create mapping table
+  b01001_map <- dplyr::bind_rows(
+    data.frame(
+      variable = male_vars,
+      age = age_groups,
+      gender = "Male",
+      stringsAsFactors = FALSE
+    ),
+    data.frame(
+      variable = female_vars,
+      age = age_groups,
+      gender = "Female",
+      stringsAsFactors = FALSE
+    )
+  )
+  return(b01001_map)
+}
+
+
+#' Transform Raw ACS B01001 Data to Tidy Format
+#'
+#' Takes raw output from `tidycensus::get_acs()` (B01001 table)
+#' and transforms it into tidy format with age, gender, population, and year columns.
+#'
+#' @param acs_raw_df Data frame with columns: GEOID, NAME, variable, estimate, moe, year
+#'   - Typically output from tidycensus::get_acs(table = "B01001", ...)
+#'   - Must include year column
+#'
+#' @return Data frame with columns: age, gender, population, year (sorted by year, then gender, then age)
+#'   - age: Age group label
+#'   - gender: "Male" or "Female"
+#'   - population: Population estimate (numeric)
+#'   - year: Year of estimate
+#'
+#' @details
+#' Filters to only B01001 age-gender variables (excludes B01001_001 total).
+#' Validates output: exactly 26 rows per year (13 age groups × 2 genders).
+map_acs_b01001_to_age_sex <- function(acs_raw_df) {
+  # Validate input
+  if (!is.data.frame(acs_raw_df)) {
+    stop("acs_raw_df must be a data frame")
+  }
+
+  required_cols <- c("variable", "estimate", "year")
+  missing_cols <- setdiff(required_cols, colnames(acs_raw_df))
+  if (length(missing_cols) > 0) {
+    stop(
+      "acs_raw_df must have columns: ",
+      paste(required_cols, collapse = ", "),
+      ". Missing: ",
+      paste(missing_cols, collapse = ", ")
+    )
+  }
+
+  # Extract total population (B01001_001) for each year
+  total_pop <- acs_raw_df |>
+    dplyr::filter(variable == "B01001_001") |>
+    dplyr::select(year, total_population = estimate) |>
+    dplyr::mutate(total_population = as.numeric(total_population))
+
+  # Get mapping
+  mapping <- get_b01001_mapping()
+
+  # Transform: filter to mapped variables, join with mapping, select columns
+  result <- acs_raw_df |>
+    dplyr::filter(variable %in% mapping$variable) |>
+    dplyr::left_join(mapping, by = "variable") |>
+    dplyr::select(age, gender, population = estimate, year) |>
+    dplyr::left_join(total_pop, by = "year") |>
+    dplyr::mutate(
+      population = as.numeric(population),
+      weight = population / total_population
+    ) |>
+    dplyr::select(age, gender, population, weight, year) |>
+    dplyr::arrange(year, gender, age)
+
+  # Validate: should have exactly 26 rows per year (13 age groups × 2 genders)
+  rows_per_year <- result |>
+    dplyr::group_by(year) |>
+    dplyr::count() |>
+    dplyr::pull(n)
+
+  if (!all(rows_per_year == 26)) {
+    warning(
+      "Expected 26 rows per year (13 age groups × 2 genders). ",
+      "Got: ", paste(unique(rows_per_year), collapse = ", "),
+      ". Check if all B01001 variables present."
+    )
+  }
+
+  return(result)
 }
