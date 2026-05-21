@@ -69,6 +69,7 @@ methods for accessing and manipulating reference data.
     \item \href{#method-StandardizationReference-getFilteredReference}{\code{StandardizationReference$getFilteredReference()}}
     \item \href{#method-StandardizationReference-getAgetruncatedReference}{\code{StandardizationReference$getAgetruncatedReference()}}
     \item \href{#method-StandardizationReference-getAdjustedReference}{\code{StandardizationReference$getAdjustedReference()}}
+    \item \href{#method-StandardizationReference-mapAgesToReference}{\code{StandardizationReference$mapAgesToReference()}}
     \item \href{#method-StandardizationReference-clone}{\code{StandardizationReference$clone()}}
   }
 }
@@ -263,6 +264,41 @@ methods for accessing and manipulating reference data.
   }
   \subsection{Returns}{
     Data frame with both transformations applied
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StandardizationReference-mapAgesToReference"></a>}}
+\if{latex}{\out{\hypertarget{method-StandardizationReference-mapAgesToReference}{}}}
+\subsection{\code{StandardizationReference$mapAgesToReference()}}{
+  Map single-year ages to reference age group labels
+
+Converts a numeric vector of single-year ages (e.g., 0, 1, 2, ..., 102)
+to the reference's age label format so prevalence data can be joined
+to reference weights by (age, gender).
+
+Works generically for any reference type:
+\itemize{
+\item Single-year references (Decennial Census "000", "001"): zero-padded pass-through
+\item Range-based grouped references (ACS "0-4", "5-9"; WHO "0-4", "5-9"): parse
+each label's min/max boundaries and lookup each age
+\item Threshold grouped references (custom "N+" labels): ages below threshold
+are zero-padded, ages >= threshold map to "N+"
+}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$mapAgesToReference(age_values)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{age_values}}{Numeric vector of single-year ages}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Character vector of reference-formatted age labels
   }
 }
 
