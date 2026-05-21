@@ -280,60 +280,40 @@ fetchACSReference <- function(years, survey = "acs5", census_api_key = NULL) {
 }
 
 
-#' B01001 Census Variable Mapping and Transformation
+#' ACS B01001 Age Group Reference Table
 #'
-#' Helper functions to transform raw ACS data (B01001: Sex by Age table)
-#' into tidy format (age, gender, population, year).
+#' Single canonical table for the 23 ACS B01001 age-sex groups. Each consumer
+#' (API variable mapping, single-year age range lookup, etc.) selects only the
+#' columns it needs.
 #'
-#' @details
-#' The B01001 table from Census API contains:
-#' - B01001_001: Total population
-#' - B01001_003-025: Male age groups (23 groups)
-#' - B01001_027-049: Female age groups (23 groups)
+#' Replaces the old \code{get_b01001_mapping()}. The 23 group labels appear
+#' in exactly one place.
 #'
-#' Both ACS1 (1-year estimates) and ACS5 (5-year estimates) use this structure.
-#' Age groups are: Under 5, 5-9, 10-14, 15-17, 18-19, 20, 21, 22-24, 25-29,
-#' 30-34, 35-39, 40-44, 45-49, 50-54, 55-59, 60-61, 62-64, 65-66, 67-69,
-#' 70-74, 75-79, 80-84, 85+
-
-#' B01001 Variable-to-Age-Gender Mapping
-#'
-#' @return Data frame with columns: variable, age, gender
-#'   - variable: B01001_* variable code
-#'   - age: Age group label (e.g., "Under 5", "5-9", "20", "85+")
-#'   - gender: "Male" or "Female"
-get_b01001_mapping <- function() {
-  # Age group labels (23 groups per gender)
-  age_groups <- c(
-    "Under 5", "5-9", "10-14", "15-17", "18-19",
-    "20", "21", "22-24", "25-29", "30-34",
-    "35-39", "40-44", "45-49", "50-54", "55-59",
-    "60-61", "62-64", "65-66", "67-69", "70-74",
-    "75-79", "80-84", "85+"
+#' @return Data frame with one row per age group and columns:
+#'   \describe{
+#'     \item{age_label}{Age group label (e.g., "0-4", "5-9", ..., "85+")}
+#'     \item{min_age}{Minimum single-year age in the group (inclusive)}
+#'     \item{max_age}{Maximum single-year age in the group (inclusive; \code{Inf} for open-ended)}
+#'     \item{male_variable}{B01001 variable code for males (e.g., "B01001_003")}
+#'     \item{female_variable}{B01001 variable code for females (e.g., "B01001_027")}
+#'   }
+acs_age_groups <- function() {
+  data.frame(
+    age_label = c("0-4", "5-9", "10-14", "15-17", "18-19",
+                  "20", "21", "22-24", "25-29", "30-34",
+                  "35-39", "40-44", "45-49", "50-54", "55-59",
+                  "60-61", "62-64", "65-66", "67-69", "70-74",
+                  "75-79", "80-84", "85+"),
+    min_age = c(0, 5, 10, 15, 18, 20, 21, 22, 25, 30,
+                 35, 40, 45, 50, 55, 60, 62, 65, 67, 70,
+                 75, 80, 85),
+    max_age = c(4, 9, 14, 17, 19, 20, 21, 24, 29, 34,
+                 39, 44, 49, 54, 59, 61, 64, 66, 69, 74,
+                 79, 84, Inf),
+    male_variable = paste0("B01001_", stringr::str_pad(3:25, width = 3, pad = "0")),
+    female_variable = paste0("B01001_", stringr::str_pad(27:49, width = 3, pad = "0")),
+    stringsAsFactors = FALSE
   )
-
-  # Male variables: B01001_003 through B01001_025 (23 variables; excludes B01001_002 which is "Total Male")
-  male_vars <- paste0("B01001_", stringr::str_pad(3:25, width = 3, pad = "0", side = "left"))
-
-  # Female variables: B01001_027 through B01001_049 (23 variables; excludes B01001_026 which is "Total Female")
-  female_vars <- paste0("B01001_", stringr::str_pad(27:49, width = 3, pad = "0", side = "left"))
-
-  # Create mapping table
-  b01001_map <- dplyr::bind_rows(
-    data.frame(
-      variable = male_vars,
-      age = age_groups,
-      gender = "Male",
-      stringsAsFactors = FALSE
-    ),
-    data.frame(
-      variable = female_vars,
-      age = age_groups,
-      gender = "Female",
-      stringsAsFactors = FALSE
-    )
-  )
-  return(b01001_map)
 }
 
 
@@ -379,13 +359,19 @@ map_acs_b01001_to_age_sex <- function(acs_raw_df) {
     dplyr::select(year, total_population = estimate) |>
     dplyr::mutate(total_population = as.numeric(total_population))
 
-  # Get mapping
-  mapping <- get_b01001_mapping()
+  # Build variable-to-group lookup from canonical ACS table
+  groups <- acs_age_groups()
+  var_lookup <- data.frame(
+    variable = c(groups$male_variable, groups$female_variable),
+    age = rep(groups$age_label, 2),
+    gender = rep(c("Male", "Female"), each = 23),
+    stringsAsFactors = FALSE
+  )
 
   # Transform: filter to mapped variables, join with mapping, select columns
   result <- acs_raw_df |>
-    dplyr::filter(variable %in% mapping$variable) |>
-    dplyr::left_join(mapping, by = "variable") |>
+    dplyr::filter(variable %in% var_lookup$variable) |>
+    dplyr::left_join(var_lookup, by = "variable") |>
     dplyr::select(age, gender, population = estimate, year) |>
     dplyr::left_join(total_pop, by = "year") |>
     dplyr::mutate(

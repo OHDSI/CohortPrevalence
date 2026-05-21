@@ -651,29 +651,20 @@ standardize_prevalence <- function(
     )
   }
 
-  # Get adjusted reference population
-  ref_adjusted <- referencePopulation$getAdjustedReference(
-    ageMin = ageMin,
-    ageMax = ageMax,
-    rightTruncation = ageRightTruncation
-  )
-
-  # Prepare prevalence data for joining
+  # ── Step 1: Filter & prepare prevalence (single-year resolution) ──
   prev_clean <- prevalenceData |>
     dplyr::select(
       analysisId, spanLabel, age, gender, numerator, denominator
     ) |>
     dplyr::filter(
-      gender %in% c(8532, 8507) # only get values with a known gender
+      gender %in% c(8532, 8507)
     ) |>
     dplyr::mutate(
-      # Convert gender concept IDs to character
       gender = dplyr::case_when(
         gender == 8532 ~ "Female",
         gender == 8507 ~ "Male",
         TRUE ~ as.character(gender)
       ),
-      # Ensure age is numeric for filtering and processing
       age = as.numeric(age)
     ) |>
     dplyr::filter(
@@ -681,16 +672,22 @@ standardize_prevalence <- function(
       is.null(ageMax) || age <= ageMax
     ) |>
     dplyr::mutate(
-      # Apply right truncation if specified and convert to character format
+      # Right truncation applied BEFORE age mapping (single-year precision)
       age = ifelse(
         !is.na(ageRightTruncation) & age >= ageRightTruncation,
         paste0(ageRightTruncation, "+"),
-        sprintf("%03d", age)
+        as.character(age)
       )
-    ) |>
-    dplyr::group_by(
-      analysisId, spanLabel, age, gender
-    ) |>
+    )
+
+  # ── Step 2: Map ages → reference group labels ──
+  # Bridges single-year ages to reference group labels (e.g., "0-4", "18-19", "85+")
+  # For single-year references (Decennial Census), this zero-pads to "000", "001", ...
+  prev_clean$age <- referencePopulation$mapAgesToReference(prev_clean$age)
+
+  # ── Step 3: Summarize by mapped groups ──
+  prev_grouped <- prev_clean |>
+    dplyr::group_by(analysisId, spanLabel, age, gender) |>
     dplyr::summarize(
       numerator = sum(numerator),
       denominator = sum(denominator),
@@ -701,9 +698,22 @@ standardize_prevalence <- function(
       stat = (numerator / denominator) * 100000
     )
 
-  # Join to reference weights
-  standardized_data <- prev_clean |>
-    dplyr::left_join(
+  # ── Step 4: Filter reference to matched groups + re-normalize weights ──
+  matched_ages   <- unique(prev_grouped$age)
+  matched_gender <- unique(prev_grouped$gender)
+  ref_adjusted <- referencePopulation$getData() |>
+    dplyr::filter(
+      age %in% matched_ages,
+      gender %in% matched_gender
+    ) |>
+    dplyr::mutate(
+      weight = population / sum(population)
+    )
+
+  # ── Step 5: Join & standardize ──
+  # inner_join ensures only matched groups contribute
+  standardized_data <- prev_grouped |>
+    dplyr::inner_join(
       ref_adjusted |> dplyr::select(age, gender, weight),
       by = c("age", "gender")
     ) |>
@@ -1040,6 +1050,76 @@ StandardizationReference <- R6::R6Class(
         )
 
       result
+    },
+
+    #' @description Map single-year ages to reference age group labels
+    #'
+    #' Converts a numeric vector of single-year ages (e.g., 0, 1, 2, ..., 102)
+    #' to the reference's age label format so prevalence data can be joined
+    #' to reference weights by (age, gender).
+    #'
+    #' Works generically for any reference type:
+    #'   - Single-year references (Decennial Census "000", "001"): zero-padded pass-through
+    #'   - Range-based grouped references (ACS "0-4", "5-9"; WHO "0-4", "5-9"): parse
+    #'     each label's min/max boundaries and lookup each age
+    #'   - Threshold grouped references (custom "N+" labels): ages below threshold
+    #'     are zero-padded, ages >= threshold map to "N+"
+    #'
+    #' @param age_values Numeric vector of single-year ages
+    #' @return Character vector of reference-formatted age labels
+    mapAgesToReference = function(age_values) {
+      # Get unique age labels from this reference
+      ref_ages <- unique(private$.data$age)
+
+      # Detect reference type from age label patterns
+      has_range  <- any(grepl("-", ref_ages))
+      has_plus   <- any(grepl("\\+", ref_ages))
+      has_text   <- any(grepl("[A-Za-z]", ref_ages))
+      is_grouped <- has_range || has_plus || has_text
+
+      if (!is_grouped) {
+        # ── Single-year reference (e.g., Decennial Census "000", "001") ──
+        return(sprintf("%03d", age_values))
+      }
+
+      # ── Grouped reference: build lookup from labels ──
+      # Parse each label into min_age, max_age
+      .parse_label <- function(label) {
+        if (grepl("\\+", label)) {
+          # "85+" → min = 85, max = Inf
+          list(min = as.numeric(gsub("\\+", "", label)), max = Inf)
+        } else if (grepl("-", label)) {
+          # "0-4" → min = 0, max = 4
+          parts <- as.numeric(strsplit(label, "-")[[1]])
+          list(min = parts[1], max = parts[2])
+        } else if (grepl("(?i)under", label)) {
+          # "Under 5" → min = 0, max = extracted_number - 1
+          num <- as.numeric(gsub("(?i)under\\s*", "", label))
+          list(min = 0, max = num - 1)
+        } else {
+          # "20" → min = 20, max = 20 (single value label)
+          num <- as.numeric(label)
+          list(min = num, max = num)
+        }
+      }
+
+      # Build lookup table: age_label, min_age, max_age
+      parsed <- lapply(ref_ages, .parse_label)
+      lookup <- data.frame(
+        age_label = ref_ages,
+        min_age = sapply(parsed, `[[`, "min"),
+        max_age = sapply(parsed, `[[`, "max"),
+        stringsAsFactors = FALSE
+      )
+
+      # Map each input age to its group label
+      result <- sapply(age_values, function(age) {
+        idx <- which(age >= lookup$min_age & age <= lookup$max_age)
+        if (length(idx) == 0) return(NA_character_)
+        lookup$age_label[idx[1]]
+      })
+
+      unname(result)
     }
   ),
 

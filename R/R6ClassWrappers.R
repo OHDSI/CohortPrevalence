@@ -9,7 +9,7 @@
 #'   \item `"period_prevalence_pd3"`: Continuous observation (pn2 + pd3)
 #'   \item `"period_prevalence_pd4"`: Sufficient days observed (pn2 + pd4)
 #' }
-#' @param lookBackDays Integer number of days for lookback window. Can be 0, any positive integer, or Inf for complete lookback.
+#' @param lookBackDays Integer number of days for lookback window. Must be a positive integer (>= 1) or Inf for complete historical lookback. Note: 0 is automatically coerced to Inf.
 #' @return A `PrevalenceType` R6 object.
 #' @export
 #'

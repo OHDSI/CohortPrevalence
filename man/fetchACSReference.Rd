@@ -4,12 +4,15 @@
 \alias{fetchACSReference}
 \title{Fetch USA ACS Reference Population On-Demand}
 \usage{
-fetchACSReference(year = 2020, cache = TRUE)
+fetchACSReference(years, survey = "acs5", census_api_key = NULL)
 }
 \arguments{
-\item{year}{Integer. ACS year (e.g., 2020, 2021, 2022)}
+\item{years}{Integer or vector of integers. ACS year(s) (e.g., 2020, or 2021:2023)}
 
-\item{cache}{Logical. Cache locally after download? (default: TRUE)}
+\item{survey}{Character. Survey type: "acs5" (default) or "acs1"}
+
+\item{census_api_key}{Character. Census API key. If NULL (default), uses CENSUS_API_KEY
+environment variable. Warns if neither provided.}
 }
 \value{
 StandardizationReference object
@@ -18,19 +21,23 @@ StandardizationReference object
 Fetch USA ACS Reference Population On-Demand
 }
 \details{
-Fetches American Community Survey (ACS) estimates from tidyCensus API.
-Requires tidyCensus package and valid Census API key (via Sys.setenv).
+Fetches American Community Survey (ACS) estimates from Census API.
+Requires tidyCensus package and valid Census API key.
 
-Note: ACS provides 5-year estimates for most age groups (depends on year).
-First call downloads; subsequent calls use cached version if cache=TRUE.
+Note: ACS provides age-grouped estimates (not single-year).
+When multiple years are requested, data is combined into a single reference with year column.
 }
 \examples{
 \dontrun{
-  # Set up Census API key (one-time)
+  # Option 1: Single year with environment variable key
   # Sys.setenv(CENSUS_API_KEY = "your_key_here")
-
-  # Fetch 2020 ACS
   acs_2020 <- fetchACSReference(2020)
+
+  # Option 2: Single year with direct key parameter
+  acs_2020 <- fetchACSReference(2020, census_api_key = "your_key_here")
+
+  # Option 3: Multiple years (combined into one reference)
+  acs_2021_2023 <- fetchACSReference(2021:2023, survey = "acs5")
 
   # Use in standardization
   result <- standardizePrevalence(

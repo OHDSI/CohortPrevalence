@@ -191,7 +191,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
         prevalent_cohort_id = self$prevalentCohort$id(),
-        lookback = self$prevalenceType$lookBackDays,
+        lookback = ifelse(is.infinite(self$prevalenceType$lookBackDays), 999999,self$prevalenceType$lookBackDays),
         multiplier = self$multiplier
       ) |>
         SqlRender::translate(
@@ -768,8 +768,15 @@ PrevalenceType <- R6::R6Class(
       checkmate::assert_choice(x = prevalenceType, choices = validTypes)
       private[[".prevalenceType"]] <- prevalenceType
       
-      # Validate lookBackDays - any non-negative integer, or Inf for complete lookback
-      checkmate::assert_integerish(x = lookBackDays, len = 1, lower = 0)
+      # Validate lookBackDays - positive integer (>= 1) or Inf for complete lookback
+      # 0 is coerced to Inf (complete historical lookback)
+      if (is.numeric(lookBackDays) && length(lookBackDays) == 1 && lookBackDays == 0) {
+        lookBackDays <- Inf
+      }
+      checkmate::assert(
+        checkmate::check_integerish(x = lookBackDays, len = 1, lower = 1),
+        checkmate::check_infinite(x = lookBackDays)
+      )
       private[[".lookBackDays"]] <- lookBackDays
       
     },
@@ -809,9 +816,7 @@ PrevalenceType <- R6::R6Class(
     # Getter: returns human-readable lookback label
     getLookbackLabel = function() {
       lbd <- private$.lookBackDays
-      if (lbd == 0) {
-        return("No lookback (events during POI only)")
-      } else if (lbd == 365) {
+      if (lbd == 365) {
         return("1-year lookback")
       } else if (lbd == 1095) {
         return("3-year lookback")
@@ -863,7 +868,14 @@ PrevalenceType <- R6::R6Class(
       if (missing(value)) {
         return(private$.lookBackDays)
       }
-      checkmate::assert_integerish(x = value, len = 1, lower = 0)
+      # Coerce 0 to Inf (complete historical lookback)
+      if (is.numeric(value) && length(value) == 1 && value == 0) {
+        value <- Inf
+      }
+      checkmate::assert(
+        checkmate::check_integerish(x = value, len = 1, lower = 1),
+        checkmate::check_infinite(x = value)
+      )
       private$.lookBackDays <- value
     }
   )

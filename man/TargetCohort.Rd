@@ -11,111 +11,122 @@ definition is validated against the expected CIRCE pattern.
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-TargetCohort-new}{\code{TargetCohort$new()}}
-\item \href{#method-TargetCohort-id}{\code{TargetCohort$id()}}
-\item \href{#method-TargetCohort-name}{\code{TargetCohort$name()}}
-\item \href{#method-TargetCohort-getCircePattern}{\code{TargetCohort$getCircePattern()}}
-\item \href{#method-TargetCohort-viewCohortInfo}{\code{TargetCohort$viewCohortInfo()}}
-\item \href{#method-TargetCohort-validateCirceJson}{\code{TargetCohort$validateCirceJson()}}
-\item \href{#method-TargetCohort-clone}{\code{TargetCohort$clone()}}
-}
+  \itemize{
+    \item \href{#method-TargetCohort-initialize}{\code{TargetCohort$new()}}
+    \item \href{#method-TargetCohort-id}{\code{TargetCohort$id()}}
+    \item \href{#method-TargetCohort-name}{\code{TargetCohort$name()}}
+    \item \href{#method-TargetCohort-getCircePattern}{\code{TargetCohort$getCircePattern()}}
+    \item \href{#method-TargetCohort-viewCohortInfo}{\code{TargetCohort$viewCohortInfo()}}
+    \item \href{#method-TargetCohort-validateCirceJson}{\code{TargetCohort$validateCirceJson()}}
+    \item \href{#method-TargetCohort-clone}{\code{TargetCohort$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-TargetCohort-new"></a>}}
-\if{latex}{\out{\hypertarget{method-TargetCohort-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new TargetCohort object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$new(id, name, calculationMode = "era", circeJsonPath = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<a id="method-TargetCohort-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-TargetCohort-initialize}{}}}
+\subsection{\code{TargetCohort$new()}}{
+  Create a new TargetCohort object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$new(id, name, calculationMode = "era", circeJsonPath = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{id}}{Integer cohort ID within the database results schema.}
+      \item{\code{name}}{Character cohort name.}
+      \item{\code{calculationMode}}{Character: \code{"era"} (default, interval overlap) or \code{"occurrence"} (point-in-time).}
+      \item{\code{circeJsonPath}}{Character path to the CIRCE JSON file. Required when \code{calculationMode = "occurrence"}.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{id}}{Integer cohort ID within the database results schema.}
-
-\item{\code{name}}{Character cohort name.}
-
-\item{\code{calculationMode}}{Character: \code{"era"} (default, interval overlap) or \code{"occurrence"} (point-in-time).}
-
-\item{\code{circeJsonPath}}{Character path to the CIRCE JSON file. Required when \code{calculationMode = "occurrence"}.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-id"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-id}{}}}
-\subsection{Method \code{id()}}{
-Return the cohort ID.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$id()}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$id()}}{
+  Return the cohort ID.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$id()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-name"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-name}{}}}
-\subsection{Method \code{name()}}{
-Return the cohort name.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$name()}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$name()}}{
+  Return the cohort name.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$name()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-getCircePattern"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-getCircePattern}{}}}
-\subsection{Method \code{getCircePattern()}}{
-Return the calculation mode (\code{"era"} or \code{"occurrence"}).
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$getCircePattern()}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$getCircePattern()}}{
+  Return the calculation mode (\code{"era"} or \code{"occurrence"}).
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$getCircePattern()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-viewCohortInfo"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-viewCohortInfo}{}}}
-\subsection{Method \code{viewCohortInfo()}}{
-Return a formatted info string about this cohort.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$viewCohortInfo()}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$viewCohortInfo()}}{
+  Return a formatted info string about this cohort.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$viewCohortInfo()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-validateCirceJson"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-validateCirceJson}{}}}
-\subsection{Method \code{validateCirceJson()}}{
-Validate a CIRCE JSON file and determine the calculation pattern.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$validateCirceJson(circeJsonPath)}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$validateCirceJson()}}{
+  Validate a CIRCE JSON file and determine the calculation pattern.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$validateCirceJson(circeJsonPath)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{circeJsonPath}}{Character path to the CIRCE JSON file.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{circeJsonPath}}{Character path to the CIRCE JSON file.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TargetCohort-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-TargetCohort-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TargetCohort$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{TargetCohort$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TargetCohort$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

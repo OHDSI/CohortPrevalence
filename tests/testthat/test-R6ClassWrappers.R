@@ -9,9 +9,23 @@ test_that("createPrevalenceType creates valid object", {
 
 test_that("createPrevalenceType accepts all valid types", {
   expect_r6_class(createPrevalenceType("point_prevalence", 365), "PrevalenceType")
-  expect_r6_class(createPrevalenceType("period_prevalence_pd2", 0), "PrevalenceType")
-  expect_r6_class(createPrevalenceType("period_prevalence_pd3", 0), "PrevalenceType")
-  expect_r6_class(createPrevalenceType("period_prevalence_pd4", 0), "PrevalenceType")
+  expect_r6_class(createPrevalenceType("period_prevalence_pd2", Inf), "PrevalenceType")
+  expect_r6_class(createPrevalenceType("period_prevalence_pd3", Inf), "PrevalenceType")
+  expect_r6_class(createPrevalenceType("period_prevalence_pd4", Inf), "PrevalenceType")
+})
+
+test_that("createPrevalenceType coerces 0 to Inf", {
+  pt <- createPrevalenceType("point_prevalence", 0)
+  expect_true(is.infinite(pt$lookBackDays))
+
+  pt <- createPrevalenceType("period_prevalence_pd2", 0)
+  expect_true(is.infinite(pt$lookBackDays))
+
+  pt <- createPrevalenceType("period_prevalence_pd3", 0)
+  expect_true(is.infinite(pt$lookBackDays))
+
+  pt <- createPrevalenceType("period_prevalence_pd4", 0)
+  expect_true(is.infinite(pt$lookBackDays))
 })
 
 # Test createCohortPrevalenceAnalysis
