@@ -37,8 +37,7 @@ The experiment class uses the builder pattern to define analysis dimensions:
 
 exp$addCohorts(tibble::tibble(
   cohortId = c(1, 2, 3),
-  cohortName = c("CKD A", "CKD B", "CKD C"),
-  circeJsonPath = c(path1, path2, path3)
+  cohortName = c("CKD A", "CKD B", "CKD C")
 ))
 
 exp$addPrevalenceTypes(list(
@@ -120,7 +119,11 @@ Add cohort definitions
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{cohorts}}{Tibble with columns: cohortId (numeric), cohortName (character), circeJsonPath (character)}
+\item{\code{cohorts}}{Tibble with columns:
+\itemize{
+\item \code{cohortId} (numeric, required): cohort ID in the results schema
+\item \code{cohortName} (character, required): display name
+}}
 }
 \if{html}{\out{</div>}}
 }

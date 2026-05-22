@@ -29,8 +29,7 @@
 #'
 #' exp$addCohorts(tibble::tibble(
 #'   cohortId = c(1, 2, 3),
-#'   cohortName = c("CKD A", "CKD B", "CKD C"),
-#'   circeJsonPath = c(path1, path2, path3)
+#'   cohortName = c("CKD A", "CKD B", "CKD C")
 #' ))
 #'
 #' exp$addPrevalenceTypes(list(
@@ -77,17 +76,18 @@ CohortPrevalenceExperiment <- R6::R6Class(
     },
 
     #' @description Add cohort definitions
-    #' @param cohorts Tibble with columns: cohortId (numeric), cohortName (character), circeJsonPath (character)
+    #' @param cohorts Tibble with columns:
+    #'   - `cohortId` (numeric, required): cohort ID in the results schema
+    #'   - `cohortName` (character, required): display name
     #' @return Invisibly returns self for method chaining
     addCohorts = function(cohorts) {
       checkmate::assert_tibble(cohorts)
       checkmate::assert_names(
         colnames(cohorts),
-        must.include = c("cohortId", "cohortName", "circeJsonPath")
+        must.include = c("cohortId", "cohortName")
       )
       checkmate::assert_numeric(cohorts$cohortId, any.missing = FALSE)
       checkmate::assert_character(cohorts$cohortName, any.missing = FALSE)
-      checkmate::assert_character(cohorts$circeJsonPath, any.missing = FALSE)
       checkmate::assert_true(length(unique(cohorts$cohortId)) == nrow(cohorts),
                             .var.name = "cohortIds must be unique")
 
@@ -257,7 +257,6 @@ CohortPrevalenceExperiment <- R6::R6Class(
             analysisId = reactable::colDef(width = 70),
             cohortId = reactable::colDef(width = 70),
             cohortName = reactable::colDef(width = 140),
-            circeJsonPath = reactable::colDef(width = 150),
             prevalenceType = reactable::colDef(width = 120),
             lookBackDays = reactable::colDef(width = 80),
             ageMin = reactable::colDef(width = 60),
@@ -308,10 +307,9 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
         analyses[[i]] <- createCohortPrevalenceAnalysis(
           analysisId = row$analysisId,
-          prevalentCohort = createPrevalenceCohort(
+          prevalentCohort = createTargetCohort(
             cohortId = row$cohortId,
-            cohortName = row$cohortName,
-            circeJsonPath = row$circeJsonPath
+            cohortName = row$cohortName
           ),
           periodOfInterest = poi_obj,
           prevalenceType = createPrevalenceType(
@@ -418,7 +416,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
         ) |>
         dplyr::select(
           analysisId,
-          cohortId, cohortName, circeJsonPath,
+          cohortId, cohortName,
           prevalenceType, lookBackDays,
           ageMin, ageMax, genderIds,
           poiType, poiLabel,

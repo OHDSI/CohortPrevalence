@@ -15,7 +15,7 @@ createPrevalenceType(prevalenceType, lookBackDays)
 \item \code{"period_prevalence_pd4"}: Sufficient days observed (pn2 + pd4)
 }}
 
-\item{lookBackDays}{Integer number of days for lookback window. Can be 0, any positive integer, or Inf for complete lookback.}
+\item{lookBackDays}{Integer number of days for lookback window. Must be a positive integer (>= 1) or Inf for complete historical lookback. Note: 0 is automatically coerced to Inf.}
 }
 \value{
 A \code{PrevalenceType} R6 object.

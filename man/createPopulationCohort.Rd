@@ -2,7 +2,7 @@
 % Please edit documentation in R/R6ClassWrappers.R
 \name{createPopulationCohort}
 \alias{createPopulationCohort}
-\title{Create a population cohort \code{CohortInfo} object}
+\title{Create a population cohort \code{PopulationCohort} object}
 \usage{
 createPopulationCohort(cohortId, cohortName)
 }
@@ -12,9 +12,9 @@ createPopulationCohort(cohortId, cohortName)
 \item{cohortName}{Character string specifying a name for the cohort.}
 }
 \value{
-A \code{CohortInfo} R6 object with cohortType='population'.
+A \code{PopulationCohort} R6 object.
 }
 \description{
-Constructs a \code{CohortInfo} object for the denominator population cohort.
-Population cohorts do not require CIRCE JSON validation.
+Constructs a \code{PopulationCohort} object for the denominator population cohort.
+Population cohorts do not require a CIRCE JSON file or calculation mode.
 }
