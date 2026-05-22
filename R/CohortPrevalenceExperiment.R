@@ -105,7 +105,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Validate each item has required structure
       for (i in seq_along(types_list)) {
         obj <- types_list[[i]]
-        if (!("prevalenceType" %in% names(obj)) || !("lookBackDays" %in% names(obj))) {
+        if (!all(c("prevalenceType", "lookBackDays", "mode") %in% names(obj))) {
           stop(
             "Item ", i, " in types_list does not appear to be a valid prevalenceType object. ",
             "Use createPrevalenceType() to create objects."
@@ -314,7 +314,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
           periodOfInterest = poi_obj,
           prevalenceType = createPrevalenceType(
             prevalenceType = row$prevalenceType,
-            lookBackDays = row$lookBackDays
+            lookBackDays = row$lookBackDays,
+            mode = row$mode
           ),
           strata = row$strata[[1]],
           demographicConstraints = createDemographicConstraints(
@@ -389,7 +390,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Convert resilience types list to tibble
       prevalence_spec <- tibble::tibble(
         prevalenceType = sapply(private$.prevalenceTypes, function(x) x$prevalenceType),
-        lookBackDays = sapply(private$.prevalenceTypes, function(x) x$lookBackDays)
+        lookBackDays = sapply(private$.prevalenceTypes, function(x) x$lookBackDays),
+        mode = sapply(private$.prevalenceTypes, function(x) x$mode)
       )
 
       # Convert demographic constraints list to tibble
@@ -417,7 +419,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
         dplyr::select(
           analysisId,
           cohortId, cohortName,
-          prevalenceType, lookBackDays,
+          prevalenceType, lookBackDays, mode,
           ageMin, ageMax, genderIds,
           poiType, poiLabel,
           strata, outputTypes

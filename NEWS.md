@@ -1,6 +1,12 @@
 CohortPrevalence v1.1.0
 =======================
 
+## Feature Enhancements
+
+* Improvements to standardization
+    * Allow for standardization by other weighting schemes acs vs 2020 US census.
+    * Automatically resolves differences in age groups between standardization references
+
 ## Breaking Changes
 
 * **Occurrence Mode Removed**: Package now uses era pattern exclusively for all analyses. The `calculationMode` and `circeJsonPath` parameters have been removed from `createTargetCohort()` and `CohortPrevalenceExperiment$addCohorts()`. All SQL files with "_occurrence" pattern have been deleted.
@@ -10,7 +16,9 @@ CohortPrevalence v1.1.0
 
 ## Method Changes
 
-* Correction for pd1_era.sql `cohort_start_date <= calendar_start_date` to ensure only looking for events prior to Day 1
+* add calcuation types of formal vs rough to determine is using either any occurrence of the disease or the formal start in the lookback period
+    * `createPrevalenceType()` when mode = "rough" then counts based on the cohort_end_date
+    * `createPrevalenceType()` when mode = "formal" then counts based on the cohort_start_date
 
 ## API Changes
 
