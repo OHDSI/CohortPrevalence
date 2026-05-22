@@ -136,9 +136,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         strata <- ""
       }
 
-      # get the denom file based on denominator type and cohort pattern
+      # get the denom file based on denominator type (always uses era pattern)
       denomType <- self$prevalenceType$getDenominatorType()
-      cohortPattern <- self$prevalentCohort$getCircePattern()
       
       # Start with base SQL (always needed)
       sqlComponents <- c(yearRangeSql, obsPopSql, obsPopYearSql)
@@ -146,7 +145,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # Add output-specific SQL based on outputTypes
       if ("prevalence" %in% private$.outputTypes) {
         denomSql <- readr::read_file(
-          fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}_{cohortPattern}.sql"))
+          fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}_era.sql"))
         ) |>
           glue::glue()
         
@@ -886,9 +885,7 @@ PrevalenceType <- R6::R6Class(
 #'
 #' @description
 #' Describes a study cohort used as the numerator (prevalent) or target (incidence) in an analysis.
-#' Supports two calculation modes: `"era"` (interval overlap) and `"occurrence"` (point-in-time).
-#' When `calculationMode = "occurrence"`, a CIRCE JSON path must be provided and the cohort
-#' definition is validated against the expected CIRCE pattern.
+#' Uses the era pattern (interval overlap) for all analyses.
 #'
 #' @export
 TargetCohort <- R6::R6Class(
@@ -897,58 +894,13 @@ TargetCohort <- R6::R6Class(
     #' @description Create a new TargetCohort object
     #' @param id Integer cohort ID within the database results schema.
     #' @param name Character cohort name.
-    #' @param calculationMode Character: `"era"` (default, interval overlap) or `"occurrence"` (point-in-time).
-    #' @param circeJsonPath Character path to the CIRCE JSON file. Required when `calculationMode = "occurrence"`.
-    initialize = function(id, name, calculationMode = "era", circeJsonPath = NULL) {
+    initialize = function(id, name) {
 
       checkmate::assert_integerish(x = id, len = 1)
       private[[".id"]] <- id
 
       checkmate::assert_string(x = name, min.chars = 1)
       private[[".name"]] <- name
-
-      checkmate::assert_choice(x = calculationMode, choices = c("era", "occurrence"))
-      private[[".calculationMode"]] <- calculationMode
-
-      if (calculationMode == "occurrence") {
-        if (is.null(circeJsonPath)) {
-          stop(glue::glue("circeJsonPath is required when calculationMode = 'occurrence' for cohort '{name}'"))
-        }
-
-        tryCatch(
-          {
-            checkmate::assert_file_exists(circeJsonPath)
-            validationResult <- self$validateCirceJson(circeJsonPath)
-
-            if (validationResult$warning) {
-              cli::cli_alert_warning(
-                glue::glue("Non-standard CIRCE pattern detected for '{name}' (ID: {id})")
-              )
-              cli::cli_alert_info(
-                glue::glue("  Pattern: {validationResult$patternLabel}")
-              )
-            } else {
-              cli::cli_alert_success(
-                glue::glue("CIRCE validation passed for '{name}' (ID: {id})")
-              )
-              cli::cli_alert_info(
-                glue::glue("  Pattern: {validationResult$patternLabel}")
-              )
-            }
-
-            private[[".circePatternLabel"]] <- validationResult$patternLabel
-          },
-          error = function(e) {
-            cli::cli_alert_danger(
-              glue::glue("CIRCE validation failed for '{name}' (ID: {id})")
-            )
-            cli::cli_alert_info(glue::glue("  Error: {e$message}"))
-            stop(e)
-          }
-        )
-      } else {
-        private[[".circePatternLabel"]] <- "ERA (Interval Overlap)"
-      }
     },
 
     #' @description Return the cohort ID.
@@ -961,83 +913,17 @@ TargetCohort <- R6::R6Class(
       return(private$.name)
     },
 
-    #' @description Return the calculation mode (`"era"` or `"occurrence"`).
-    getCircePattern = function() {
-      return(private$.calculationMode)
-    },
-
     #' @description Return a formatted info string about this cohort.
     viewCohortInfo = function() {
       id <- self$id()
       name <- self$name()
-      mode <- private$.calculationMode
-      patternLabel <- private$.circePatternLabel
-      info <- glue::glue("Cohort Id: {id} | Name: {name} | Mode: {mode} | Pattern: {patternLabel}")
+      info <- glue::glue("Cohort Id: {id} | Name: {name} | Pattern: ERA")
       return(info)
-    },
-
-    #' @description Validate a CIRCE JSON file and determine the calculation pattern.
-    #' @param circeJsonPath Character path to the CIRCE JSON file.
-    validateCirceJson = function(circeJsonPath) {
-      tryCatch(
-        {
-          circeJson <- jsonlite::read_json(circeJsonPath)
-        },
-        error = function(e) {
-          stop(glue::glue("Failed to parse CIRCE JSON: {e$message}"))
-        }
-      )
-
-      # Extract key components with safe access
-      pcl <- tryCatch(circeJson$PrimaryCriteria$PrimaryCriteriaLimit$Type, error = function(e) NULL)
-      el <- tryCatch(circeJson$ExpressionLimit$Type, error = function(e) NULL)
-      es <- tryCatch(circeJson$EndStrategy, error = function(e) NULL)
-      hasDateOffset <- !is.null(es) && !is.null(es$DateOffset)
-
-      # Pattern 1: ERA (First/First/No EndStrategy)
-      # Pattern 2: OCCURRENCE (All/All/DateOffset)
-      isPattern1 <- (pcl == "First" && el == "First" && is.null(es))
-      isPattern2 <- (pcl == "All" && el == "All" && hasDateOffset)
-      isValid <- isPattern1 || isPattern2
-
-      hasWarning <- FALSE
-
-      if (!isValid) {
-        hasWarning <- TRUE
-        warning(
-          "Non-standard CIRCE cohort definition for ", self$name(), ".\n",
-          "Expected Pattern 1 (ERA): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy\n",
-          "Or Pattern 2 (OCCURRENCE): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy\n",
-          "Found: PrimaryCriteriaLimit='", pcl, "', ExpressionLimit='", el, "', ",
-          "EndStrategy=", if (is.null(es)) "NULL" else "Present", "\n",
-          "Defaulting to 'era' pattern for initialization."
-        )
-      }
-
-      ll <- list(
-        isValid = isValid,
-        pattern = if (isValid) {
-          if (isPattern1) "era" else "occurrence"
-        } else {
-          "era"
-        },
-        patternLabel = if (isValid) {
-          if (isPattern1) "ERA (Interval Overlap)" else "OCCURRENCE (Point-in-Time)"
-        } else {
-          "ERA (Interval Overlap) - DEFAULT (non-standard pattern detected)"
-        },
-        warning = hasWarning,
-        details = list(primaryCriteriaLimit = pcl, expressionLimit = el, hasDateOffset = hasDateOffset)
-      )
-
-      invisible(ll)
     }
   ),
   private = list(
     .id = NULL,
-    .name = NULL,
-    .calculationMode = NULL,
-    .circePatternLabel = NULL
+    .name = NULL
   )
 )
 

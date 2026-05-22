@@ -125,24 +125,17 @@ createRassenIncidenceAnalysis <- function(analysisId,
 #' Create a target cohort `TargetCohort` object
 #'
 #' Constructs a `TargetCohort` object for use as the prevalence numerator or incidence target cohort.
-#' When `calculationMode = "occurrence"`, a CIRCE JSON file is required and validated.
-#' Non-CIRCE or derived cohorts can be used with the default `calculationMode = "era"`.
+#' All analyses use the era pattern (interval overlap).
 #'
 #' @param cohortId Integer: the cohort ID within the database results schema of interest.
 #' @param cohortName Character string specifying a name for the cohort.
-#' @param calculationMode Character: `"era"` (default, interval overlap) or `"occurrence"` (point-in-time).
-#' @param circeJsonPath Character string path to the CIRCE JSON file. Required when
-#'   `calculationMode = "occurrence"`. Must follow one of two patterns:
-#'   \itemize{
-#'     \item ERA (Chronic): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy
-#'     \item OCCURRENCE (Code Events): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy
-#'   }
+#'
 #' @return A `TargetCohort` R6 object.
 #' @export
 #'
-createTargetCohort <- function(cohortId, cohortName, calculationMode = "era", circeJsonPath = NULL) {
+createTargetCohort <- function(cohortId, cohortName) {
   cohortId <- as.integer(cohortId)
-  targetCohort <- TargetCohort$new(id = cohortId, name = cohortName, calculationMode = calculationMode, circeJsonPath = circeJsonPath)
+  targetCohort <- TargetCohort$new(id = cohortId, name = cohortName)
   return(targetCohort)
 }
 

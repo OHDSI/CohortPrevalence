@@ -37,9 +37,7 @@ The experiment class uses the builder pattern to define analysis dimensions:
 
 exp$addCohorts(tibble::tibble(
   cohortId = c(1, 2, 3),
-  cohortName = c("CKD A", "CKD B", "CKD C"),
-  calculationMode = c("era", "era", "occurrence"),
-  circeJsonPath = c(NA, NA, path3)
+  cohortName = c("CKD A", "CKD B", "CKD C")
 ))
 
 exp$addPrevalenceTypes(list(
@@ -76,251 +74,229 @@ results <- generatePrevalence(analyses, executionSettings = settings)
 }
 \section{Methods}{
 \subsection{Public methods}{
-  \itemize{
-    \item \href{#method-CohortPrevalenceExperiment-initialize}{\code{CohortPrevalenceExperiment$new()}}
-    \item \href{#method-CohortPrevalenceExperiment-addCohorts}{\code{CohortPrevalenceExperiment$addCohorts()}}
-    \item \href{#method-CohortPrevalenceExperiment-addPrevalenceTypes}{\code{CohortPrevalenceExperiment$addPrevalenceTypes()}}
-    \item \href{#method-CohortPrevalenceExperiment-addDemographicConstraints}{\code{CohortPrevalenceExperiment$addDemographicConstraints()}}
-    \item \href{#method-CohortPrevalenceExperiment-addPeriodsOfInterest}{\code{CohortPrevalenceExperiment$addPeriodsOfInterest()}}
-    \item \href{#method-CohortPrevalenceExperiment-setCommonParameters}{\code{CohortPrevalenceExperiment$setCommonParameters()}}
-    \item \href{#method-CohortPrevalenceExperiment-validate}{\code{CohortPrevalenceExperiment$validate()}}
-    \item \href{#method-CohortPrevalenceExperiment-getSpecification}{\code{CohortPrevalenceExperiment$getSpecification()}}
-    \item \href{#method-CohortPrevalenceExperiment-viewDesign}{\code{CohortPrevalenceExperiment$viewDesign()}}
-    \item \href{#method-CohortPrevalenceExperiment-define}{\code{CohortPrevalenceExperiment$define()}}
-    \item \href{#method-CohortPrevalenceExperiment-clone}{\code{CohortPrevalenceExperiment$clone()}}
-  }
+\itemize{
+\item \href{#method-CohortPrevalenceExperiment-new}{\code{CohortPrevalenceExperiment$new()}}
+\item \href{#method-CohortPrevalenceExperiment-addCohorts}{\code{CohortPrevalenceExperiment$addCohorts()}}
+\item \href{#method-CohortPrevalenceExperiment-addPrevalenceTypes}{\code{CohortPrevalenceExperiment$addPrevalenceTypes()}}
+\item \href{#method-CohortPrevalenceExperiment-addDemographicConstraints}{\code{CohortPrevalenceExperiment$addDemographicConstraints()}}
+\item \href{#method-CohortPrevalenceExperiment-addPeriodsOfInterest}{\code{CohortPrevalenceExperiment$addPeriodsOfInterest()}}
+\item \href{#method-CohortPrevalenceExperiment-setCommonParameters}{\code{CohortPrevalenceExperiment$setCommonParameters()}}
+\item \href{#method-CohortPrevalenceExperiment-validate}{\code{CohortPrevalenceExperiment$validate()}}
+\item \href{#method-CohortPrevalenceExperiment-getSpecification}{\code{CohortPrevalenceExperiment$getSpecification()}}
+\item \href{#method-CohortPrevalenceExperiment-viewDesign}{\code{CohortPrevalenceExperiment$viewDesign()}}
+\item \href{#method-CohortPrevalenceExperiment-define}{\code{CohortPrevalenceExperiment$define()}}
+\item \href{#method-CohortPrevalenceExperiment-clone}{\code{CohortPrevalenceExperiment$clone()}}
+}
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-CohortPrevalenceExperiment-initialize"></a>}}
-\if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-initialize}{}}}
-\subsection{\code{CohortPrevalenceExperiment$new()}}{
-  Create new experiment
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$new(name, description = NULL)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{name}}{Character. Descriptive name for the experiment}
-      \item{\code{description}}{Character. Optional description}
-    }
-    \if{html}{\out{</div>}}
-  }
+\if{html}{\out{<a id="method-CohortPrevalenceExperiment-new"></a>}}
+\if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-new}{}}}
+\subsection{Method \code{new()}}{
+Create new experiment
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$new(name, description = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{name}}{Character. Descriptive name for the experiment}
+
+\item{\code{description}}{Character. Optional description}
+}
+\if{html}{\out{</div>}}
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-addCohorts"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-addCohorts}{}}}
-\subsection{\code{CohortPrevalenceExperiment$addCohorts()}}{
-  Add cohort definitions
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$addCohorts(cohorts)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{cohorts}}{Tibble with columns:
+\subsection{Method \code{addCohorts()}}{
+Add cohort definitions
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$addCohorts(cohorts)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{cohorts}}{Tibble with columns:
 \itemize{
 \item \code{cohortId} (numeric, required): cohort ID in the results schema
 \item \code{cohortName} (character, required): display name
-\item \code{calculationMode} (character, optional): \code{"era"} (default) or \code{"occurrence"}
-\item \code{circeJsonPath} (character, optional): path to CIRCE JSON. Required for rows where \code{calculationMode = "occurrence"}
 }}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for method chaining
-  }
 }
-
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for method chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-addPrevalenceTypes"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-addPrevalenceTypes}{}}}
-\subsection{\code{CohortPrevalenceExperiment$addPrevalenceTypes()}}{
-  Add prevalence type definitions
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$addPrevalenceTypes(types_list)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{types_list}}{List of prevalenceType objects (created via createPrevalenceType)}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for method chaining
-  }
+\subsection{Method \code{addPrevalenceTypes()}}{
+Add prevalence type definitions
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$addPrevalenceTypes(types_list)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{types_list}}{List of prevalenceType objects (created via createPrevalenceType)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for method chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-addDemographicConstraints"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-addDemographicConstraints}{}}}
-\subsection{\code{CohortPrevalenceExperiment$addDemographicConstraints()}}{
-  Add demographic constraint definitions
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$addDemographicConstraints(constraints_list)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{constraints_list}}{List of demographicConstraints objects (created via createDemographicConstraints)}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for method chaining
-  }
+\subsection{Method \code{addDemographicConstraints()}}{
+Add demographic constraint definitions
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$addDemographicConstraints(constraints_list)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{constraints_list}}{List of demographicConstraints objects (created via createDemographicConstraints)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for method chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-addPeriodsOfInterest"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-addPeriodsOfInterest}{}}}
-\subsection{\code{CohortPrevalenceExperiment$addPeriodsOfInterest()}}{
-  Add periods of interest
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$addPeriodsOfInterest(poi_list)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{poi_list}}{List of period objects (YearlyRange or Span objects)}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for method chaining
-  }
+\subsection{Method \code{addPeriodsOfInterest()}}{
+Add periods of interest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$addPeriodsOfInterest(poi_list)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{poi_list}}{List of period objects (YearlyRange or Span objects)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for method chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-setCommonParameters"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-setCommonParameters}{}}}
-\subsection{\code{CohortPrevalenceExperiment$setCommonParameters()}}{
-  Set common parameters for all analyses
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$setCommonParameters(
+\subsection{Method \code{setCommonParameters()}}{
+Set common parameters for all analyses
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$setCommonParameters(
   strata = NULL,
   outputTypes = NULL
-)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{strata}}{Character vector of strata variables (e.g., c("age", "gender"))}
-      \item{\code{outputTypes}}{Character vector of output types (e.g., "prevalence")}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for method chaining
-  }
+)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{strata}}{Character vector of strata variables (e.g., c("age", "gender"))}
+
+\item{\code{outputTypes}}{Character vector of output types (e.g., "prevalence")}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for method chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-validate"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-validate}{}}}
-\subsection{\code{CohortPrevalenceExperiment$validate()}}{
-  Validate all required parameters are set
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$validate()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns TRUE if valid, otherwise stops with error
-  }
+\subsection{Method \code{validate()}}{
+Validate all required parameters are set
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$validate()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Invisibly returns TRUE if valid, otherwise stops with error
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-getSpecification"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-getSpecification}{}}}
-\subsection{\code{CohortPrevalenceExperiment$getSpecification()}}{
-  Get specification as flat tibble
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$getSpecification()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Tibble with one row per analysis combination
-  }
+\subsection{Method \code{getSpecification()}}{
+Get specification as flat tibble
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$getSpecification()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Tibble with one row per analysis combination
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-viewDesign"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-viewDesign}{}}}
-\subsection{\code{CohortPrevalenceExperiment$viewDesign()}}{
-  View experiment design
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$viewDesign(format = "console")}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{format}}{Character. "console" (default) for text table, "html" for interactive reactable}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns specification tibble
-  }
+\subsection{Method \code{viewDesign()}}{
+View experiment design
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$viewDesign(format = "console")}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{format}}{Character. "console" (default) for text table, "html" for interactive reactable}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns specification tibble
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-define"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-define}{}}}
-\subsection{\code{CohortPrevalenceExperiment$define()}}{
-  Define analysis specifications (create analysis objects)
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$define(autoIdStart = 1L)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{autoIdStart}}{Numeric. Starting ID for analyses (default: 1L)}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    List of CohortPrevalenceAnalysis objects with specification attached as attribute
-  }
+\subsection{Method \code{define()}}{
+Define analysis specifications (create analysis objects)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$define(autoIdStart = 1L)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{autoIdStart}}{Numeric. Starting ID for analyses (default: 1L)}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+List of CohortPrevalenceAnalysis objects with specification attached as attribute
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-CohortPrevalenceExperiment-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-CohortPrevalenceExperiment-clone}{}}}
-\subsection{\code{CohortPrevalenceExperiment$clone()}}{
-  The objects of this class are cloneable with this method.
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{CohortPrevalenceExperiment$clone(deep = FALSE)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{deep}}{Whether to make a deep clone.}
-    }
-    \if{html}{\out{</div>}}
-  }
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$clone(deep = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }

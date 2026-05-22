@@ -1,6 +1,6 @@
 Package: CohortPrevalence
 Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
-Version: 1.0.2
+Version: 1.1.0
 Authors@R: c(
     person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut")),
     person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
@@ -44,3 +44,4 @@ VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
 Config/roxygen2/version: 8.0.0
+RoxygenNote: 7.3.2

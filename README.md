@@ -91,8 +91,7 @@ exp <- CohortPrevalenceExperiment$new(
 # Add dimensions (fluent API)
 exp$addCohorts(tibble::tibble(
   cohortId = c(1, 2, 3),
-  cohortName = c("CKD A", "CKD B", "CKD C"),
-  circeJsonPath = c(path1, path2, path3)
+  cohortName = c("CKD A", "CKD B", "CKD C")
 ))
 exp$addPrevalenceTypes(list(
     createPrevalenceType("point_prevalence", lookBackDays = 0L),

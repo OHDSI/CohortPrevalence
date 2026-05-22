@@ -40,225 +40,216 @@ tracking provenance, standardization parameters, and execution metadata.
 }
 }
 \section{Active bindings}{
-  \if{html}{\out{<div class="r6-active-bindings">}}
-  \describe{
-    \item{\code{prevalence}}{Data frame with prevalence results}
+\if{html}{\out{<div class="r6-active-bindings">}}
+\describe{
+\item{\code{prevalence}}{Data frame with prevalence results}
 
-    \item{\code{incidence}}{Data frame with incidence results}
+\item{\code{incidence}}{Data frame with incidence results}
 
-    \item{\code{drugUsage}}{Data frame with drug usage results}
+\item{\code{drugUsage}}{Data frame with drug usage results}
 
-    \item{\code{metaInfo}}{Data frame with analysis metadata}
+\item{\code{metaInfo}}{Data frame with analysis metadata}
 
-    \item{\code{stdPrev}}{Data frame with standardized prevalence results}
+\item{\code{stdPrev}}{Data frame with standardized prevalence results}
 
-    \item{\code{standardizationApplied}}{List of standardization parameters (read-only)}
-  }
-  \if{html}{\out{</div>}}
+\item{\code{standardizationApplied}}{List of standardization parameters (read-only)}
+}
+\if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-  \itemize{
-    \item \href{#method-PrevalenceResults-initialize}{\code{PrevalenceResults$new()}}
-    \item \href{#method-PrevalenceResults-export}{\code{PrevalenceResults$export()}}
-    \item \href{#method-PrevalenceResults-standardizePrevalence}{\code{PrevalenceResults$standardizePrevalence()}}
-    \item \href{#method-PrevalenceResults-validate}{\code{PrevalenceResults$validate()}}
-    \item \href{#method-PrevalenceResults-summary}{\code{PrevalenceResults$summary()}}
-    \item \href{#method-PrevalenceResults-print}{\code{PrevalenceResults$print()}}
-    \item \href{#method-PrevalenceResults-show_query}{\code{PrevalenceResults$show_query()}}
-    \item \href{#method-PrevalenceResults-.addExecutedQuery}{\code{PrevalenceResults$.addExecutedQuery()}}
-    \item \href{#method-PrevalenceResults-clone}{\code{PrevalenceResults$clone()}}
-  }
+\itemize{
+\item \href{#method-PrevalenceResults-new}{\code{PrevalenceResults$new()}}
+\item \href{#method-PrevalenceResults-export}{\code{PrevalenceResults$export()}}
+\item \href{#method-PrevalenceResults-standardizePrevalence}{\code{PrevalenceResults$standardizePrevalence()}}
+\item \href{#method-PrevalenceResults-validate}{\code{PrevalenceResults$validate()}}
+\item \href{#method-PrevalenceResults-summary}{\code{PrevalenceResults$summary()}}
+\item \href{#method-PrevalenceResults-print}{\code{PrevalenceResults$print()}}
+\item \href{#method-PrevalenceResults-show_query}{\code{PrevalenceResults$show_query()}}
+\item \href{#method-PrevalenceResults-.addExecutedQuery}{\code{PrevalenceResults$.addExecutedQuery()}}
+\item \href{#method-PrevalenceResults-clone}{\code{PrevalenceResults$clone()}}
+}
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-PrevalenceResults-initialize"></a>}}
-\if{latex}{\out{\hypertarget{method-PrevalenceResults-initialize}{}}}
-\subsection{\code{PrevalenceResults$new()}}{
-  Create new PrevalenceResults object
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$new(
+\if{html}{\out{<a id="method-PrevalenceResults-new"></a>}}
+\if{latex}{\out{\hypertarget{method-PrevalenceResults-new}{}}}
+\subsection{Method \code{new()}}{
+Create new PrevalenceResults object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$new(
   prevalence = NULL,
   incidence = NULL,
   drugUsage = NULL,
   metaInfo = NULL,
   executionId = NULL
-)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{prevalence}}{Data frame with prevalence results}
-      \item{\code{incidence}}{Data frame with incidence results}
-      \item{\code{drugUsage}}{Data frame with drug usage results}
-      \item{\code{metaInfo}}{Data frame with analysis metadata}
-      \item{\code{executionId}}{Optional character string for execution tracking (internal use)}
-    }
-    \if{html}{\out{</div>}}
-  }
+)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{prevalence}}{Data frame with prevalence results}
+
+\item{\code{incidence}}{Data frame with incidence results}
+
+\item{\code{drugUsage}}{Data frame with drug usage results}
+
+\item{\code{metaInfo}}{Data frame with analysis metadata}
+
+\item{\code{executionId}}{Optional character string for execution tracking (internal use)}
+}
+\if{html}{\out{</div>}}
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-export"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-export}{}}}
-\subsection{\code{PrevalenceResults$export()}}{
-  Export results to directory bundle with manifest
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$export(outputFolder, bundleName = NULL)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{outputFolder}}{Character path where bundle directory will be created}
-      \item{\code{bundleName}}{Optional name for the bundle directory. Default: auto-generated timestamp}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self for chaining
-  }
+\subsection{Method \code{export()}}{
+Export results to directory bundle with manifest
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$export(outputFolder, bundleName = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{outputFolder}}{Character path where bundle directory will be created}
+
+\item{\code{bundleName}}{Optional name for the bundle directory. Default: auto-generated timestamp}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self for chaining
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-standardizePrevalence"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-standardizePrevalence}{}}}
-\subsection{\code{PrevalenceResults$standardizePrevalence()}}{
-  Apply direct method standardization
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$standardizePrevalence(
+\subsection{Method \code{standardizePrevalence()}}{
+Apply direct method standardization
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$standardizePrevalence(
   referencePopulation,
   ageMin = NULL,
   ageMax = NULL,
   ageRightTruncation = NULL
-)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{referencePopulation}}{StandardizationReference object}
-      \item{\code{ageMin}}{Numeric minimum age for filtering}
-      \item{\code{ageMax}}{Numeric maximum age for filtering}
-      \item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    New PrevalenceResults object with standardized prevalence
-  }
+)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{referencePopulation}}{StandardizationReference object}
+
+\item{\code{ageMin}}{Numeric minimum age for filtering}
+
+\item{\code{ageMax}}{Numeric maximum age for filtering}
+
+\item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+New PrevalenceResults object with standardized prevalence
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-validate"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-validate}{}}}
-\subsection{\code{PrevalenceResults$validate()}}{
-  Validate data integrity and relationships
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$validate()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Logical TRUE if valid, otherwise stops with error
-  }
+\subsection{Method \code{validate()}}{
+Validate data integrity and relationships
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$validate()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Logical TRUE if valid, otherwise stops with error
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-summary"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-summary}{}}}
-\subsection{\code{PrevalenceResults$summary()}}{
-  Print summary of results
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$summary()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self
-  }
+\subsection{Method \code{summary()}}{
+Print summary of results
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$summary()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Invisibly returns self
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-print"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-print}{}}}
-\subsection{\code{PrevalenceResults$print()}}{
-  Print object
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$print()}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self
-  }
+\subsection{Method \code{print()}}{
+Print object
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$print()}\if{html}{\out{</div>}}
 }
 
+\subsection{Returns}{
+Invisibly returns self
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-show_query"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-show_query}{}}}
-\subsection{\code{PrevalenceResults$show_query()}}{
-  Display executed SQL query for an analysis
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$show_query(analysisId)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{analysisId}}{Character or numeric analysis ID}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns the SQL string
-  }
+\subsection{Method \code{show_query()}}{
+Display executed SQL query for an analysis
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$show_query(analysisId)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{analysisId}}{Character or numeric analysis ID}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns the SQL string
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-.addExecutedQuery"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-.addExecutedQuery}{}}}
-\subsection{\code{PrevalenceResults$.addExecutedQuery()}}{
-  Add executed query for an analysis (internal use)
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$.addExecutedQuery(analysisId, sql_string)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{analysisId}}{Character or numeric analysis ID}
-      \item{\code{sql_string}}{Character SQL query string}
-    }
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Returns}{
-    Invisibly returns self
-  }
+\subsection{Method \code{.addExecutedQuery()}}{
+Add executed query for an analysis (internal use)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$.addExecutedQuery(analysisId, sql_string)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{analysisId}}{Character or numeric analysis ID}
+
+\item{\code{sql_string}}{Character SQL query string}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self
+}
+}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PrevalenceResults-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-PrevalenceResults-clone}{}}}
-\subsection{\code{PrevalenceResults$clone()}}{
-  The objects of this class are cloneable with this method.
-  \subsection{Usage}{
-    \if{html}{\out{<div class="r">}}
-    \preformatted{PrevalenceResults$clone(deep = FALSE)}
-    \if{html}{\out{</div>}}
-  }
-  \subsection{Arguments}{
-    \if{html}{\out{<div class="arguments">}}
-    \describe{
-      \item{\code{deep}}{Whether to make a deep clone.}
-    }
-    \if{html}{\out{</div>}}
-  }
+\subsection{Method \code{clone()}}{
+The objects of this class are cloneable with this method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$clone(deep = FALSE)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{deep}}{Whether to make a deep clone.}
+}
+\if{html}{\out{</div>}}
+}
+}
 }
