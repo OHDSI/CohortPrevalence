@@ -8,6 +8,7 @@ library(dplyr)
 library(readr)
 library(tidyr)
 library(usethis)
+devtools::load_all()
 
 # Note: USA Census 2020 data is publicly available
 # Retrieved via Census API using tidycensus package
@@ -27,7 +28,11 @@ var2020 <- tidycensus::load_variables(year = 2020, dataset = "dhc") |>
 pctNames <- var2020$name
 
 # retrieve from API
-census2020Weights <- tidycensus::get_decennial(geography = "us", year = 2020, sumfile = "dhc", variables = pctNames)|>
+census2020Weights <- tidycensus::get_decennial(
+  geography = "us",
+  year = 2020,
+  sumfile = "dhc",
+  variables = pctNames) |>
   dplyr::left_join(var2020, by = c("variable" = "name"))
 
 # get ages
@@ -56,7 +61,7 @@ usa_2020_data <- census2020Weights |>
 cat("USA Census 2020 - Data Check:\n")
 cat("Total Population: ", format(sum(usa_2020_data$population), big.mark = ","), "\n")
 cat("Expected (~330M): ✓\n")
-cat("Age groups: ", n_distinct(usa_2020_data$age), "\n")
+cat("Age groups: ", dplyr::n_distinct(usa_2020_data$age), "\n")
 cat("Genders: ", paste(unique(usa_2020_data$gender), collapse = ", "), "\n\n")
 
 # Create StandardizationReference object

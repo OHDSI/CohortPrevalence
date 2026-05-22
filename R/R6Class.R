@@ -190,7 +190,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
         prevalent_cohort_id = self$prevalentCohort$id(),
-        lookback = ifelse(is.infinite(self$prevalenceType$lookBackDays), 999999,self$prevalenceType$lookBackDays),
+        lookback = ifelse(is.infinite(self$prevalenceType$lookBackDays), 999999, self$prevalenceType$lookBackDays),
+        anchor_date = self$prevalenceType$getAnchorDate(),
         multiplier = self$multiplier
       ) |>
         SqlRender::translate(
@@ -755,7 +756,7 @@ IncidenceAnalysis <- R6::R6Class(
 PrevalenceType <- R6::R6Class(
   classname = "PrevalenceType",
   public = list(
-    initialize = function(prevalenceType, lookBackDays) {
+    initialize = function(prevalenceType, lookBackDays, mode = "formal") {
       
       # Validate prevalenceType is one of the valid options
       validTypes <- c(
@@ -767,14 +768,14 @@ PrevalenceType <- R6::R6Class(
       checkmate::assert_choice(x = prevalenceType, choices = validTypes)
       private[[".prevalenceType"]] <- prevalenceType
       
-      # Validate lookBackDays - positive integer (>= 1) or Inf for complete lookback
-      # 0 is coerced to Inf (complete historical lookback)
-      if (is.numeric(lookBackDays) && length(lookBackDays) == 1 && lookBackDays == 0) {
-        lookBackDays <- Inf
-      }
+      # Validate mode
+      checkmate::assert_choice(x = mode, choices = c("formal", "rough"))
+      private[[".mode"]] <- mode
+      
+      # Validate lookBackDays - integer >= 0 or Inf for complete lookback
       checkmate::assert(
-        checkmate::check_integerish(x = lookBackDays, len = 1, lower = 1),
-        checkmate::check_infinite(x = lookBackDays)
+        checkmate::check_integerish(x = lookBackDays, len = 1, lower = 0),
+        checkmate::check_true(is.infinite(lookBackDays))
       )
       private[[".lookBackDays"]] <- lookBackDays
       
@@ -812,10 +813,21 @@ PrevalenceType <- R6::R6Class(
       return(labelMap[[private$.prevalenceType]])
     },
     
+    # Getter: returns the anchor_date column name based on mode
+    getAnchorDate = function() {
+      if (private$.mode == "formal") {
+        return("cohort_start_date")
+      } else {
+        return("cohort_end_date")
+      }
+    },
+    
     # Getter: returns human-readable lookback label
     getLookbackLabel = function() {
       lbd <- private$.lookBackDays
-      if (lbd == 365) {
+      if (lbd == 0) {
+        return("No lookback (only POI)")
+      } else if (lbd == 365) {
         return("1-year lookback")
       } else if (lbd == 1095) {
         return("3-year lookback")
@@ -832,10 +844,12 @@ PrevalenceType <- R6::R6Class(
       lookbackLabel <- self$getLookbackLabel()
       numerator <- self$getNumeratorType()
       denominator <- self$getDenominatorType()
+      modeLabel <- ifelse(private$.mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)")
       
       txt <- c(
         glue::glue("Prevalence Type ==> {prevalenceLabel}"),
         glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
+        glue::glue("  Mode: {modeLabel}"),
         glue::glue("  Lookback: {lookbackLabel}")
       ) |> glue::glue_collapse("\n")
       
@@ -845,7 +859,8 @@ PrevalenceType <- R6::R6Class(
   ),
   private = list(
     .prevalenceType = NULL,
-    .lookBackDays = NULL
+    .lookBackDays = NULL,
+    .mode = NULL
   ),
   active = list(
     
@@ -867,15 +882,19 @@ PrevalenceType <- R6::R6Class(
       if (missing(value)) {
         return(private$.lookBackDays)
       }
-      # Coerce 0 to Inf (complete historical lookback)
-      if (is.numeric(value) && length(value) == 1 && value == 0) {
-        value <- Inf
-      }
       checkmate::assert(
-        checkmate::check_integerish(x = value, len = 1, lower = 1),
-        checkmate::check_infinite(x = value)
+        checkmate::check_integerish(x = value, len = 1, lower = 0),
+        checkmate::check_true(is.infinite(value))
       )
       private$.lookBackDays <- value
+    },
+    
+    mode = function(value) {
+      if (missing(value)) {
+        return(private$.mode)
+      }
+      checkmate::assert_choice(x = value, choices = c("formal", "rough"))
+      private$.mode <- value
     }
   )
 )

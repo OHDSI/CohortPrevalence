@@ -1,6 +1,7 @@
 #' Create a `PrevalenceType` object
 #'
-#' Constructs a `PrevalenceType` object specifying the prevalence type and lookback period.
+#' Constructs a `PrevalenceType` object specifying the prevalence type, lookback period,
+#' and calculation mode.
 #'
 #' @param prevalenceType Character string specifying prevalence type. Must be one of:
 #' \itemize{
@@ -9,14 +10,26 @@
 #'   \item `"period_prevalence_pd3"`: Continuous observation (pn2 + pd3)
 #'   \item `"period_prevalence_pd4"`: Sufficient days observed (pn2 + pd4)
 #' }
-#' @param lookBackDays Integer number of days for lookback window. Must be a positive integer (>= 1) or Inf for complete historical lookback. Note: 0 is automatically coerced to Inf.
+#' @param lookBackDays Integer number of days for lookback window. Must be an integer >= 0
+#'   or `Inf` for complete historical lookback. A value of 0 means no lookback — only events
+#'   exactly on the interval day/period are counted.
+#' @param mode Character. Calculation mode controlling which cohort date anchors the event.
+#'   Must be one of:
+#' \itemize{
+#'   \item `"formal"` (default): Uses `cohort_start_date` as the anchor. Formal prevalence
+#'     asks: did the disease START within the lookback window relative to the period of interest?
+#'   \item `"rough"`: Uses `cohort_end_date` as the anchor. Rough prevalence asks: was the
+#'     disease detected (still active) during the interval? This is a simpler detection-based
+#'     calculation.
+#' }
 #' @return A `PrevalenceType` R6 object.
 #' @export
 #'
-createPrevalenceType <- function(prevalenceType, lookBackDays) {
+createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal") {
   pt <- PrevalenceType$new(
     prevalenceType = prevalenceType,
-    lookBackDays = lookBackDays
+    lookBackDays = lookBackDays,
+    mode = mode
   )
   return(pt)
 }
