@@ -19,9 +19,9 @@ SELECT * FROM (
     INNER JOIN #year_interval  b
     ON observation_period_start_date < b.calendar_end_date
     AND observation_period_end_date >= b.calendar_start_date
-	  {@min_obs_time > 0} ? { -- add lead-in period
+	  {{@min_obs_time > 0}} ? {{ -- add lead-in period
 	  WHERE observation_period_start_date <= DATEADD(day, -@min_obs_time, b.calendar_start_date)
-	  }
+	  }}
   )
 )
 /* demographic constraints */
