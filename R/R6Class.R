@@ -228,14 +228,11 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterest$poiRange$span_label}")
       }
 
-      # prep denom
-      denomType <- self$prevalenceType$getDenominatorType()
-      dn <- denomType
-
       # prep op
       ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
       demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
       demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
+      
       
       # prep outputTypes
       outputs <- paste0(private$.outputTypes, collapse = ", ")
@@ -247,9 +244,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohortName = self$prevalentCohort$name(),
         poi = poi,
         prevalenceType = self$prevalenceType$getPrevalenceLabel(),
-        lookBackDays = glue::glue("{self$prevalenceType$lookBackDays}d"),
+        lookBackDays = self$prevalenceType$getLookbackLabel(),
         numerator = self$prevalenceType$getNumeratorType(),
-        denominator = dn,
+        denominator = self$prevalenceType$getDenominatorType(),
+        prevalenceMode = ifelse(self$prevalenceType$mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)"),
         obsPeriod = ope,
         outputTypes = outputs,
         demoConAge = demoConAge,
@@ -806,9 +804,9 @@ PrevalenceType <- R6::R6Class(
     getPrevalenceLabel = function() {
       labelMap <- list(
         "point_prevalence" = "Point Prevalence",
-        "period_prevalence_pd2" = "Period Prevalence (all time observed)",
-        "period_prevalence_pd3" = "Period Prevalence (continuous observation)",
-        "period_prevalence_pd4" = "Period Prevalence (sufficient days)"
+        "period_prevalence_pd2" = "Period Prevalence (at least 1 day)",
+        "period_prevalence_pd3" = "Period Prevalence (complete period)",
+        "period_prevalence_pd4" = "Period Prevalence (at least n days)"
       )
       return(labelMap[[private$.prevalenceType]])
     },
