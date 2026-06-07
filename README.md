@@ -21,6 +21,10 @@ Users have the option of selecting:
 - Numerator Option:
     - Option 1: The number of patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time
     - Option 2: The number of patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time.
+
+- Prevalence Mode:
+    - **formal**: Anchors prevalence to the `cohort_start_date`. A patient is considered prevalent if evidence of disease exists on or before the cohort start date (within the lookback window). This is the standard epidemiological approach where disease must be established at the beginning of the observation.
+    - **rough**: Anchors prevalence to the `cohort_end_date`. A patient is considered prevalent if evidence of disease exists at any time up to and including the end of the cohort period. This provides a more inclusive estimate that captures disease identified during the period of interest.
     
 - Defining Eligible Observation Periods in the population
     1) Minimum Observation Period Length: This is the required time that persons in the database must have been observed to be eligible. This can be any number in days; typical options would be 0 days or 365 days. 
@@ -51,7 +55,7 @@ analysis <- createCohortPrevalenceAnalysis(
   analysisId = 1L,
   prevalentCohort = createPopulationCohort(name = "CKD", isoPeriod = "2020-2024"),
   periodOfInterest = createYearlyRange(2020:2024),
-  prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 0L),
+  prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
   demographicConstraints = createDemographicConstraints(ageMin = 18, ageMax = 150),
   outputTypes = "prevalence"
 )
@@ -91,13 +95,12 @@ exp <- CohortPrevalenceExperiment$new(
 # Add dimensions (fluent API)
 exp$addCohorts(tibble::tibble(
   cohortId = c(1, 2, 3),
-  cohortName = c("CKD A", "CKD B", "CKD C"),
-  circeJsonPath = c(path1, path2, path3)
+  cohortName = c("CKD A", "CKD B", "CKD C")
 ))
 exp$addPrevalenceTypes(list(
-    createPrevalenceType("point_prevalence", lookBackDays = 0L),
-    createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L),
-    createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L)
+    createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
+    createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L, mode = "formal"),
+    createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L, mode = "rough")
   ))
 exp$addDemographicConstraints(list(
     createDemographicConstraints(ageMin = 18, ageMax = 150),

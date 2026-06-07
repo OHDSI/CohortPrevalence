@@ -4,7 +4,7 @@
 \alias{createPrevalenceType}
 \title{Create a \code{PrevalenceType} object}
 \usage{
-createPrevalenceType(prevalenceType, lookBackDays)
+createPrevalenceType(prevalenceType, lookBackDays, mode = "formal")
 }
 \arguments{
 \item{prevalenceType}{Character string specifying prevalence type. Must be one of:
@@ -15,11 +15,24 @@ createPrevalenceType(prevalenceType, lookBackDays)
 \item \code{"period_prevalence_pd4"}: Sufficient days observed (pn2 + pd4)
 }}
 
-\item{lookBackDays}{Integer number of days for lookback window. Can be 0, any positive integer, or Inf for complete lookback.}
+\item{lookBackDays}{Integer number of days for lookback window. Must be an integer >= 0
+or \code{Inf} for complete historical lookback. A value of 0 means no lookback — only events
+exactly on the interval day/period are counted.}
+
+\item{mode}{Character. Calculation mode controlling which cohort date anchors the event.
+Must be one of:
+\itemize{
+\item \code{"formal"} (default): Uses \code{cohort_start_date} as the anchor. Formal prevalence
+asks: did the disease START within the lookback window relative to the period of interest?
+\item \code{"rough"}: Uses \code{cohort_end_date} as the anchor. Rough prevalence asks: was the
+disease detected (still active) during the interval? This is a simpler detection-based
+calculation.
+}}
 }
 \value{
 A \code{PrevalenceType} R6 object.
 }
 \description{
-Constructs a \code{PrevalenceType} object specifying the prevalence type and lookback period.
+Constructs a \code{PrevalenceType} object specifying the prevalence type, lookback period,
+and calculation mode.
 }

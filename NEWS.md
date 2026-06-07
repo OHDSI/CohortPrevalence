@@ -1,3 +1,37 @@
+CohortPrevalence v1.1.0
+=======================
+
+## Feature Enhancements
+
+* Improvements to standardization
+    * Allow for standardization by other weighting schemes acs vs 2020 US census.
+    * Automatically resolves differences in age groups between standardization references
+* Addition of Lead-in Window - the minimum duration of continuous observation required before a patient can be considered at risk and included in the denominator.
+
+## Breaking Changes
+
+* **Occurrence Mode Removed**: Package now uses era pattern exclusively for all analyses. The `calculationMode` and `circeJsonPath` parameters have been removed from `createTargetCohort()` and `CohortPrevalenceExperiment$addCohorts()`. All SQL files with "_occurrence" pattern have been deleted.
+  * Migration: Remove `calculationMode` and `circeJsonPath` arguments from any calls to `createTargetCohort()`
+  * All analyses now use interval overlap (era) pattern by default
+* **CIRCE JSON Validation Removed**: Cohort validation against CIRCE patterns is no longer performed. The `TargetCohort$validateCirceJson()` method has been removed.
+
+## Method Changes
+
+* add calcuation types of formal vs rough to determine is using either any occurrence of the disease or the formal start in the lookback period
+    * `createPrevalenceType()` when mode = "rough" then counts based on the cohort_end_date
+    * `createPrevalenceType()` when mode = "formal" then counts based on the cohort_start_date
+
+## API Changes
+
+* `CohortInfo` R6 class has been removed. It has been replaced by two purpose-specific classes:
+    * `TargetCohort` — for the prevalence numerator and incidence target cohort.
+    * `PopulationCohort` — for the denominator population cohort.
+* `createPrevalenceCohort()` has been renamed to `createTargetCohort()`.
+* `createPopulationCohort()` now constructs a `PopulationCohort` object instead of a `CohortInfo` object. The function signature is unchanged.
+* `createTargetCohort()` signature simplified: `createTargetCohort(cohortId, cohortName)` (removed `calculationMode` and `circeJsonPath` parameters)
+* `CohortPrevalenceExperiment$addCohorts()` tibble columns simplified: now requires only `cohortId` and `cohortName` (removed optional `calculationMode` and `circeJsonPath` columns)
+* `CohortPrevalenceExperiment$setCommonParameters` adds minimumObservationLength and useOnlyFirstObservationPeriod as common parameters to the experiment. 
+
 CohortPrevalence v1.0.1
 =======================
 
@@ -11,11 +45,8 @@ CohortPrevalence v1.0.0
 ## Refactor of Sql 
 
 * Cohort Types:
-    * Allow for two cohorts (Era: first occurrence end of continuous observation; Occurrence: all occurrences end on start date)
-    * Validation of circe inputs 
-    * apply different sql logic based on cohort type
-    * requires circeJsonPath for validation
-* Refine Prevalence type options
+    * Era pattern: first occurrence end of continuous observation
+    * Refine Prevalence type options
     * point_prevalence --> pn1 and pd1 with a lookback period
     * period_prevalence_pd2 --> pn2 and pd2 with all time in poi
     * period_prevalence_pd3 --> pn2 and pd3 at least 1 day in poi

@@ -29,8 +29,7 @@
 #'
 #' exp$addCohorts(tibble::tibble(
 #'   cohortId = c(1, 2, 3),
-#'   cohortName = c("CKD A", "CKD B", "CKD C"),
-#'   circeJsonPath = c(path1, path2, path3)
+#'   cohortName = c("CKD A", "CKD B", "CKD C")
 #' ))
 #'
 #' exp$addPrevalenceTypes(list(
@@ -77,17 +76,18 @@ CohortPrevalenceExperiment <- R6::R6Class(
     },
 
     #' @description Add cohort definitions
-    #' @param cohorts Tibble with columns: cohortId (numeric), cohortName (character), circeJsonPath (character)
+    #' @param cohorts Tibble with columns:
+    #'   - `cohortId` (numeric, required): cohort ID in the results schema
+    #'   - `cohortName` (character, required): display name
     #' @return Invisibly returns self for method chaining
     addCohorts = function(cohorts) {
       checkmate::assert_tibble(cohorts)
       checkmate::assert_names(
         colnames(cohorts),
-        must.include = c("cohortId", "cohortName", "circeJsonPath")
+        must.include = c("cohortId", "cohortName")
       )
       checkmate::assert_numeric(cohorts$cohortId, any.missing = FALSE)
       checkmate::assert_character(cohorts$cohortName, any.missing = FALSE)
-      checkmate::assert_character(cohorts$circeJsonPath, any.missing = FALSE)
       checkmate::assert_true(length(unique(cohorts$cohortId)) == nrow(cohorts),
                             .var.name = "cohortIds must be unique")
 
@@ -105,7 +105,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Validate each item has required structure
       for (i in seq_along(types_list)) {
         obj <- types_list[[i]]
-        if (!("prevalenceType" %in% names(obj)) || !("lookBackDays" %in% names(obj))) {
+        if (!all(c("prevalenceType", "lookBackDays", "mode") %in% names(obj))) {
           stop(
             "Item ", i, " in types_list does not appear to be a valid prevalenceType object. ",
             "Use createPrevalenceType() to create objects."
@@ -169,17 +169,26 @@ CohortPrevalenceExperiment <- R6::R6Class(
     #' @description Set common parameters for all analyses
     #' @param strata Character vector of strata variables (e.g., c("age", "gender"))
     #' @param outputTypes Character vector of output types (e.g., "prevalence")
+    #' @param minimumObservationLength Integer minimum lead-in days before each POI start date
+    #' @param useOnlyFirstObservationPeriod Logical. If TRUE, only first observation period per person is used
     #' @return Invisibly returns self for method chaining
-    setCommonParameters = function(strata = NULL, outputTypes = NULL) {
+    setCommonParameters = function(strata = NULL,
+                                   outputTypes = NULL,
+                                   minimumObservationLength = 0L,
+                                   useOnlyFirstObservationPeriod = FALSE) {
       if (!is.null(strata)) {
         checkmate::assert_character(strata, any.missing = FALSE)
       }
       if (!is.null(outputTypes)) {
         checkmate::assert_character(outputTypes, any.missing = FALSE)
       }
+      checkmate::assert_integerish(minimumObservationLength, len = 1)
+      checkmate::assert_logical(useOnlyFirstObservationPeriod, len = 1)
 
       private$.strata <- strata
       private$.outputTypes <- outputTypes
+      private$.minimumObservationLength <- as.integer(minimumObservationLength)
+      private$.useOnlyFirstObservationPeriod <- useOnlyFirstObservationPeriod
       invisible(self)
     },
 
@@ -257,7 +266,6 @@ CohortPrevalenceExperiment <- R6::R6Class(
             analysisId = reactable::colDef(width = 70),
             cohortId = reactable::colDef(width = 70),
             cohortName = reactable::colDef(width = 140),
-            circeJsonPath = reactable::colDef(width = 150),
             prevalenceType = reactable::colDef(width = 120),
             lookBackDays = reactable::colDef(width = 80),
             ageMin = reactable::colDef(width = 60),
@@ -293,7 +301,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Create analysis objects from spec rows
       analyses <- vector("list", nrow(spec))
 
-      for (i in 1:nrow(spec)) {
+      for (i in seq_len(nrow(spec))) {
         row <- spec[i, ]
 
         # Reconstruct POI object from spec row
@@ -308,17 +316,19 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
         analyses[[i]] <- createCohortPrevalenceAnalysis(
           analysisId = row$analysisId,
-          prevalentCohort = createPrevalenceCohort(
+          prevalentCohort = createTargetCohort(
             cohortId = row$cohortId,
-            cohortName = row$cohortName,
-            circeJsonPath = row$circeJsonPath
+            cohortName = row$cohortName
           ),
           periodOfInterest = poi_obj,
           prevalenceType = createPrevalenceType(
             prevalenceType = row$prevalenceType,
-            lookBackDays = row$lookBackDays
+            lookBackDays = row$lookBackDays,
+            mode = row$mode
           ),
           strata = row$strata[[1]],
+          minimumObservationLength = row$minimumObservationLength,
+          useOnlyFirstObservationPeriod = row$useOnlyFirstObservationPeriod,
           demographicConstraints = createDemographicConstraints(
             ageMin = row$ageMin,
             ageMax = row$ageMax,
@@ -347,12 +357,16 @@ CohortPrevalenceExperiment <- R6::R6Class(
     .periodsOfInterest = NULL,
     .strata = NULL,
     .outputTypes = NULL,
+    .minimumObservationLength = 0L,
+    .useOnlyFirstObservationPeriod = FALSE,
 
     # Expand periods of interest into flat specification rows
     .expandPeriodsOfInterest = function() {
       poi_spec <- tibble::tibble(
         poiType = character(),
-        poiLabel = character()
+        poiLabel = character(),
+        poiStart = as.Date(character()),
+        poiEnd = as.Date(character())
       )
 
       for (i in seq_along(private$.periodsOfInterest)) {
@@ -368,16 +382,20 @@ CohortPrevalenceExperiment <- R6::R6Class(
             poi_spec, 
             tibble::tibble(
              poiType = "yearly",
-             poiLabel = poiLabel
+             poiLabel = poiLabel,
+             poiStart = as.Date(paste0(a, "-01-01")),
+             poiEnd = as.Date(paste0(b, "-12-31"))
             )
            )
         } else {
-          poiLabel <- glue::glue("{poi$poiRange$span_label}")
+           poiLabel <- as.character(poi$poiRange$span_label)
           poi_spec <- rbind(
             poi_spec, 
             tibble::tibble(
              poiType = "span",
-             poiLabel = poiLabel
+             poiLabel = poiLabel,
+             poiStart = poi$poiRange$calendar_start_date,
+             poiEnd = poi$poiRange$calendar_end_date
             )
            )
         }
@@ -391,7 +409,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Convert resilience types list to tibble
       prevalence_spec <- tibble::tibble(
         prevalenceType = sapply(private$.prevalenceTypes, function(x) x$prevalenceType),
-        lookBackDays = sapply(private$.prevalenceTypes, function(x) x$lookBackDays)
+        lookBackDays = sapply(private$.prevalenceTypes, function(x) x$lookBackDays),
+        mode = sapply(private$.prevalenceTypes, function(x) x$mode)
       )
 
       # Convert demographic constraints list to tibble
@@ -414,14 +433,17 @@ CohortPrevalenceExperiment <- R6::R6Class(
         dplyr::mutate(
           analysisId = dplyr::row_number(),
           strata = list(private$.strata),
-          outputTypes = list(private$.outputTypes)
+          outputTypes = list(private$.outputTypes),
+          minimumObservationLength = private$.minimumObservationLength,
+          useOnlyFirstObservationPeriod = private$.useOnlyFirstObservationPeriod
         ) |>
         dplyr::select(
           analysisId,
-          cohortId, cohortName, circeJsonPath,
-          prevalenceType, lookBackDays,
+          cohortId, cohortName,
+          prevalenceType, lookBackDays, mode,
           ageMin, ageMax, genderIds,
-          poiType, poiLabel,
+          poiType, poiLabel, poiStart, poiEnd,
+          minimumObservationLength, useOnlyFirstObservationPeriod,
           strata, outputTypes
         )
 

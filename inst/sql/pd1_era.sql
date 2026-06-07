@@ -18,7 +18,7 @@ FROM (
   SELECT *,
     ROW_NUMBER() OVER (
       PARTITION BY subject_id, span_label
-      ORDER BY 
+      ORDER BY
         CASE WHEN DATEDIFF(day, calendar_start_date, cohort_start_date) < 0 THEN 0 ELSE 1 END,
         ABS(DATEDIFF(day, calendar_start_date, cohort_start_date)),
         observation_period_start_date
@@ -37,9 +37,9 @@ WHERE rn1 = 1;
 DROP TABLE IF EXISTS #allEvents;
 CREATE TABLE #allEvents AS
 SELECT *,
-  CASE WHEN 
-    cohort_start_date <= calendar_end_date
-    AND cohort_end_date >= DATEADD(day, -@lookback, calendar_start_date)
+  CASE WHEN
+    cohort_start_date <= calendar_start_date
+    AND @anchor_date >= DATEADD(day, -@lookback, calendar_start_date)
   THEN 1 ELSE 0 END AS case_event
 FROM #denom
 ;

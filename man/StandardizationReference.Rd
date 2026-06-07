@@ -67,8 +67,10 @@ methods for accessing and manipulating reference data.
 \item \href{#method-StandardizationReference-getGenderValues}{\code{StandardizationReference$getGenderValues()}}
 \item \href{#method-StandardizationReference-getMetadata}{\code{StandardizationReference$getMetadata()}}
 \item \href{#method-StandardizationReference-getFilteredReference}{\code{StandardizationReference$getFilteredReference()}}
-\item \href{#method-StandardizationReference-getAgetruncatedReference}{\code{StandardizationReference$getAgetruncatedReference()}}
 \item \href{#method-StandardizationReference-getAdjustedReference}{\code{StandardizationReference$getAdjustedReference()}}
+\item \href{#method-StandardizationReference-validateRightTruncation}{\code{StandardizationReference$validateRightTruncation()}}
+\item \href{#method-StandardizationReference-getValidTruncationPoints}{\code{StandardizationReference$getValidTruncationPoints()}}
+\item \href{#method-StandardizationReference-mapAgesToReference}{\code{StandardizationReference$mapAgesToReference()}}
 \item \href{#method-StandardizationReference-clone}{\code{StandardizationReference$clone()}}
 }
 }
@@ -207,26 +209,6 @@ Data frame filtered and re-normalized to bounds
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-StandardizationReference-getAgetruncatedReference"></a>}}
-\if{latex}{\out{\hypertarget{method-StandardizationReference-getAgetruncatedReference}{}}}
-\subsection{Method \code{getAgetruncatedReference()}}{
-Apply age truncation (collapse ages >= threshold into single group)
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAgetruncatedReference(rightTruncation)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{rightTruncation}}{Age threshold. Ages >= this value collapse to "threshold+"}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Data frame with ages >= threshold collapsed and weights re-normalized
-}
-}
-\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getAdjustedReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAdjustedReference}{}}}
 \subsection{Method \code{getAdjustedReference()}}{
@@ -252,6 +234,79 @@ Apply both bounds filtering and age truncation
 }
 \subsection{Returns}{
 Data frame with both transformations applied
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StandardizationReference-validateRightTruncation"></a>}}
+\if{latex}{\out{\hypertarget{method-StandardizationReference-validateRightTruncation}{}}}
+\subsection{Method \code{validateRightTruncation()}}{
+Validate right truncation point against reference age groups
+
+For single-year references, any integer age is valid. For grouped references,
+the truncation point must fall exactly at the start of an age group (e.g.,
+"85" for "85+" group, "80" for "80-84" group). Fails fast if truncation
+falls mid-group.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$validateRightTruncation(rightTruncation)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{rightTruncation}}{Numeric. Age threshold to validate.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Numeric. The validated truncation point (or stop with error)
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StandardizationReference-getValidTruncationPoints"></a>}}
+\if{latex}{\out{\hypertarget{method-StandardizationReference-getValidTruncationPoints}{}}}
+\subsection{Method \code{getValidTruncationPoints()}}{
+Get valid truncation points for this reference
+
+Returns a numeric vector of all valid age thresholds where right truncation
+is allowed (start of each age group for grouped references, all ages for
+single-year references).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getValidTruncationPoints()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Numeric vector of valid truncation points
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-StandardizationReference-mapAgesToReference"></a>}}
+\if{latex}{\out{\hypertarget{method-StandardizationReference-mapAgesToReference}{}}}
+\subsection{Method \code{mapAgesToReference()}}{
+Map single-year ages to reference age group labels
+
+Converts a character/numeric vector of ages (some possibly \"N+\" labels from
+right truncation) to the reference's age label format so prevalence data can
+be joined to reference weights by (age, gender).
+
+Works generically for any reference type:
+\itemize{
+\item Already-truncated \"N+\" values pass through unchanged
+\item Single-year references (Decennial Census): zero-pad numeric values
+\item Grouped references (ACS, WHO): lookup which group each numeric age falls into
+}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{age_values}}{Character/numeric vector. May contain \"N+\" suffix values or numeric strings.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Character vector of reference-formatted age labels
 }
 }
 \if{html}{\out{<hr>}}

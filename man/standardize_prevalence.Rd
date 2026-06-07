@@ -51,17 +51,45 @@ age truncation for real-world database patterns (e.g., Optum age masking).
 }
 \details{
 Algorithm (direct method standardization):
-\enumerate{
-\item Filter reference population to demographic bounds (ageMin-ageMax)
-\item If ageRightTruncation specified: collapse ages >= threshold into single group
-\item Re-normalize weights within adjusted age groups
-\item Filter and prepare prevalence data: convert gender concept IDs, convert age to
-3-character zero-padded format (or "ageMax+" if right truncated)
-\item Join prevalence data to adjusted reference weights by age and gender
-\item Calculate crude rate per 100,000 population for each stratum
-\item Multiply each stratum's crude rate by reference weight for standardization
-\item Aggregate results by analysisId and spanLabel
-\item Output includes crude rates (for comparison to standard population rates)
+
+\strong{Step 1}: Validate & apply right truncation to reference population
+\itemize{
+\item If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
+\item Apply truncation + demographic bounds to reference
+}
+
+\strong{Step 2}: Filter & prepare crude prevalence
+\itemize{
+\item Convert gender concept IDs (8532→Female, 8507→Male)
+\item Convert age to numeric, apply ageMin/ageMax filters
+\item Apply right truncation: ages >= threshold → "threshold+"
+}
+
+\strong{Step 3}: Map crude ages → reference group labels
+\itemize{
+\item "N+" values pass through unchanged
+\item For single-year references: zero-pad to "000", "001", ...
+\item For grouped references: lookup which age group each value falls into
+}
+
+\strong{Step 4}: Summarize by mapped age-gender groups
+\itemize{
+\item Group by analysisId, spanLabel, age, gender; sum numerator and denominator
+\item Calculate crude rate per 100,000
+}
+
+\strong{Step 5}: Re-filter reference to matched crude age-gender combos only, renormalize weights
+\itemize{
+\item Filter ref_base to only age-gender pairs present in prevalence data
+\item Renormalize weights to sum to 1.0 within matched subset
+}
+
+\strong{Step 6}: Join, standardize, and aggregate
+\itemize{
+\item inner_join crude rates to reference weights by (age, gender)
+\item Calculate stdValue = rate × weight for each stratum
+\item Aggregate: stdStat = sum(stdValue) per analysisId + spanLabel
+\item Output includes totalNum, totalDenom, crudeStat, and stdStat
 }
 }
 \keyword{internal}

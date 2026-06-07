@@ -26,7 +26,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".analysisTag"]] <- analysisTag
 
       # set prevalent cohort
-      checkmate::assert_class(x = prevalentCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = prevalentCohort, classes = "TargetCohort")
       private[[".prevalentCohort"]] <- prevalentCohort
 
       # set periodOfInterest
@@ -59,7 +59,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".demographicConstraints"]] <- demographicConstraints
 
       # set population
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      checkmate::assert_class(x = populationCohort, classes = "PopulationCohort", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
 
       # set outputTypes (defaults to "prevalence", can include "incidence" and/or "drugs")
@@ -136,9 +136,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         strata <- ""
       }
 
-      # get the denom file based on denominator type and cohort pattern
+      # get the denom file based on denominator type (always uses era pattern)
       denomType <- self$prevalenceType$getDenominatorType()
-      cohortPattern <- self$prevalentCohort$getCircePattern()
       
       # Start with base SQL (always needed)
       sqlComponents <- c(yearRangeSql, obsPopSql, obsPopYearSql)
@@ -146,7 +145,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # Add output-specific SQL based on outputTypes
       if ("prevalence" %in% private$.outputTypes) {
         denomSql <- readr::read_file(
-          fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}_{cohortPattern}.sql"))
+          fs::path_package(package = "CohortPrevalence", glue::glue("sql/{denomType}_era.sql"))
         ) |>
           glue::glue()
         
@@ -187,11 +186,13 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
         min_obs_time = self$minimumObservationLength,
+        use_lead_in = self$minimumObservationLength > 0,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
         prevalent_cohort_id = self$prevalentCohort$id(),
-        lookback = self$prevalenceType$lookBackDays,
+        lookback = ifelse(is.infinite(self$prevalenceType$lookBackDays), 999999, self$prevalenceType$lookBackDays),
+        anchor_date = self$prevalenceType$getAnchorDate(),
         multiplier = self$multiplier
       ) |>
         SqlRender::translate(
@@ -228,14 +229,11 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         poi <- glue::glue("{self$periodOfInterest$poiType}: {self$periodOfInterest$poiRange$span_label}")
       }
 
-      # prep denom
-      denomType <- self$prevalenceType$getDenominatorType()
-      dn <- denomType
-
       # prep op
       ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
       demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
       demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
+      
       
       # prep outputTypes
       outputs <- paste0(private$.outputTypes, collapse = ", ")
@@ -247,9 +245,10 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         cohortName = self$prevalentCohort$name(),
         poi = poi,
         prevalenceType = self$prevalenceType$getPrevalenceLabel(),
-        lookBackDays = glue::glue("{self$prevalenceType$lookBackDays}d"),
+        lookBackDays = self$prevalenceType$getLookbackLabel(),
         numerator = self$prevalenceType$getNumeratorType(),
-        denominator = dn,
+        denominator = self$prevalenceType$getDenominatorType(),
+        prevalenceMode = ifelse(self$prevalenceType$mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)"),
         obsPeriod = ope,
         outputTypes = outputs,
         demoConAge = demoConAge,
@@ -375,7 +374,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.prevalentCohort)
       }
-      checkmate::assert_class(x = prevalentCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = prevalentCohort, classes = "TargetCohort")
       private$.prevalentCohort <- value
     },
 
@@ -432,7 +431,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.populationCohort)
       }
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      checkmate::assert_class(x = populationCohort, classes = "PopulationCohort", null.ok = TRUE)
       private$.populationCohort <- value
     },
 
@@ -492,7 +491,7 @@ IncidenceAnalysis <- R6::R6Class(
       private[[".analysisId"]] <- analysisId
 
       # set prevalent cohort
-      checkmate::assert_class(x = targetCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = targetCohort, classes = "TargetCohort")
       private[[".targetCohort"]] <- targetCohort
 
       # set periodOfInterst
@@ -520,7 +519,7 @@ IncidenceAnalysis <- R6::R6Class(
       private[[".demographicConstraints"]] <- demographicConstraints
 
       # set population
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      checkmate::assert_class(x = populationCohort, classes = "PopulationCohort", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
 
     },
@@ -599,6 +598,7 @@ IncidenceAnalysis <- R6::R6Class(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
         min_obs_time = self$minimumObservationLength,
+        use_lead_in = self$minimumObservationLength > 0,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
@@ -685,7 +685,7 @@ IncidenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.targetCohort)
       }
-      checkmate::assert_class(x = targetCohort, classes = "CohortInfo")
+      checkmate::assert_class(x = targetCohort, classes = "TargetCohort")
       private$.targetCohort <- value
     },
 
@@ -734,7 +734,7 @@ IncidenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.populationCohort)
       }
-      checkmate::assert_class(x = populationCohort, classes = "CohortInfo", null.ok = TRUE)
+      checkmate::assert_class(x = populationCohort, classes = "PopulationCohort", null.ok = TRUE)
       private$.populationCohort <- value
     },
 
@@ -756,7 +756,7 @@ IncidenceAnalysis <- R6::R6Class(
 PrevalenceType <- R6::R6Class(
   classname = "PrevalenceType",
   public = list(
-    initialize = function(prevalenceType, lookBackDays) {
+    initialize = function(prevalenceType, lookBackDays, mode = "formal") {
       
       # Validate prevalenceType is one of the valid options
       validTypes <- c(
@@ -768,8 +768,15 @@ PrevalenceType <- R6::R6Class(
       checkmate::assert_choice(x = prevalenceType, choices = validTypes)
       private[[".prevalenceType"]] <- prevalenceType
       
-      # Validate lookBackDays - any non-negative integer, or Inf for complete lookback
-      checkmate::assert_integerish(x = lookBackDays, len = 1, lower = 0)
+      # Validate mode
+      checkmate::assert_choice(x = mode, choices = c("formal", "rough"))
+      private[[".mode"]] <- mode
+      
+      # Validate lookBackDays - integer >= 0 or Inf for complete lookback
+      checkmate::assert(
+        checkmate::check_integerish(x = lookBackDays, len = 1, lower = 0),
+        checkmate::check_true(is.infinite(lookBackDays))
+      )
       private[[".lookBackDays"]] <- lookBackDays
       
     },
@@ -799,18 +806,27 @@ PrevalenceType <- R6::R6Class(
     getPrevalenceLabel = function() {
       labelMap <- list(
         "point_prevalence" = "Point Prevalence",
-        "period_prevalence_pd2" = "Period Prevalence (all time observed)",
-        "period_prevalence_pd3" = "Period Prevalence (continuous observation)",
-        "period_prevalence_pd4" = "Period Prevalence (sufficient days)"
+        "period_prevalence_pd2" = "Period Prevalence (at least 1 day)",
+        "period_prevalence_pd3" = "Period Prevalence (complete period)",
+        "period_prevalence_pd4" = "Period Prevalence (at least n days)"
       )
       return(labelMap[[private$.prevalenceType]])
+    },
+    
+    # Getter: returns the anchor_date column name based on mode
+    getAnchorDate = function() {
+      if (private$.mode == "formal") {
+        return("cohort_start_date")
+      } else {
+        return("cohort_end_date")
+      }
     },
     
     # Getter: returns human-readable lookback label
     getLookbackLabel = function() {
       lbd <- private$.lookBackDays
       if (lbd == 0) {
-        return("No lookback (events during POI only)")
+        return("No lookback (only POI)")
       } else if (lbd == 365) {
         return("1-year lookback")
       } else if (lbd == 1095) {
@@ -828,10 +844,12 @@ PrevalenceType <- R6::R6Class(
       lookbackLabel <- self$getLookbackLabel()
       numerator <- self$getNumeratorType()
       denominator <- self$getDenominatorType()
+      modeLabel <- ifelse(private$.mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)")
       
       txt <- c(
         glue::glue("Prevalence Type ==> {prevalenceLabel}"),
         glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
+        glue::glue("  Mode: {modeLabel}"),
         glue::glue("  Lookback: {lookbackLabel}")
       ) |> glue::glue_collapse("\n")
       
@@ -841,7 +859,8 @@ PrevalenceType <- R6::R6Class(
   ),
   private = list(
     .prevalenceType = NULL,
-    .lookBackDays = NULL
+    .lookBackDays = NULL,
+    .mode = NULL
   ),
   active = list(
     
@@ -863,140 +882,114 @@ PrevalenceType <- R6::R6Class(
       if (missing(value)) {
         return(private$.lookBackDays)
       }
-      checkmate::assert_integerish(x = value, len = 1, lower = 0)
+      checkmate::assert(
+        checkmate::check_integerish(x = value, len = 1, lower = 0),
+        checkmate::check_true(is.infinite(value))
+      )
       private$.lookBackDays <- value
+    },
+    
+    mode = function(value) {
+      if (missing(value)) {
+        return(private$.mode)
+      }
+      checkmate::assert_choice(x = value, choices = c("formal", "rough"))
+      private$.mode <- value
     }
   )
 )
 
-## Cohort Info ----------------
-CohortInfo <- R6::R6Class(
-  classname = "CohortInfo",
+## Target Cohort ----------------
+#' TargetCohort R6 Class
+#'
+#' @description
+#' Describes a study cohort used as the numerator (prevalent) or target (incidence) in an analysis.
+#' Uses the era pattern (interval overlap) for all analyses.
+#'
+#' @export
+TargetCohort <- R6::R6Class(
+  classname = "TargetCohort",
   public = list(
-    initialize = function(id, name, cohortType = "prevalent", circeJsonPath = NULL) {
+    #' @description Create a new TargetCohort object
+    #' @param id Integer cohort ID within the database results schema.
+    #' @param name Character cohort name.
+    initialize = function(id, name) {
 
       checkmate::assert_integerish(x = id, len = 1)
       private[[".id"]] <- id
 
       checkmate::assert_string(x = name, min.chars = 1)
       private[[".name"]] <- name
-
-      # Validate cohort type
-      checkmate::assert_choice(x = cohortType, choices = c("prevalent", "population"))
-      private[[".cohortType"]] <- cohortType
-
-      # CIRCE validation only required for prevalent cohorts
-      if (cohortType == "prevalent") {
-        if (is.null(circeJsonPath)) {
-          stop(glue::glue("circeJsonPath is required for {cohortType} cohorts"))
-        }
-        
-        tryCatch(
-          {
-            checkmate::assert_file_exists(circeJsonPath)
-            validationResult <- self$validateCirceJson(circeJsonPath)
-            
-            cli::cli_alert_success(
-              glue::glue("✓ CIRCE validation passed for '{name}' (ID: {id})")
-            )
-            cli::cli_alert_info(
-              glue::glue("  Pattern: {validationResult$patternLabel}")
-            )
-            
-            private[[".circePattern"]] <- validationResult$pattern
-            private[[".circePatternLabel"]] <- validationResult$patternLabel
-          },
-          error = function(e) {
-            cli::cli_alert_danger(
-              glue::glue("✗ CIRCE validation failed for '{name}' (ID: {id})")
-            )
-            cli::cli_alert_info(glue::glue("  Error: {e$message}"))
-            stop(e)
-          },
-          warning = function(w) {
-            cli::cli_alert_warning(
-              glue::glue("⚠ Warning during CIRCE validation for '{name}' (ID: {id}): {w$message}")
-            )
-          }
-        )
-      } else {
-        # Population cohorts don't need CIRCE validation
-        private[[".circePattern"]] <- NA_character_
-        private[[".circePatternLabel"]] <- "N/A (Population denominator)"
-      }
     },
+
+    #' @description Return the cohort ID.
     id = function() {
-      cId <- private$.id
-      return(cId)
+      return(private$.id)
     },
+
+    #' @description Return the cohort name.
     name = function() {
-      cName <- private$.name
-      return(cName)
+      return(private$.name)
     },
-    getCohortType = function() {
-      return(private$.cohortType)
-    },
-    viewCohortInfo = function(){
+
+    #' @description Return a formatted info string about this cohort.
+    viewCohortInfo = function() {
       id <- self$id()
       name <- self$name()
-      cohortType <- private$.cohortType
-      patternLabel <- private$.circePatternLabel
-      info <- glue::glue("Cohort Id: {id} | Name: {name} | Type: {cohortType} | Pattern: {patternLabel}")
+      info <- glue::glue("Cohort Id: {id} | Name: {name} | Pattern: ERA")
       return(info)
-    },
-    
-    getCircePattern = function() {
-      return(private$.circePattern)
-    },
-    
-    validateCirceJson = function(circeJsonPath) {
-      # Read and parse CIRCE JSON file
-      tryCatch(
-        {
-          circeJson <- jsonlite::read_json(circeJsonPath)
-        },
-        error = function(e) {
-          stop(glue::glue("Failed to parse CIRCE JSON: {e$message}"))
-        }
-      )
-      
-      # Extract key components with safe access
-      pcl <- tryCatch(circeJson$PrimaryCriteria$PrimaryCriteriaLimit$Type, error = function(e) NULL)
-      el <- tryCatch(circeJson$ExpressionLimit$Type, error = function(e) NULL)
-      es <- tryCatch(circeJson$EndStrategy, error = function(e) NULL)
-      hasDateOffset <- !is.null(es) && !is.null(es$DateOffset)
-      
-      # Pattern 1: ERA (First/First/No EndStrategy)
-      # Pattern 2: OCCURRENCE (All/All/DateOffset)
-      isPattern1 <- (pcl == "First" && el == "First" && is.null(es))
-      isPattern2 <- (pcl == "All" && el == "All" && hasDateOffset)
-      isValid <- isPattern1 || isPattern2
-      
-      if (!isValid) {
-        stop(
-          "Invalid CIRCE cohort definition for ", self$name(), ".\n",
-          "Pattern 1 (ERA): PrimaryCriteriaLimit='First', ExpressionLimit='First', no EndStrategy\n",
-          "Pattern 2 (OCCURRENCE): PrimaryCriteriaLimit='All', ExpressionLimit='All', DateOffset EndStrategy\n",
-          "Found: PrimaryCriteriaLimit='", pcl, "', ExpressionLimit='", el, "', ",
-          "EndStrategy=", if (is.null(es)) "NULL" else "Present"
-        )
-      }
-      ll <- list(
-        isValid = isValid,
-        pattern = if (isPattern1) "era" else "occurrence",
-        patternLabel = if (isPattern1) "ERA (Interval Overlap)" else "OCCURRENCE (Point-in-Time)",
-        details = list(primaryCriteriaLimit = pcl, expressionLimit = el, hasDateOffset = hasDateOffset)
-      )
-      
-      invisible(ll)
     }
   ),
   private = list(
     .id = NULL,
-    .name = NULL,
-    .cohortType = NULL,
-    .circePattern = NULL,
-    .circePatternLabel = NULL
+    .name = NULL
+  )
+)
+
+## Population Cohort ----------------
+#' PopulationCohort R6 Class
+#'
+#' @description
+#' Describes a denominator population cohort for prevalence analyses.
+#' Does not require a CIRCE JSON file or a calculation mode.
+#'
+#' @export
+PopulationCohort <- R6::R6Class(
+  classname = "PopulationCohort",
+  public = list(
+    #' @description Create a new PopulationCohort object
+    #' @param id Integer cohort ID within the database results schema.
+    #' @param name Character cohort name.
+    initialize = function(id, name) {
+
+      checkmate::assert_integerish(x = id, len = 1)
+      private[[".id"]] <- id
+
+      checkmate::assert_string(x = name, min.chars = 1)
+      private[[".name"]] <- name
+    },
+
+    #' @description Return the cohort ID.
+    id = function() {
+      return(private$.id)
+    },
+
+    #' @description Return the cohort name.
+    name = function() {
+      return(private$.name)
+    },
+
+    #' @description Return a formatted info string about this cohort.
+    viewCohortInfo = function() {
+      id <- self$id()
+      name <- self$name()
+      info <- glue::glue("Cohort Id: {id} | Name: {name} | Type: population")
+      return(info)
+    }
+  ),
+  private = list(
+    .id = NULL,
+    .name = NULL
   )
 )
 

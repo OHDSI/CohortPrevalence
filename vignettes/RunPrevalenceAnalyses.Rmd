@@ -1,5 +1,5 @@
 ---
-title: "Running A Single Prevalence Analysis"
+title: "Basics of Using Cohort Prevalence"
 author:
   - Kelly Li
   - Martin Lavallee
@@ -232,4 +232,67 @@ exportPrevalenceQuery(
   outputFolder = outputFolder
 )
 ```
+
+## Running Multi-Dimensional Prevalence Experiments
+
+For more complex analyses involving multiple cohorts, prevalence types, demographic constraints, and periods of interest, you can use the `CohortPrevalenceExperiment` class. This approach automatically generates all combinations of analysis dimensions through a Cartesian product expansion.
+
+### Define Analysis Dimensions
+
+```{r}
+# Create experiment specification
+exp <- CohortPrevalenceExperiment$new(
+  name = "Hypertension Multi-Analysis Study",
+  description = "Multiple prevalence types and demographic stratifications"
+)
+
+# Add cohort definitions
+exp$addCohorts(tibble::tibble(
+  cohortId = c(316866),
+  cohortName = c("Hypertension")
+))
+
+# Add prevalence types (formal, rough, point, and period)
+exp$addPrevalenceTypes(list(
+  createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
+  createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "formal"),
+  createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "rough")
+))
+
+# Add demographic constraints (age ranges)
+exp$addDemographicConstraints(list(
+  createDemographicConstraints(ageMin = 18, ageMax = 150),
+  createDemographicConstraints(ageMin = 65, ageMax = 150)
+))
+
+# Add periods of interest
+exp$addPeriodsOfInterest(list(
+  createYearlyRange(2016:2020)
+))
+
+```
+
+### Execute All Analyses
+
+```{r}
+# Materialize all analysis specifications
+analyses <- exp$define()
+
+# Execute all analyses
+results <- generatePrevalence(
+  prevalenceAnalysisList = analyses,
+  executionSettings = executionSettings,
+  captureSql = TRUE
+)
+
+#standardize results
+results$standardizePrevalence(
+  referencePopulation = usa_census_2020,
+  ageRightTruncation = 70
+)
+
+# Export all results
+results$export(outputFolder = outputFolder)
+```
+
 
