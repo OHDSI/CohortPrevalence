@@ -13,7 +13,6 @@ FROM
     ORDER BY observation_period_start_date, observation_period_end_date)
     AS ob_row
 FROM @cdm_database_schema.observation_period
-WHERE DATEDIFF(day, observation_period_start_date, observation_period_end_date) >= @min_obs_time -- add min. obs time
 )
 {@use_first_op} ? {
 /* Limit to the first observation period per person*/
