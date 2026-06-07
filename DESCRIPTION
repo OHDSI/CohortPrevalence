@@ -3,7 +3,9 @@ Title: Standardized Prevalence Calculator for OMOP/OHDSI Ecosystem
 Version: 1.1.0
 Authors@R: c(
     person("Martin", "Lavallee", ,"lavallee@ohdsi.org", role = c("aut")),
-    person("Kelly","Li", ,"kli@ohdsi.org", role = c("aut", "cre"))
+    person("Klaus","Bondt", ,"klaus.bondt@nemesis.health", role = c("aut")),
+    person("Asieh","Golozar", ,"asieh.golozar@nemesis.health", role = c("aut")),
+    person("Kelly","Li", ,"kli@ohdsi.org", role = c("cre"))
   )
 Description: This package calculates prevalence of a condition in a population.
 License: Apache License

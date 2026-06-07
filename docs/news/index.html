@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
       </span>
     </div>
 
@@ -32,7 +32,10 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
-      <a href="../articles/SinglePrevalenceAnalyses.html">Running A Single Prevalence Analysis</a>
+      <a href="../articles/PrevalenceMethodology.html">Prevalence Estimation Methodology</a>
+    </li>
+    <li>
+      <a href="../articles/RunPrevalenceAnalyses.html">Basics of Using Cohort Prevalence</a>
     </li>
   </ul></li>
 <li>
@@ -51,6 +54,139 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.1.0" id="cohortprevalence-v110">CohortPrevalence v1.1.0<a class="anchor" aria-label="anchor" href="#cohortprevalence-v110"></a></h2>
+<div class="section level3">
+<h3 id="feature-enhancements-1-1-0">Feature Enhancements<a class="anchor" aria-label="anchor" href="#feature-enhancements-1-1-0"></a></h3>
+<ul><li>Improvements to standardization
+<ul><li>Allow for standardization by other weighting schemes acs vs 2020 US census.</li>
+<li>Automatically resolves differences in age groups between standardization references</li>
+</ul></li>
+<li>Addition of Lead-in Window - the minimum duration of continuous observation required before a patient can be considered at risk and included in the denominator.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-1-1-0">Breaking Changes<a class="anchor" aria-label="anchor" href="#breaking-changes-1-1-0"></a></h3>
+<ul><li>
+<strong>Occurrence Mode Removed</strong>: Package now uses era pattern exclusively for all analyses. The <code>calculationMode</code> and <code>circeJsonPath</code> parameters have been removed from <code><a href="../reference/createTargetCohort.html">createTargetCohort()</a></code> and <code>CohortPrevalenceExperiment$addCohorts()</code>. All SQL files with “_occurrence” pattern have been deleted.
+<ul><li>Migration: Remove <code>calculationMode</code> and <code>circeJsonPath</code> arguments from any calls to <code><a href="../reference/createTargetCohort.html">createTargetCohort()</a></code>
+</li>
+<li>All analyses now use interval overlap (era) pattern by default</li>
+</ul></li>
+<li>
+<strong>CIRCE JSON Validation Removed</strong>: Cohort validation against CIRCE patterns is no longer performed. The <code>TargetCohort$validateCirceJson()</code> method has been removed.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="method-changes-1-1-0">Method Changes<a class="anchor" aria-label="anchor" href="#method-changes-1-1-0"></a></h3>
+<ul><li>add calcuation types of formal vs rough to determine is using either any occurrence of the disease or the formal start in the lookback period
+<ul><li>
+<code><a href="../reference/createPrevalenceType.html">createPrevalenceType()</a></code> when mode = “rough” then counts based on the cohort_end_date</li>
+<li>
+<code><a href="../reference/createPrevalenceType.html">createPrevalenceType()</a></code> when mode = “formal” then counts based on the cohort_start_date</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="api-changes-1-1-0">API Changes<a class="anchor" aria-label="anchor" href="#api-changes-1-1-0"></a></h3>
+<ul><li>
+<code>CohortInfo</code> R6 class has been removed. It has been replaced by two purpose-specific classes:
+<ul><li>
+<code>TargetCohort</code> — for the prevalence numerator and incidence target cohort.</li>
+<li>
+<code>PopulationCohort</code> — for the denominator population cohort.</li>
+</ul></li>
+<li>
+<code>createPrevalenceCohort()</code> has been renamed to <code><a href="../reference/createTargetCohort.html">createTargetCohort()</a></code>.</li>
+<li>
+<code><a href="../reference/createPopulationCohort.html">createPopulationCohort()</a></code> now constructs a <code>PopulationCohort</code> object instead of a <code>CohortInfo</code> object. The function signature is unchanged.</li>
+<li>
+<code><a href="../reference/createTargetCohort.html">createTargetCohort()</a></code> signature simplified: <code>createTargetCohort(cohortId, cohortName)</code> (removed <code>calculationMode</code> and <code>circeJsonPath</code> parameters)</li>
+<li>
+<code>CohortPrevalenceExperiment$addCohorts()</code> tibble columns simplified: now requires only <code>cohortId</code> and <code>cohortName</code> (removed optional <code>calculationMode</code> and <code>circeJsonPath</code> columns)</li>
+<li>
+<code>CohortPrevalenceExperiment$setCommonParameters</code> adds minimumObservationLength and useOnlyFirstObservationPeriod as common parameters to the experiment.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.0.1" id="cohortprevalence-v101">CohortPrevalence v1.0.1<a class="anchor" aria-label="anchor" href="#cohortprevalence-v101"></a></h2>
+<div class="section level3">
+<h3 id="main-bug-fix-1-0-1">Main Bug fix<a class="anchor" aria-label="anchor" href="#main-bug-fix-1-0-1"></a></h3>
+<ul><li>add R6 as import for package</li>
+<li>correct bugs in prevalence</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.0.0" id="cohortprevalence-v100">CohortPrevalence v1.0.0<a class="anchor" aria-label="anchor" href="#cohortprevalence-v100"></a></h2>
+<div class="section level3">
+<h3 id="refactor-of-sql-1-0-0">Refactor of Sql<a class="anchor" aria-label="anchor" href="#refactor-of-sql-1-0-0"></a></h3>
+<ul><li>Cohort Types:
+<ul><li>Era pattern: first occurrence end of continuous observation</li>
+<li>Refine Prevalence type options</li>
+<li>point_prevalence –&gt; pn1 and pd1 with a lookback period</li>
+<li>period_prevalence_pd2 –&gt; pn2 and pd2 with all time in poi</li>
+<li>period_prevalence_pd3 –&gt; pn2 and pd3 at least 1 day in poi</li>
+<li>period_prevalence_pd4 –&gt; pn2 and pd4 at least n days in poi</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="major-new-features-1-0-0">Major New Features<a class="anchor" aria-label="anchor" href="#major-new-features-1-0-0"></a></h3>
+<ul><li>
+<strong>PrevalenceResults Class</strong>
+<ul><li>Unified results container with dual crude/standardized storage</li>
+<li>Export/import with manifest.json tracking</li>
+<li>SQL query audit trail (SHA256 checksums)</li>
+<li>
+<code>.addExecutedQuery()</code> for provenance tracking</li>
+</ul></li>
+<li>
+<strong>Standardization Integration</strong>
+<ul><li>Add stored reference data for census, who and japanese population for standardization</li>
+<li>functions to build StandardizationReference for ACS on the fly</li>
+<li>
+<code>standardizePrevalence()</code> method (modifies in-place, returns self)</li>
+<li>Separate <code>stdPrev</code> slot preserves crude prevalence</li>
+<li>Calls internal <code><a href="../reference/standardize_prevalence.html">standardize_prevalence()</a></code> function (snake_case)</li>
+</ul></li>
+<li>
+<strong>CohortPrevalenceExperiment Class</strong>
+<ul><li>Multi-dimensional specification builder (fluent builder pattern)</li>
+<li>Cartesian product expansion: cohorts × types × constraints × periods of interest</li>
+<li>Expansion via <code><a href="https://tidyr.tidyverse.org/reference/expand_grid.html" class="external-link">tidyr::expand_grid()</a></code> with automatic analysisId generation</li>
+<li>
+<code>define()</code> materializes analysis objects from specifications</li>
+<li>
+<code>viewDesign()</code> displays specification (console text or reactable HTML)</li>
+<li>CSV-exportable specification for reproducibility and version control</li>
+<li>Full validation gates at each step (fail-fast)</li>
+</ul></li>
+<li>
+<strong>Drug Output Type Support</strong>
+<ul><li>
+<code>drugConceptSets</code> slot added to CohortPrevalenceAnalysis</li>
+<li>Validation: required if “drugs” in outputTypes, otherwise ignored</li>
+<li>Each item validated as Capr ConceptSetItem with @id and @Name slots</li>
+<li>
+<strong>Marked experimental</strong> with warning in documentation: “Use with caution”</li>
+</ul></li>
+<li>
+<strong>Unified API Simplification</strong>
+<ul><li>
+<code><a href="../reference/generatePrevalence.html">generatePrevalence()</a></code> accepts only <code>prevalenceAnalysisList</code> (single input)</li>
+<li>Composition pattern: <code>exp$define()</code> → <code><a href="../reference/generatePrevalence.html">generatePrevalence()</a></code>
+</li>
+<li>Removed dual-input routing logic (cleaner separation of concerns)</li>
+</ul></li>
+<li>
+<strong>New Dependencies</strong>
+<ul><li>
+<strong>Imports</strong>: rlang, lubridate, digest, jsonlite, checkmate</li>
+<li>
+<strong>Suggests</strong>: shiny, plotly, reactable</li>
+</ul></li>
+</ul></div>
+<div class="section level3">
+<h3 id="deprecated-features-1-0-0">Deprecated Features<a class="anchor" aria-label="anchor" href="#deprecated-features-1-0-0"></a></h3>
+<ul><li>All: <code>generateSinglePrevalence()</code>, <code>generateMultiplePrevalence()</code>, <code>runPrevalence()</code> (removed in prior session)</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.1.0" id="cohortprevalence-v010">CohortPrevalence v0.1.0<a class="anchor" aria-label="anchor" href="#cohortprevalence-v010"></a></h2>
 <ul><li>bug fix pn2 uses events in the current poi. ensure pn1 only uses prior events</li>
@@ -91,7 +227,7 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by Martin Lavallee, Kelly Li.</p>
+  <p></p><p>Developed by Martin Lavallee, Klaus Bondt, Asieh Golozar, Kelly Li.</p>
 </div>
 
 <div class="pkgdown">

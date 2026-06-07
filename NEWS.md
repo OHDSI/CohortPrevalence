@@ -6,6 +6,7 @@ CohortPrevalence v1.1.0
 * Improvements to standardization
     * Allow for standardization by other weighting schemes acs vs 2020 US census.
     * Automatically resolves differences in age groups between standardization references
+* Addition of Lead-in Window - the minimum duration of continuous observation required before a patient can be considered at risk and included in the denominator.
 
 ## Breaking Changes
 
@@ -29,6 +30,7 @@ CohortPrevalence v1.1.0
 * `createPopulationCohort()` now constructs a `PopulationCohort` object instead of a `CohortInfo` object. The function signature is unchanged.
 * `createTargetCohort()` signature simplified: `createTargetCohort(cohortId, cohortName)` (removed `calculationMode` and `circeJsonPath` parameters)
 * `CohortPrevalenceExperiment$addCohorts()` tibble columns simplified: now requires only `cohortId` and `cohortName` (removed optional `calculationMode` and `circeJsonPath` columns)
+* `CohortPrevalenceExperiment$setCommonParameters` adds minimumObservationLength and useOnlyFirstObservationPeriod as common parameters to the experiment. 
 
 CohortPrevalence v1.0.1
 =======================

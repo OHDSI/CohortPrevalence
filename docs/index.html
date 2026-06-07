@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
       </span>
     </div>
 
@@ -50,7 +50,10 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="articles/SinglePrevalenceAnalyses.html">Running A Single Prevalence Analysis</a>
+      <a href="articles/PrevalenceMethodology.html">Prevalence Estimation Methodology</a>
+    </li>
+    <li>
+      <a href="articles/RunPrevalenceAnalyses.html">Basics of Using Cohort Prevalence</a>
     </li>
   </ul>
 </li>
@@ -74,6 +77,9 @@
 <div class="page-header"><h1 id="cohortprevalence">CohortPrevalence<a class="anchor" aria-label="anchor" href="#cohortprevalence"></a>
 </h1></div>
 <p>The goal of <code>CohortPrevalence</code> is to provide a standard prevalence calculation for data mapped to the OMOP CDM. This package relies on <code>DatabaseConnector</code> and <code>SqlRender</code> to perform its prevalence calculation.</p>
+<div class="section level2">
+<h2 id="rassen-methodology">Rassen Methodology<a class="anchor" aria-label="anchor" href="#rassen-methodology"></a>
+</h2>
 <p>The methods for calculating prevalence are sourced from <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC6301730/" class="external-link">Rassen et al 2018</a>. Users have the option of selecting:</p>
 <ul>
 <li><p>Period of Interest: the specific time for which prevalence is anchored for its enumeration. This is often one year but can also be defined as a span of multiple years.</p></li>
@@ -95,14 +101,276 @@
 </ul>
 </li>
 <li>
+<p>Prevalence Mode:</p>
+<ul>
+<li>
+<strong>formal</strong>: Anchors prevalence to the <code>cohort_start_date</code>. A patient is considered prevalent if evidence of disease exists on or before the cohort start date (within the lookback window). This is the standard epidemiological approach where disease must be established at the beginning of the observation.</li>
+<li>
+<strong>rough</strong>: Anchors prevalence to the <code>cohort_end_date</code>. A patient is considered prevalent if evidence of disease exists at any time up to and including the end of the cohort period. This provides a more inclusive estimate that captures disease identified during the period of interest.</li>
+</ul>
+</li>
+<li>
 <p>Defining Eligible Observation Periods in the population</p>
 <ol style="list-style-type: decimal">
 <li>Minimum Observation Period Length: This is the required time that persons in the database must have been observed to be eligible. This can be any number in days; typical options would be 0 days or 365 days.</li>
 <li>First or any observation period: Determine whether to use first observation period or any observation period to evaluate the prevalence of a disease during the period of interest. In claims data, it is possible for patients to leave the database and return.</li>
 </ol>
 </li>
-<li><p>Demographic Stratafication: age, gender and race</p></li>
+<li><p>Demographic Stratification: age, gender and race</p></li>
 </ul>
+</div>
+<div class="section level2">
+<h2 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+</h2>
+<ul>
+<li>
+<strong>Flexible Prevalence Definitions</strong>: Multiple denominator and numerator options following Rassen et al. 2018 methodology</li>
+<li>
+<strong>Age Standardization</strong>: Standardize prevalence estimates using built-in or custom reference populations</li>
+<li>
+<strong>Demographic Stratification</strong>: Results stratified by age, gender, and race</li>
+<li>
+<strong>Multi-Dimensional Experiment Design</strong>: Define complex multi-analysis specifications with automatic Cartesian product expansion</li>
+<li>
+<strong>Results Management</strong>: Unified container with dual crude/standardized storage, SQL audit trail, and export/import</li>
+<li>
+<strong>Interactive Results Explorer</strong>: Shiny-based dashboard for visualizing trends across analyses</li>
+<li>
+<strong>Multiple Output Types</strong>: Simultaneous generation of prevalence, incidence, and experimental drug usage metrics</li>
+<li>
+<strong>OMOP CDM Compliant</strong>: Works with data mapped to the OMOP Common Data Model</li>
+</ul>
+<hr>
+</div>
+<div class="section level2">
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
+</h2>
+<div class="section level3">
+<h3 id="single-prevalence-analysis">Single Prevalence Analysis<a class="anchor" aria-label="anchor" href="#single-prevalence-analysis"></a>
+</h3>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create analysis specification</span></span>
+<span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/createCohortPrevalenceAnalysis.html">createCohortPrevalenceAnalysis</a></span><span class="op">(</span></span>
+<span>  analysisId <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  prevalentCohort <span class="op">=</span> <span class="fu"><a href="reference/createPopulationCohort.html">createPopulationCohort</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"CKD"</span>, isoPeriod <span class="op">=</span> <span class="st">"2020-2024"</span><span class="op">)</span>,</span>
+<span>  periodOfInterest <span class="op">=</span> <span class="fu"><a href="reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span><span class="fl">2020</span><span class="op">:</span><span class="fl">2024</span><span class="op">)</span>,</span>
+<span>  prevalenceType <span class="op">=</span> <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"point_prevalence"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
+<span>  demographicConstraints <span class="op">=</span> <span class="fu"><a href="reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span>ageMin <span class="op">=</span> <span class="fl">18</span>, ageMax <span class="op">=</span> <span class="fl">150</span><span class="op">)</span>,</span>
+<span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Execute analysis</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/generatePrevalence.html">generatePrevalence</a></span><span class="op">(</span></span>
+<span>  prevalenceAnalysisList <span class="op">=</span> <span class="va">analysis</span>,</span>
+<span>  executionSettings <span class="op">=</span> <span class="va">settings</span>,</span>
+<span>  captureSql <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Explore results interactively</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">explore</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Launches Shiny dashboard with tabs: Prevalence | Incidence | Drug Usage</span></span>
+<span><span class="co"># Note: explore() is not yet ready for use</span></span>
+<span></span>
+<span><span class="co"># View SQL executed</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">show_query</span><span class="op">(</span>analysisId <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Standardize prevalence</span></span>
+<span><span class="va">reference</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/getStandardizationReference.html">getStandardizationReference</a></span><span class="op">(</span><span class="st">"WHO World Standard 2008"</span><span class="op">)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">standardizePrevalence</span><span class="op">(</span><span class="va">reference</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Export results with manifest</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">export</span><span class="op">(</span>outputFolder <span class="op">=</span> <span class="st">"~/analysis_results"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="multi-dimensional-experiment-design">Multi-Dimensional Experiment Design<a class="anchor" aria-label="anchor" href="#multi-dimensional-experiment-design"></a>
+</h3>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Define analysis dimensions</span></span>
+<span><span class="va">exp</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/CohortPrevalenceExperiment.html">CohortPrevalenceExperiment</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  name <span class="op">=</span> <span class="st">"CKD Multi-Cohort Study"</span>,</span>
+<span>  description <span class="op">=</span> <span class="st">"3 cohort definitions × 3 prevalence types × 2 demographics"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Add dimensions (fluent API)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">addCohorts</span><span class="op">(</span><span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
+<span>  cohortId <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  cohortName <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"CKD A"</span>, <span class="st">"CKD B"</span>, <span class="st">"CKD C"</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">addPrevalenceTypes</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"point_prevalence"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd2"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"rough"</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">addDemographicConstraints</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span>ageMin <span class="op">=</span> <span class="fl">18</span>, ageMax <span class="op">=</span> <span class="fl">150</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span>ageMin <span class="op">=</span> <span class="fl">65</span>, ageMax <span class="op">=</span> <span class="fl">150</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">addPeriodsOfInterest</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span><span class="fl">2015</span><span class="op">:</span><span class="fl">2024</span><span class="op">)</span></span>
+<span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">validate</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Preview specification (3 × 3 × 2 × 10 = 180 analyses)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">viewDesign</span><span class="op">(</span><span class="op">)</span>        <span class="co"># Console table</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">viewDesign</span><span class="op">(</span><span class="st">"html"</span><span class="op">)</span>  <span class="co"># Reactable (searchable/filterable)</span></span>
+<span></span>
+<span><span class="co"># Materialize analysis objects</span></span>
+<span><span class="va">analyses</span> <span class="op">&lt;-</span> <span class="va">exp</span><span class="op">$</span><span class="fu">define</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Execute all analyses</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/generatePrevalence.html">generatePrevalence</a></span><span class="op">(</span></span>
+<span>  prevalenceAnalysisList <span class="op">=</span> <span class="va">analyses</span>,</span>
+<span>  executionSettings <span class="op">=</span> <span class="va">settings</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Dashboard shows all 180 analyses with filtering</span></span>
+<span><span class="co"># Note: explore() is not yet ready for use</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">explore</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="multiple-output-types">Multiple Output Types<a class="anchor" aria-label="anchor" href="#multiple-output-types"></a>
+</h3>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># ⚠️ Note: Drug output type is experimental - use with caution</span></span>
+<span></span>
+<span><span class="co"># Define drug concept sets using Capr</span></span>
+<span><span class="va">drug_concepts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu">Capr</span><span class="fu">::</span><span class="fu"><a href="https://ohdsi.github.io/Capr/reference/readConceptSet.html" class="external-link">readConceptSet</a></span><span class="op">(</span><span class="st">"path/to/aspirin.json"</span><span class="op">)</span>,</span>
+<span>  <span class="fu">Capr</span><span class="fu">::</span><span class="fu"><a href="https://ohdsi.github.io/Capr/reference/readConceptSet.html" class="external-link">readConceptSet</a></span><span class="op">(</span><span class="st">"path/to/statin.json"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Include drug analysis</span></span>
+<span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/createCohortPrevalenceAnalysis.html">createCohortPrevalenceAnalysis</a></span><span class="op">(</span></span>
+<span>  analysisId <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  <span class="co"># ... other parameters ...</span></span>
+<span>  outputTypes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"prevalence"</span>, <span class="st">"incidence"</span>, <span class="st">"drugs"</span><span class="op">)</span>,</span>
+<span>  drugConceptSets <span class="op">=</span> <span class="va">drug_concepts</span>  <span class="co"># Required if "drugs" in outputTypes</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/generatePrevalence.html">generatePrevalence</a></span><span class="op">(</span><span class="va">analysis</span>, <span class="va">executionSettings</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Results now contain three data frames</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">prevalence</span>    <span class="co"># Prevalence rates</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">incidence</span>     <span class="co"># Incidence rates</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">drugUsage</span>     <span class="co"># Drug usage patterns (experimental)</span></span>
+<span></span>
+<span><span class="co"># Explore tab-based dashboard</span></span>
+<span><span class="co"># Note: explore() is not yet ready for use</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">explore</span><span class="op">(</span><span class="op">)</span>     <span class="co"># Tabs: Prevalence | Incidence | Drug Usage</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="understanding-results-output">Understanding Results Output<a class="anchor" aria-label="anchor" href="#understanding-results-output"></a>
+</h2>
+<p>The <code>PrevalenceResults</code> object consolidates all analysis output:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Raw data</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">prevalence</span>      <span class="co"># Crude prevalence estimates</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">incidence</span>       <span class="co"># Incidence rates (if requested)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">drugUsage</span>       <span class="co"># Drug usage metrics (if requested, experimental)</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">metaInfo</span>        <span class="co"># Analysis metadata &amp; configuration</span></span>
+<span></span>
+<span><span class="co"># Standardized data</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">stdPrev</span>         <span class="co"># Standardized prevalence (after standardizePrevalence())</span></span>
+<span></span>
+<span><span class="co"># Query tracking</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">show_query</span><span class="op">(</span>analysisId <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>  <span class="co"># View SQL executed</span></span>
+<span></span>
+<span><span class="co"># Provenance &amp; export</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">export</span><span class="op">(</span>outputFolder <span class="op">=</span> <span class="st">"output"</span><span class="op">)</span>  <span class="co"># Creates manifest.json with SHA256 checksums</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="experimental-features">Experimental Features<a class="anchor" aria-label="anchor" href="#experimental-features"></a>
+</h2>
+<div class="section level3">
+<h3 id="drug-usage-output-type">Drug Usage Output Type<a class="anchor" aria-label="anchor" href="#drug-usage-output-type"></a>
+</h3>
+<p>⚠️ <strong>Experimental</strong> - The <code>"drugs"</code> output type is currently experimental and should be used with caution. Results may be subject to future changes. Requires valid Capr ConceptSetItems via the <code>drugConceptSets</code> parameter.</p>
+</div>
+<div class="section level3">
+<h3 id="results-explorer-in-development">Results Explorer (In Development)<a class="anchor" aria-label="anchor" href="#results-explorer-in-development"></a>
+</h3>
+<p>⚠️ <strong>Not Yet Ready</strong> - The interactive <code>results$explore()</code> Shiny dashboard is under development. This feature will provide tabbed visualization of prevalence, incidence, and drug usage results with interactive filtering and exploration capabilities. Check back in a future release.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="composition--best-practices">Composition &amp; Best Practices<a class="anchor" aria-label="anchor" href="#composition--best-practices"></a>
+</h2>
+<div class="section level3">
+<h3 id="recommended-workflow">Recommended Workflow<a class="anchor" aria-label="anchor" href="#recommended-workflow"></a>
+</h3>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Design</strong>: Use <code>CohortPrevalenceExperiment</code> to define multi-dimensional specifications</li>
+<li>
+<strong>Validate</strong>: Call <code>exp$viewDesign()</code> to inspect Cartesian product before execution</li>
+<li>
+<strong>Execute</strong>: <code>generatePrevalence(exp$define(), ...)</code> runs all analyses with unified logging</li>
+<li>
+<strong>Explore</strong>: <code>results$explore()</code> launches interactive dashboard for pattern discovery ⚠️ <em>Not yet ready</em>
+</li>
+<li>
+<strong>Standardize</strong>: Apply <code>results$standardizePrevalence(reference)</code> to comparable estimates</li>
+<li>
+<strong>Export</strong>: <code>results$export()</code> bundles all outputs with provenance manifest</li>
+</ol>
+</div>
+<div class="section level3">
+<h3 id="performance-tips">Performance Tips<a class="anchor" aria-label="anchor" href="#performance-tips"></a>
+</h3>
+<ul>
+<li>For large experiments (&gt;100 analyses), run in stages with monitoring</li>
+<li>Use <code>captureSql = FALSE</code> to reduce memory footprint (disables query audit trail)</li>
+<li>Advanced: <code>explore()</code> UI filter available once feature is ready</li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"ohdsi/CohortPrevalence"</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="requirements">Requirements<a class="anchor" aria-label="anchor" href="#requirements"></a>
+</h3>
+<ul>
+<li>DatabaseConnector</li>
+<li>SqlRender</li>
+</ul>
+</div>
+</div>
+<div class="section level2">
+<h2 id="reference-populations-for-standardization">Reference Populations for Standardization<a class="anchor" aria-label="anchor" href="#reference-populations-for-standardization"></a>
+</h2>
+<p>The package includes pre-built reference populations for age standardization:</p>
+<ul>
+<li>
+<strong>WHO World Standard 2008</strong>: Official WHO population standard with 21 age groups (0-4, 5-9, …, 100+)
+<ul>
+<li>Source: <a href="https://seer.cancer.gov/stdpopulations/world.who.html" class="external-link uri">https://seer.cancer.gov/stdpopulations/world.who.html</a>
+</li>
+</ul>
+</li>
+<li>
+<strong>USA Census 2020</strong>: Decennial Census by single-year age and gender
+<ul>
+<li>Source: US Census Bureau (Census API via tidycensus)</li>
+<li>See <a href="data-raw/usa_census/README.html">data-raw/usa_census/README.md</a> for Census API setup</li>
+</ul>
+</li>
+<li>
+<strong>Japan Census 2020</strong>: National Census by single-year age and gender
+<ul>
+<li>Source: Statistics Bureau of Japan (e-Stat)</li>
+<li>See <a href="data-raw/japan_census/README.html">data-raw/japan_census/README.md</a> for data processing details</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
+</h2>
+<p>Apache License 2.0</p>
+</div>
 </div>
   </div>
 
@@ -126,7 +394,9 @@
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
 <li>Martin Lavallee <br><small class="roles"> Author </small>  </li>
-<li>Kelly Li <br><small class="roles"> Author, maintainer </small>  </li>
+<li>Klaus Bondt <br><small class="roles"> Author </small>  </li>
+<li>Asieh Golozar <br><small class="roles"> Author </small>  </li>
+<li>Kelly Li <br><small class="roles"> Maintainer </small>  </li>
 </ul>
 </div>
 
@@ -138,7 +408,7 @@
 
       <footer><div class="copyright">
   <p></p>
-<p>Developed by Martin Lavallee, Kelly Li.</p>
+<p>Developed by Martin Lavallee, Klaus Bondt, Asieh Golozar, Kelly Li.</p>
 </div>
 
 <div class="pkgdown">

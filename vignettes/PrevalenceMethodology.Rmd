@@ -1,0 +1,263 @@
+---
+title: "Prevalence Estimation Methodology"
+author:
+  - Asieh Golozar
+  - Klaus Bondt
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Prevalence Estimation Methodology}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+callout-appearance: simple
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  eval = FALSE,
+  fig.width = 7,
+  fig.height = 5,
+  dpi = 96,
+  cache = FALSE
+)
+
+library(CohortPrevalence)
+```
+
+## Overview
+
+This vignette describes the cohort-based approach to prevalence estimation implemented in the `CohortPrevalence` package. It provides a comprehensive explanation of the methodological parameters, assumptions, and calculations used to estimate disease prevalence from OMOP-standardized observational data.
+
+## 1. Background
+
+Estimating prevalence, the proportion of a defined population that has a given condition at a specified time or over a defined period, is a fundamental task in epidemiology and a routine requirement within the pharmaceutical industry supporting drug development, trial feasibility, regulatory and payer planning, health economic modelling and market forecasting.
+
+In practice, "true" prevalence is unknown. Observational databases derived from routine healthcare, including insurance claims and electronic health records (EHR), are commonly used for this purpose, but deriving valid prevalence estimates from these data sources is challenging:
+
+- Not all individuals with a condition are diagnosed
+- When they are, capture and documentation of the onset and resolution is not complete in available data
+- No single data source provides complete visibility into a population's disease burden
+
+Prevalence can therefore only be estimated with explicit, well-justified assumptions to approximate the true burden as closely as possible.
+
+### Three Interconnected Problems
+
+To obtain an optimal estimate, three interconnected problems need to be addressed:
+
+1. **Identifying patients with the Condition of Interest (CoI)** — the numerator of the prevalence equation
+2. **Defining who is at risk** — the denominator
+3. **Projecting the result** — if required, generalizing from the database to the target population
+
+### 1.1 Identifying the Condition of Interest (CoI)
+
+Observational databases do not directly record disease status. They record clinical events, including diagnoses, prescriptions, laboratory results, and procedures, recorded during routine care encounters primarily for billing and reimbursement purposes. The disease status and its timing must therefore be inferred from these events using a **phenotype algorithm**: a set of rules that translates coded data into membership of the CoI cohort.
+
+This inference is imperfect for several reasons:
+
+- Coding practices vary across institutions, payers, and time periods
+- Diagnostic codes may be used as part of the diagnostic workup rather than confirmed diagnoses, or may reflect administrative conventions rather than clinical reality
+- For more chronic CoIs, the disease may be present but not necessarily re-coded at every subsequent encounter, making it difficult to determine whether it is ongoing or resolved
+- The first coded event in a database may not represent the actual disease onset; a patient may have carried the diagnosis even before appearing in a given data source
+- Underdiagnosis and undercoding are particularly problematic for CoIs requiring specialist assessment or that are asymptomatic in early stages
+
+Therefore, any prevalence estimate from observational data is conditional on a phenotype algorithm. The simplest such algorithm relies solely on the diagnostic code of the disease, but more reliable approaches combine different records to improve recall (finding all CoIs) and precision (excluding other, potentially similar conditions). Differences in algorithm design, in the codes used, the time windows applied, and the minimum data requirements, produce different case counts and therefore different prevalence estimates.
+
+### 1.2 Defining the Population at Risk
+
+The denominator for a prevalence estimate should represent the population at risk of being identified as having the condition—that is, those who, if they had the disease, would plausibly be detected in the data.
+
+In observational databases this is complicated as patients enter and leave databases depending on their insurance coverage, care-seeking behavior, or enrollment status. Someone observable for only a few weeks has little chance for any existing condition to be recorded, and including such a patient in the denominator leads to systematic underestimation of prevalence. The choice of denominator definition, including which patients to include and how much prior observation to require, directly affects the magnitude of this problem.
+
+### 1.3 Generalizability to the Target Population
+
+A prevalence estimate from an observational database applies only to the population captured in that database. However, often a different target population is required, most prominently the general population. Private insurance claim databases in the US, for example, often used for prevalence studies due to their enormous size, capture employed individuals and their dependents and systematically underrepresent the uninsured, elderly and lower-income populations. EHR data reflect patients who seek care at specific health systems.
+
+### The Need for a Standardized Framework
+
+In current practice, researchers address these challenges through ad hoc choices on how the CoI and the population at risk are identified, which vary from study to study, often without explicit justification. This results in prevalence estimates for the same CoI, in the same database, produced by different teams that can differ substantially. These estimates are difficult to reproduce, compare, or defend to external audiences.
+
+Instead, a standardized, reproducible analytic framework is needed, defining the methodological choices explicitly, stating the assumptions underlying each choice, acknowledging the limitations those assumptions introduce, and applying these consistently across diseases, databases, and organizations.
+
+The `CohortPrevalence` package provides this framework, implementing a cohort-based approach to prevalence estimation from OMOP-standardized observational data, with pre-specified parameters, documented assumptions, and known limitations.
+
+---
+
+## 2. Parameters
+
+A complete prevalence estimation in `CohortPrevalence` is fully defined by five key parameters:
+
+### 2.1 Condition of Interest (Numerator)
+
+Patients with the condition of interest are identified through a **numerator cohort**. Each record in the numerator cohort represents a patient's period of cohort membership and contains:
+
+- **Cohort start date**: The earliest recorded event satisfying the cohort definition
+- **Cohort end date**: The date when the condition is no longer considered present
+
+For most chronic conditions, the cohort end date is set to the end of the patient's observation period in the database. However, for conditions that can be resolved (such as heart failure being resolved through heart transplantation), the cohort end date corresponds to the resolution date. For conditions from which patients can recover, the cohort end date corresponds to the recovery date or death date.
+
+**Important:** The validity of all prevalence estimates is directly dependent on the accuracy of the outcome cohort definition. Cohort start and end date definitions, the inclusion criteria and temporal logics used to identify cases, can have a substantial impact on results and require careful specification.
+
+### 2.2 Population at Risk
+
+Population at risk is the subset of the population who could be identified as having the CoI. Eligibility criteria are applied to restrict the at-risk population to a clinically relevant subgroup. Examples include:
+
+- Minimum or maximum age
+- Specific sex
+- Any other observable characteristic available in the database
+
+Among patients satisfying the eligibility criteria, their contribution to the at-risk population (denominator) during the Period of Interest (PoI) can be defined according to one of the following options:
+
+| Option | Definition |
+|--------|------------|
+| **pd₁** (Day 1 population) | Patients observable on the first day of the Period of Interest |
+| **pd₂** (Complete-period population) | Patients observable for the entire Period of Interest |
+| **pd₃** (Any-time population) | Patients observable on any day during the Period of Interest |
+| **pd₄** (Sufficient-time population) | Patients observable for at least n days during the Period of Interest |
+
+### 2.3 Time of Prevalence Estimation
+
+The time of prevalence estimation defines when prevalence is measured. It can be set to:
+
+- **A single point in time**: A specific calendar date, referred to as the index date
+- **A defined time interval**: The Period of Interest (PoI)
+
+This choice determines which patients are counted in the calculation.
+
+### 2.4 Lookback Window
+
+The lookback window is a defined span of time prior to the time of prevalence estimation during which the database is queried for CoI. In the cohort-based approach, the lookback window determines the maximum time between a patient's first qualifying cohort event and the index date for that patient to be counted as a prevalent case.
+
+The lookback window can be:
+
+- **Finite**: Such as 1, 5, or 10 years, in which case only patients whose first qualifying event falls within that window are counted
+- **Unrestricted**: All patients with a qualifying event at any point in their available database history are counted
+
+### 2.5 Lead-in Period (LiP)
+
+The lead-in period is the minimum duration of continuous observation required before a patient can be considered at risk and included in the denominator. LiP ensures that every patient had sufficient time for an existing condition to be documented before the prevalence estimation point.
+
+- **Default**: 365 days
+- **Sensitivity analysis alternatives**: 0 days (no requirement) and 3 years (stricter requirement)
+
+### 2.6 Rough vs formal
+
+While the above presents the formal approach to prevalence calculation, we also present a “rough” calculation which is common alternative performed by analysts in the pharmaceutical industry. We alternatively define the “rough” calculation as counting cases based on whether the cohort end date falls into an enumeration window relative to the period of interest and lookback period. Part of our aim is to present several parameterization of estimation in order to exhaustively define the range of viable
+estimates. Given our assumption that a “true” prevalence is not attainable our best direction is to present all tweaks to the calculation.
+
+Further in the rough calcuation there are two types of cohorts that can be used: era vs occurrence. An era cohort follows the same cohort construction as what is depicted above. An occurrence cohort instead counts every occurrence of the case definition for the person history. The cohort start date is the first occurrence and the cohort end date is the last recorded occurrence. Examples of how to design this cohrot will be shown in future documentation. 
+
+---
+
+## 3. Prevalence Estimation Types
+
+A prevalence estimate is fully defined by the five parameters above. The lookback window and the time of estimation together determine the type of prevalence being measured:
+
+| Type | Lookback | Time |
+|------|----------|------|
+| **Complete point prevalence** | Unrestricted | Single point in time |
+| **Complete period prevalence** | Unrestricted | Defined time interval |
+| **Limited duration point prevalence** | Finite window | Single point in time |
+| **Limited duration period prevalence** | Finite window | Defined time interval |
+
+Different combinations of parameter values yield different prevalence estimates for the same condition in the same database. A more sensitive phenotype definition for CoI, a longer lead-in period, or a stricter criterion for determining the population at risk will each change the prevalence estimate.
+
+### Sensitivity Analysis
+
+Varying all parameters systematically produces a range of estimates that characterizes the sensitivity of the result to methodological choices. This is particularly useful for understanding how robust your findings are to different assumptions about the data.
+
+---
+
+## 4. Practical Examples
+
+The following examples use Disease X, a chronic condition for which patients are considered to remain prevalent until the end of their observation period in the database. The outcome cohort start date corresponds to the date of first recorded diagnosis; the cohort end date corresponds to the end of the patient's continuous observation period.
+
+**Legend:**
+- Light blue shaded region = denominator (patients with at least 365 days of prior observation who are observable at or during the Period of Interest)
+- Light blue lines = patient observation windows
+- Dark teal = membership in the numerator cohort
+- Gold diamond = diagnosis events
+- Red dashed line = index date or Period of Interest
+- ✓ = patient included in numerator
+- ✗ = patient excluded
+
+### Example 1: Complete Point Prevalence on December 31, 2022
+
+**Denominator:** Patients with at least 365 days of prior observation who are observable on December 31, 2022.
+
+**Numerator:** Denominator patients in the outcome cohort on that date.
+
+**Results:** Patients A and E are counted.
+- Patient B left the database in 2019 (cohort and observation end)
+- Patient C entered less than 365 days before the index date and is excluded from the denominator
+- Patient D has no qualifying event
+
+### Example 2: Limited Duration (5-Year) Point Prevalence on December 31, 2022
+
+**Denominator:** Same as Example 1.
+
+**Numerator:** Denominator patients whose first qualifying event falls within the 5-year lookback window (January 1, 2018 to December 31, 2022) and who are in the cohort at the index date.
+
+**Results:** Patients E and F qualify.
+- Patient A was diagnosed in 2015, before the window
+- Patient B left the database in 2019
+- Patient C does not meet the prior observation requirement
+
+### Example 3: Complete Period Prevalence during Calendar Year 2022
+
+**Denominator:** Patients with at least 365 days of prior observation by January 1, 2022.
+
+**Numerator:** Denominator patients whose cohort overlaps with any part of calendar year 2022.
+
+**Results:**
+- Patient F qualifies as her cohort overlaps with January-June 2022; her observation line ends mid-2022 when she left the database
+- Patient G left the database in December 2021 and does not overlap with 2022
+- Patient C does not meet the prior observation requirement
+
+---
+
+## 5. Future Directions
+
+### Recurrent Conditions
+
+The current framework is designed for chronic conditions. Extending it to recurrent conditions, such as acute diagnoses or medication episodes with defined durations, requires additional methodology for episode definition, gap logic, and the interpretation of prevalence for non-persistent states.
+
+### Standardization and Projection
+
+Database-level prevalence estimates do not generalize directly to the source population. Future work will develop standardization and projection methods, including:
+
+- Demographic standardization to reference populations
+- Temporal projection of future prevalence using incidence, remission, and mortality rates
+
+This directly addresses the generalizability limitation described above.
+
+### Phenotype Validation
+
+The accuracy of the numerator cohort is the most important factor influencing the validity of prevalence estimates. Future work will develop systematic approaches for development and validation of phenotype definitions.
+
+### Joint Incidence-Prevalence Framework
+
+Incidence and prevalence are methodologically linked: prevalence is a function of incidence and disease duration. A parallel cohort-based framework for incidence estimation, consistent with the design principles of `CohortPrevalence`, would enable joint estimation of incidence and prevalence from the same analytic infrastructure and support temporal projection.
+
+---
+
+## References
+
+1. Porta M. A Dictionary of Epidemiology. 6th ed. Oxford University Press; 2014.
+
+2. Garbe E et al. Estimating Chronic Disease Prevalence from Claims Data: Reducing Bias by Accounting for Diseased Individuals Who Do Not Generate Claims. Value Health. 2013. doi:10.1016/j.jval.2013.08.2292
+
+3. Dombrowski S et al. Estimating Disease Prevalence in Administrative Data. Clin Invest Med. 2022;45(2). doi:10.25011/cim.v45i2.38100
+
+4. Ross JS et al. Enrollment factors and bias of disease prevalence estimates in administrative claims data. Ann Epidemiol. 2015. doi:10.1016/j.annepidem.2015.01.004
+
+5. Peng M et al. Incidence and Prevalence Estimations Based on Claims Data: New Methodological Considerations. Value Health. 2015. doi:10.1016/j.jval.2015.09.2910
+
+6. Dahlen A, Charu V. Analysis of Sampling Bias in Large Health Care Claims Databases. JAMA Netw Open. 2023;6(1):e2249804. doi:10.1001/jamanetworkopen.2022.49804
+
+7. Rassen JA, Bartels DB, Schneeweiss S, Patrick AR, Murk W. Measuring prevalence and incidence of chronic conditions in claims and electronic health record databases. Clin Epidemiol. 2019;11:1-15. doi:10.2147/CLEP.S164218
+
+8. National Cancer Institute SEER. Measures of Cancer Prevalence. https://surveillance.cancer.gov/prevalence/measures.html
+
+9. Raventos B, Catala M, Du M, et al. IncidencePrevalence: An R package to calculate population-level incidence rates and prevalence using the OMOP common data model. Pharmacoepidemiol Drug Saf. 2023. doi:10.1002/pds.5717

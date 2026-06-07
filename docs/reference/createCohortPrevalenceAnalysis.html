@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
       </span>
     </div>
 
@@ -32,7 +32,10 @@
     <span class="caret"></span>
   </a>
   <ul class="dropdown-menu" role="menu"><li>
-      <a href="../articles/SinglePrevalenceAnalyses.html">Running A Single Prevalence Analysis</a>
+      <a href="../articles/PrevalenceMethodology.html">Prevalence Estimation Methodology</a>
+    </li>
+    <li>
+      <a href="../articles/RunPrevalenceAnalyses.html">Basics of Using Cohort Prevalence</a>
     </li>
   </ul></li>
 <li>
@@ -59,17 +62,18 @@
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">createCohortPrevalenceAnalysis</span><span class="op">(</span></span>
 <span>  <span class="va">analysisId</span>,</span>
+<span>  analysisTag <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">prevalentCohort</span>,</span>
 <span>  <span class="va">periodOfInterest</span>,</span>
-<span>  <span class="va">lookBackOptions</span>,</span>
-<span>  <span class="va">numeratorType</span>,</span>
-<span>  <span class="va">denominatorType</span>,</span>
+<span>  <span class="va">prevalenceType</span>,</span>
 <span>  minimumObservationLength <span class="op">=</span> <span class="fl">0L</span>,</span>
 <span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  multiplier <span class="op">=</span> <span class="fl">100000L</span>,</span>
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  demographicConstraints <span class="op">=</span> <span class="fu"><a href="createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  populationCohort <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  populationCohort <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span>,</span>
+<span>  drugConceptSets <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -80,21 +84,15 @@
 
 
 <dt>prevalentCohort</dt>
-<dd><p>A <code>PrevalenceCohort</code> object specifying the cohort of interest (required).</p></dd>
+<dd><p>A <code>TargetCohort</code> object specifying the cohort of interest (required).</p></dd>
 
 
 <dt>periodOfInterest</dt>
 <dd><p>A <code>PeriodOfInterest</code> object (required).</p></dd>
 
 
-<dt>numeratorType</dt>
-<dd><p>Character string specifying numerator type. Must be one of:</p><ul><li><p><code>"pn1"</code>: Patients who have been observed to have the condition of interest on the first day of the period of interest or within the lookback time</p></li>
-<li><p><code>"pn2"</code>: patients who have been observed to have the condition of interest at any time in the period of interest or within the lookback time</p></li>
-</ul></dd>
-
-
-<dt>denominatorType</dt>
-<dd><p>A <code>DenominatorType</code> object (required).</p></dd>
+<dt>prevalenceType</dt>
+<dd><p>A <code>PrevalenceType</code> object (required).</p></dd>
 
 
 <dt>useOnlyFirstObservationPeriod</dt>
@@ -114,11 +112,16 @@
 
 
 <dt>populationCohort</dt>
-<dd><p>A <code>CohortPopulation</code> object specifying the population of interest on which to compute prevalence.</p></dd>
+<dd><p>A <code>PopulationCohort</code> object specifying the population of interest on which to compute prevalence.</p></dd>
 
 
-<dt>lookbackOptions</dt>
-<dd><p>A <code>LookBackOption</code> object (required).</p></dd>
+<dt>outputTypes</dt>
+<dd><p>Character vector specifying which output types to generate. Defaults to <code>"prevalence"</code>. Can include <code>"incidence"</code> and/or <code>"drugs"</code> for simultaneous generation using shared base tables.
+<strong>Warning</strong>: The <code>"drugs"</code> output type is experimental and should be used with caution. Results may be subject to future changes.</p></dd>
+
+
+<dt>drugConceptSets</dt>
+<dd><p>Optional list of Capr ConceptSetItems. Required if <code>"drugs"</code> is in <code>outputTypes</code>, otherwise ignored.</p></dd>
 
 
 <dt>minimumObservationLength:</dt>
@@ -140,7 +143,7 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by Martin Lavallee, Kelly Li.</p>
+  <p></p><p>Developed by Martin Lavallee, Klaus Bondt, Asieh Golozar, Kelly Li.</p>
 </div>
 
 <div class="pkgdown">

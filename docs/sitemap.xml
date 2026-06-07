@@ -7,6 +7,12 @@
     <loc>/articles/index.html</loc>
   </url>
   <url>
+    <loc>/articles/PrevalenceMethodology.html</loc>
+  </url>
+  <url>
+    <loc>/articles/RunPrevalenceAnalyses.html</loc>
+  </url>
+  <url>
     <loc>/articles/SinglePrevalenceAnalyses.html</loc>
   </url>
   <url>
@@ -20,6 +26,12 @@
   </url>
   <url>
     <loc>/news/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/acs_age_groups.html</loc>
+  </url>
+  <url>
+    <loc>/reference/CohortPrevalenceExperiment.html</loc>
   </url>
   <url>
     <loc>/reference/createCohortPrevalenceAnalysis.html</loc>
@@ -40,6 +52,9 @@
     <loc>/reference/createPrevalenceCohort.html</loc>
   </url>
   <url>
+    <loc>/reference/createPrevalenceType.html</loc>
+  </url>
+  <url>
     <loc>/reference/createRassenIncidenceAnalysis.html</loc>
   </url>
   <url>
@@ -47,6 +62,9 @@
   </url>
   <url>
     <loc>/reference/createSpanPrevalence.html</loc>
+  </url>
+  <url>
+    <loc>/reference/createStandardizationReference.html</loc>
   </url>
   <url>
     <loc>/reference/createTargetCohort.html</loc>
@@ -58,10 +76,16 @@
     <loc>/reference/createYearlyRange.html</loc>
   </url>
   <url>
+    <loc>/reference/dot-calculate_wilson_ci.html</loc>
+  </url>
+  <url>
     <loc>/reference/exportPrevalenceQuery.html</loc>
   </url>
   <url>
     <loc>/reference/exportPrevalenceResults.html</loc>
+  </url>
+  <url>
+    <loc>/reference/fetchACSReference.html</loc>
   </url>
   <url>
     <loc>/reference/generateMultiplePrevalence.html</loc>
@@ -70,12 +94,45 @@
     <loc>/reference/generateMultipleRassenIncidence.html</loc>
   </url>
   <url>
+    <loc>/reference/generatePrevalence.html</loc>
+  </url>
+  <url>
     <loc>/reference/generateSinglePrevalence.html</loc>
   </url>
   <url>
     <loc>/reference/generateSingleRassenIncidence.html</loc>
   </url>
   <url>
+    <loc>/reference/getStandardizationReference.html</loc>
+  </url>
+  <url>
+    <loc>/reference/importStandardizationReference.html</loc>
+  </url>
+  <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/listStandardizationReferences.html</loc>
+  </url>
+  <url>
+    <loc>/reference/loadPrevalenceResults.html</loc>
+  </url>
+  <url>
+    <loc>/reference/map_acs_b01001_to_age_sex.html</loc>
+  </url>
+  <url>
+    <loc>/reference/PopulationCohort.html</loc>
+  </url>
+  <url>
+    <loc>/reference/PrevalenceResults.html</loc>
+  </url>
+  <url>
+    <loc>/reference/StandardizationReference.html</loc>
+  </url>
+  <url>
+    <loc>/reference/standardize_prevalence.html</loc>
+  </url>
+  <url>
+    <loc>/reference/TargetCohort.html</loc>
   </url>
 </urlset>

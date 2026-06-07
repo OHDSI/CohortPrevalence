@@ -199,7 +199,9 @@ Set common parameters for all analyses
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$setCommonParameters(
   strata = NULL,
-  outputTypes = NULL
+  outputTypes = NULL,
+  minimumObservationLength = 0L,
+  useOnlyFirstObservationPeriod = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -209,6 +211,10 @@ Set common parameters for all analyses
 \item{\code{strata}}{Character vector of strata variables (e.g., c("age", "gender"))}
 
 \item{\code{outputTypes}}{Character vector of output types (e.g., "prevalence")}
+
+\item{\code{minimumObservationLength}}{Integer minimum lead-in days before each POI start date}
+
+\item{\code{useOnlyFirstObservationPeriod}}{Logical. If TRUE, only first observation period per person is used}
 }
 \if{html}{\out{</div>}}
 }
