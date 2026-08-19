@@ -1,7 +1,8 @@
 /* Step 3a: For yearly case, get calendar_year, start date, and end date
-TODO: include @strata param for other strata variables */
+TODO: include @strata param for other strata variables
+gender/race/ethnicity are already filtered upstream in #obsPopMain (obsPop.sql) */
 DROP TABLE IF EXISTS #obsPopYear;
-CREATE TABLE #obsPopYear
+CREATE TEMP TABLE #obsPopYear
 AS
 SELECT * FROM (
   SELECT subject_id, span_label, cohort_definition_id,
@@ -12,18 +13,17 @@ SELECT * FROM (
         /* compute age */
         EXTRACT(YEAR FROM calendar_start_date) - year_of_birth AS age,
         gender_concept_id AS gender,
-        race_concept_id AS race-- put other strata here
-  FROM(
-    SELECT * FROM #obsPopMain
-    /* join on years of interest to get valid observation periods */
-    INNER JOIN #year_interval  b
-    ON observation_period_start_date < b.calendar_end_date
-    AND observation_period_end_date >= b.calendar_start_date
-	  {{@use_lead_in}} ? {{ -- add lead-in period
-	  WHERE observation_period_start_date <= DATEADD(day, -@min_obs_time, b.calendar_start_date)
-	  }}
-  )
+        race_concept_id AS race,
+        ethnicity_concept_id AS ethnicity
+  FROM #obsPopMain
+  /* join on years of interest to get valid observation periods */
+  INNER JOIN #year_interval  b
+  ON observation_period_start_date < b.calendar_end_date
+  AND observation_period_end_date >= b.calendar_start_date
+  {{@use_lead_in}} ? {{ -- add lead-in period
+  WHERE observation_period_start_date <= DATEADD(day, -@min_obs_time, b.calendar_start_date)
+  }}
 )
 /* demographic constraints */
-WHERE (age >= {ageMin} AND age <= {ageMax}) AND gender IN ({genderIds})
+WHERE (age >= {ageMin} AND age <= {ageMax})
 ;
