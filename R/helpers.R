@@ -1,3 +1,68 @@
+validatePrevalenceCohort <- function(prevalenceAnalysisClass, executionSettings) {
+  checkmate::assert_class(prevalenceAnalysisClass, classes = "CohortPrevalenceAnalysis")
+  checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
+
+  validationSql <- "
+    SELECT
+      COUNT(*) AS total_count,
+      SUM(CASE WHEN cohort_start_date = cohort_end_date THEN 1 ELSE 0 END) AS point_count,
+      SUM(CASE WHEN cohort_start_date < cohort_end_date THEN 1 ELSE 0 END) AS era_count,
+      SUM(CASE WHEN cohort_start_date IS NULL
+                    OR cohort_end_date IS NULL
+                    OR cohort_start_date > cohort_end_date
+          THEN 1 ELSE 0 END) AS invalid_count,
+       SUM(CASE WHEN cohort_start_date IS NULL
+            OR cohort_end_date IS NULL
+            OR cohort_start_date <> cohort_end_date
+          THEN 1 ELSE 0 END) AS formal_invalid_count
+    FROM @cohort_database_schema.@cohort_table
+    WHERE cohort_definition_id = @prevalent_cohort_id"
+
+  counts <- DatabaseConnector::renderTranslateQuerySql(
+    connection = executionSettings$getConnection(),
+    sql = validationSql,
+    cohort_database_schema = executionSettings$workDatabaseSchema,
+    cohort_table = executionSettings$cohortTable,
+    prevalent_cohort_id = prevalenceAnalysisClass$prevalentCohort$id(),
+    tempEmulationSchema = executionSettings$tempEmulationSchema,
+    snakeCaseToCamelCase = FALSE
+  )
+
+  totalCount <- as.integer(counts$total_count[[1]])
+  pointCount <- as.integer(counts$point_count[[1]])
+  eraCount <- as.integer(counts$era_count[[1]])
+  invalidCount <- as.integer(counts$invalid_count[[1]])
+  formalInvalidCount <- as.integer(counts$formal_invalid_count[[1]])
+  mode <- prevalenceAnalysisClass$prevalenceType$mode
+
+  if (mode == "formal" && formalInvalidCount > 0L) {
+    stop("Formal prevalence requires cohort_start_date to equal cohort_end_date.")
+  }
+
+  if (mode == "rough" && invalidCount > 0L) {
+    stop("Rough prevalence requires cohort_start_date to be less than or equal to cohort_end_date.")
+  }
+
+  if (totalCount == 0L) {
+    inputShape <- "empty"
+  } else if (eraCount > pointCount) {
+    inputShape <- "era"
+  } else if (pointCount > eraCount) {
+    inputShape <- "point"
+  } else {
+    stop("Rough prevalence could not determine whether the cohort contains points or eras because the counts are tied.")
+  }
+
+  list(
+    totalCount = totalCount,
+    pointCount = pointCount,
+    eraCount = eraCount,
+    invalidCount = invalidCount,
+    formalInvalidCount = formalInvalidCount,
+    inputShape = inputShape
+  )
+}
+
 getDenomText <- function(denomType) {
   checkmate::assert_choice(x = denomType, choices = c("pd1", "pd2", "pd3", "pd4"))
   if (denomType == "pd1") {

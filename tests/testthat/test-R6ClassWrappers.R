@@ -5,6 +5,24 @@ test_that("createPrevalenceType creates valid object", {
   expect_r6_class(pt, "PrevalenceType")
   expect_equal(pt$prevalenceType, "point_prevalence")
   expect_equal(pt$lookBackDays, 365L)
+  expect_equal(pt$leadInDays, 0L)
+})
+
+test_that("createPrevalenceType accepts a custom lead-in", {
+  pt <- createPrevalenceType(
+    "period_prevalence_pd3",
+    lookBackDays = 365,
+    leadInDays = 180L
+  )
+
+  expect_equal(pt$leadInDays, 180L)
+})
+
+test_that("createPrevalenceType rejects a negative lead-in", {
+  expect_error(
+    createPrevalenceType("point_prevalence", lookBackDays = 365, leadInDays = -1),
+    class = "checkmate_error"
+  )
 })
 
 test_that("createPrevalenceType accepts all valid types", {

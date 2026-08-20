@@ -1,58 +1,58 @@
-runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
+# runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 
-  cli::cat_line()
-  cli::cat_bullet("Assembling SQL...", bullet = "info")
+#   cli::cat_line()
+#   cli::cat_bullet("Assembling SQL...", bullet = "info")
 
-  tryCatch({
-    sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
-    cli::cli_alert_success("SQL assembled successfully")
-  }, error = function(e) {
-    cli::cli_alert_danger("Failed to assemble SQL: {e$message}")
-    stop(e)
-  })
+#   tryCatch({
+#     sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
+#     cli::cli_alert_success("SQL assembled successfully")
+#   }, error = function(e) {
+#     cli::cli_alert_danger("Failed to assemble SQL: {e$message}")
+#     stop(e)
+#   })
 
-  tryCatch({
-    sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
-    cli::cli_alert_success("SQL rendered and translated successfully")
-  }, error = function(e) {
-    cli::cli_alert_danger("Failed to render SQL: {e$message}")
-    stop(e)
-  })
+#   tryCatch({
+#     sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
+#     cli::cli_alert_success("SQL rendered and translated successfully")
+#   }, error = function(e) {
+#     cli::cli_alert_danger("Failed to render SQL: {e$message}")
+#     stop(e)
+#   })
 
-  cli::cat_line()
-  cli::cat_rule(glue::glue("Executing Analysis {prevalenceAnalysisClass$analysisId}"))
+#   cli::cat_line()
+#   cli::cat_rule(glue::glue("Executing Analysis {prevalenceAnalysisClass$analysisId}"))
 
-  tryCatch({
-    DatabaseConnector::executeSql(
-      connection = executionSettings$getConnection(),
-      sql = sql2
-    )
-    cli::cli_alert_success("Analysis executed successfully")
-  }, error = function(e) {
-    cli::cli_alert_danger("Failed to execute SQL: {e$message}")
-    stop(e)
-  })
+#   tryCatch({
+#     DatabaseConnector::executeSql(
+#       connection = executionSettings$getConnection(),
+#       sql = sql2
+#     )
+#     cli::cli_alert_success("Analysis executed successfully")
+#   }, error = function(e) {
+#     cli::cli_alert_danger("Failed to execute SQL: {e$message}")
+#     stop(e)
+#   })
 
-  cli::cat_line()
-  cli::cat_bullet("Collecting results...", bullet = "info")
+#   cli::cat_line()
+#   cli::cat_bullet("Collecting results...", bullet = "info")
 
-  tryCatch({
-    results <- prevalenceAnalysisClass$collectResults(
-      connection = executionSettings$getConnection(),
-      executionSettings = executionSettings
-    )
-    cli::cli_alert_success("Results collected successfully")
+#   tryCatch({
+#     results <- prevalenceAnalysisClass$collectResults(
+#       connection = executionSettings$getConnection(),
+#       executionSettings = executionSettings
+#     )
+#     cli::cli_alert_success("Results collected successfully")
 
-    # Summary of collected tables
-    outputTypes <- paste(names(results), collapse = ", ")
-    cli::cli_alert_info("Result tables collected: {outputTypes}")
-  }, error = function(e) {
-    cli::cli_alert_danger("Failed to collect results: {e$message}")
-    stop(e)
-  })
+#     # Summary of collected tables
+#     outputTypes <- paste(names(results), collapse = ", ")
+#     cli::cli_alert_info("Result tables collected: {outputTypes}")
+#   }, error = function(e) {
+#     cli::cli_alert_danger("Failed to collect results: {e$message}")
+#     stop(e)
+#   })
 
-  return(results)
-}
+#   return(results)
+# }
 
 
 #' Generate Prevalence Analysis Results
@@ -144,8 +144,8 @@ generatePrevalence <- function(prevalenceAnalysisList,
 
   # Initialize result storage
   prevResultsList <- if ("prevalence" %in% outputTypes) list() else NULL
-  incResultsList <- if ("incidence" %in% outputTypes) list() else NULL
-  drugResultsList <- if ("drugs" %in% outputTypes) list() else NULL
+  # incResultsList <- if ("incidence" %in% outputTypes) list() else NULL
+  # drugResultsList <- if ("drugs" %in% outputTypes) list() else NULL
   metaInfoList <- list()
   executedQueries <- list()
   executionErrors <- list()
@@ -169,6 +169,11 @@ generatePrevalence <- function(prevalenceAnalysisList,
       }, error = function(e) {
         cli::cli_alert_warning("Could not display analysis info: {e$message}")
       })
+
+      validatePrevalenceCohort(
+        prevalenceAnalysisClass = prevalenceAnalysisClass,
+        executionSettings = executionSettings
+      )
 
       # Assemble and render SQL
       cli::cat_line()
@@ -210,15 +215,15 @@ generatePrevalence <- function(prevalenceAnalysisList,
         cli::cli_alert_success("Prevalence: {nrow(analysisResults$prevalence)} rows")
       }
 
-      if ("incidence" %in% outputTypes && !is.null(analysisResults$incidence)) {
-        incResultsList[[i]] <- analysisResults$incidence
-        cli::cli_alert_success("Incidence: {nrow(analysisResults$incidence)} rows")
-      }
+      # if ("incidence" %in% outputTypes && !is.null(analysisResults$incidence)) {
+      #   incResultsList[[i]] <- analysisResults$incidence
+      #   cli::cli_alert_success("Incidence: {nrow(analysisResults$incidence)} rows")
+      # }
 
-      if ("drugs" %in% outputTypes && !is.null(analysisResults$drugUsage)) {
-        drugResultsList[[i]] <- analysisResults$drugUsage
-        cli::cli_alert_success("Drug usage: {nrow(analysisResults$drugUsage)} rows")
-      }
+      # if ("drugs" %in% outputTypes && !is.null(analysisResults$drugUsage)) {
+      #   drugResultsList[[i]] <- analysisResults$drugUsage
+      #   cli::cli_alert_success("Drug usage: {nrow(analysisResults$drugUsage)} rows")
+      # }
 
       # Capture metaInfo
       if (!is.null(analysisResults$metaInfo)) {
@@ -242,15 +247,15 @@ generatePrevalence <- function(prevalenceAnalysisList,
     cli::cli_alert_success("Combined prevalence: {nrow(combinedResults$prevalence)} total rows")
   }
 
-  if ("incidence" %in% outputTypes && !is.null(incResultsList) && length(incResultsList) > 0) {
-    combinedResults$incidence <- do.call('rbind', incResultsList)
-    cli::cli_alert_success("Combined incidence: {nrow(combinedResults$incidence)} total rows")
-  }
+  # if ("incidence" %in% outputTypes && !is.null(incResultsList) && length(incResultsList) > 0) {
+  #   combinedResults$incidence <- do.call('rbind', incResultsList)
+  #   cli::cli_alert_success("Combined incidence: {nrow(combinedResults$incidence)} total rows")
+  # }
 
-  if ("drugs" %in% outputTypes && !is.null(drugResultsList) && length(drugResultsList) > 0) {
-    combinedResults$drugUsage <- do.call('rbind', drugResultsList)
-    cli::cli_alert_success("Combined drug usage: {nrow(combinedResults$drugUsage)} total rows")
-  }
+  # if ("drugs" %in% outputTypes && !is.null(drugResultsList) && length(drugResultsList) > 0) {
+  #   combinedResults$drugUsage <- do.call('rbind', drugResultsList)
+  #   cli::cli_alert_success("Combined drug usage: {nrow(combinedResults$drugUsage)} total rows")
+  # }
 
   if (length(metaInfoList) > 0) {
     metaInfoData <- do.call('rbind', metaInfoList) |>
@@ -265,8 +270,8 @@ generatePrevalence <- function(prevalenceAnalysisList,
 
   results <- PrevalenceResults$new(
     prevalence = combinedResults$prevalence,
-    incidence = combinedResults$incidence,
-    drugUsage = combinedResults$drugUsage,
+    # incidence = combinedResults$incidence,
+    # drugUsage = combinedResults$drugUsage,
     metaInfo = combinedResults$metaInfo
   )
 

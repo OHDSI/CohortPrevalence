@@ -756,7 +756,7 @@ IncidenceAnalysis <- R6::R6Class(
 PrevalenceType <- R6::R6Class(
   classname = "PrevalenceType",
   public = list(
-    initialize = function(prevalenceType, lookBackDays, mode = "formal") {
+    initialize = function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
       
       # Validate prevalenceType is one of the valid options
       validTypes <- c(
@@ -778,6 +778,9 @@ PrevalenceType <- R6::R6Class(
         checkmate::check_true(is.infinite(lookBackDays))
       )
       private[[".lookBackDays"]] <- lookBackDays
+
+      checkmate::assert_integerish(x = leadInDays, len = 1, lower = 0)
+      private[[".leadInDays"]] <- leadInDays
       
     },
     
@@ -850,7 +853,8 @@ PrevalenceType <- R6::R6Class(
         glue::glue("Prevalence Type ==> {prevalenceLabel}"),
         glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
         glue::glue("  Mode: {modeLabel}"),
-        glue::glue("  Lookback: {lookbackLabel}")
+        glue::glue("  Lookback: {lookbackLabel}"),
+        glue::glue("  Lead-in days: {private$.leadInDays}")
       ) |> glue::glue_collapse("\n")
       
       return(txt)
@@ -860,6 +864,7 @@ PrevalenceType <- R6::R6Class(
   private = list(
     .prevalenceType = NULL,
     .lookBackDays = NULL,
+    .leadInDays = NULL,
     .mode = NULL
   ),
   active = list(
@@ -887,6 +892,14 @@ PrevalenceType <- R6::R6Class(
         checkmate::check_true(is.infinite(value))
       )
       private$.lookBackDays <- value
+    },
+
+    leadInDays = function(value) {
+      if (missing(value)) {
+        return(private$.leadInDays)
+      }
+      checkmate::assert_integerish(x = value, len = 1, lower = 0)
+      private$.leadInDays <- value
     },
     
     mode = function(value) {

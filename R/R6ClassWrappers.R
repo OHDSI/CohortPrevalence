@@ -22,14 +22,17 @@
 #'     disease detected (still active) during the interval? This is a simpler detection-based
 #'     calculation.
 #' }
+#' @param leadInDays Integer number of observation days required before the period of interest.
+#'   This prevalence-type setting defaults to 0.
 #' @return A `PrevalenceType` R6 object.
 #' @export
 #'
-createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal") {
+createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
   pt <- PrevalenceType$new(
     prevalenceType = prevalenceType,
     lookBackDays = lookBackDays,
-    mode = mode
+    mode = mode,
+    leadInDays = leadInDays
   )
   return(pt)
 }
