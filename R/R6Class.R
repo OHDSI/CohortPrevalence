@@ -806,8 +806,8 @@ PrevalenceType <- R6::R6Class(
     getPrevalenceLabel = function() {
       labelMap <- list(
         "point_prevalence" = "Point Prevalence",
-        "period_prevalence_pd2" = "Period Prevalence (at least 1 day)",
-        "period_prevalence_pd3" = "Period Prevalence (complete period)",
+        "period_prevalence_pd2" = "Period Prevalence (complete period)", # issue 23 - flipped pd2 and pd3 labels
+        "period_prevalence_pd3" = "Period Prevalence (at least 1 day)",
         "period_prevalence_pd4" = "Period Prevalence (at least n days)"
       )
       return(labelMap[[private$.prevalenceType]])
