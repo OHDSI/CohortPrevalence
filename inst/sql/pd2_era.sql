@@ -26,8 +26,8 @@ FROM (
     /* Get qualified events that are observed over the complete poi */
     SELECT *
     FROM #obsPopYear
-    # issue 25 - we need to allow for the calendar end date to within the observation period
-    # Meaning, we can have the calendar end date to be the same as the observation period end date.
+    -- issue 25 - we need to allow for the calendar end date to within the observation period
+    -- Meaning, we can have the calendar end date to be the same as the observation period end date.
     WHERE calendar_start_date >= observation_period_start_date AND calendar_end_date <= observation_period_end_date
   ) diff
 ) ranked
