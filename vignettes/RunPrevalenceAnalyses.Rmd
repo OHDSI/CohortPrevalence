@@ -143,8 +143,8 @@ In this analysis, we care about the entire population, and so we leave the `popu
 
 
 ```{r}
-prevalentCohort <- createPrevalenceCohort(cohortId = 316866,
-                                          cohortName = "Hypertension")
+prevalentCohort <- createTargetCohort(cohortId = 1,
+                                      cohortName = "Hypertension")
 # Yearly prevalence for periods 2016-2017, 2017-2018, etc.
 periodOfInterest <- createYearlyRange(range = c(2016:2020))
 
@@ -156,79 +156,98 @@ populationCohort <- NULL
 
 ## Step 2: Prevalence analysis options
 Next, we define the options specific to the prevalence analysis.
-This includes a choice of numerator and denominator computational technique.
+The numerator and denominator are chosen together through `createPrevalenceType()`.
 `CohortPrevalence` uses operational definitions of prevalence from [Rassen et al](https://pubmed.ncbi.nlm.nih.gov/30588119/). 
 Please see the vignette `prevalence` for definitions of the numerator and denominator choices.
 
-Beyond the numerator and denominator, we also create options for the length of lookback (and whether we only want to use observed time in the lookback), rate multiplier, minimum observation length, strata variables (default age and gender), and whether or not we want to use only the first observation period, 
+A `PrevalenceType` bundles four settings:
+
+- `prevalenceType`: one of `"point_prevalence"` (pn1 + pd1), `"period_prevalence_pd2"`, `"period_prevalence_pd3"`, or `"period_prevalence_pd4"`.
+- `lookBackDays`: how far back to look for a qualifying event; `Inf` means complete historical lookback.
+- `mode`: `"formal"` anchors on `cohort_start_date`, `"rough"` anchors on `cohort_end_date`.
+- `leadInDays`: days of continuous observation a person must accrue *before* the period of interest starts in order to enter the denominator. The default `0L` keeps every observation period that overlaps the period of interest.
+
+Beyond the prevalence type, we set the demographic constraints of the population, the rate multiplier, the strata variables, and whether we want to use only the first observation period.
 
 ```{r}
 analysisId <- 123 # Any unique integer ID to define this analysis
 
-# Select numerator and denominator options
-numeratorType <- "pn1" #pn1 or pn2
-denominatorType <- createDenominatorType(denomType = "pd3") #pd1, pd2, pd3, or pd4
+# Select the prevalence type (numerator + denominator), lookback, mode, and lead-in
+prevalenceType <- createPrevalenceType(
+  prevalenceType = "period_prevalence_pd3",
+  lookBackDays = 99999L,
+  mode = "formal",
+  leadInDays = 0L
+)
 
-# Set lookback period options
-lookBackOptions <- createLookBackOptions(lookBackDays = 99999L,
-                                         useObservedTimeOnly = FALSE)
+# Constrain the population by age and gender
+demographicConstraints <- createDemographicConstraints(
+  ageMin = 0,
+  ageMax = 150,
+  genderIds = c(8507, 8532)
+)
 
-# Set strata options - NULL by default uses age and gender
+# Set strata options - NULL means no stratification
 strata <- NULL
 
 # Set other specifications
-minimumObservationLength <- 0L
 useOnlyFirstObservationPeriod <- FALSE
-multiplier <- 100000
+multiplier <- 100000L
 
 prevalenceAnalysisClass <- createCohortPrevalenceAnalysis(
   analysisId = analysisId,
   prevalentCohort = prevalentCohort,
   periodOfInterest = periodOfInterest,
-  lookBackOptions = lookBackOptions,
-  numeratorType = numeratorType,
-  denominatorType = denominatorType,
-  minimumObservationLength =  minimumObservationLength,
-  useOnlyFirstObservationPeriod =  useOnlyFirstObservationPeriod,
+  prevalenceType = prevalenceType,
+  useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
   multiplier = multiplier,
   strata = strata,
-  populationCohort = NULL
+  demographicConstraints = demographicConstraints,
+  populationCohort = populationCohort,
+  outputTypes = "prevalence"
 )
+
+# Review the assembled settings
+prevalenceAnalysisClass$viewAnalysisInfo()
 ```
 
 ## Step 3: Run analyses 
 
 The `prevalenceAnalysisClass` object is now a wrapped-up package of all our analysis specifications. 
-Using this object, we can now run the analysis with `generateSinglePrevalence` and our previously defined database connection settings.
+Using this object, we can now run the analysis with `generatePrevalence` and our previously defined database connection settings.
+`generatePrevalence()` accepts either a single analysis object or a list of them, and returns a `PrevalenceResults` object.
 
 ```{r}
 # Results
-results <- generateSinglePrevalence(
-  prevalenceAnalysisClass = prevalenceAnalysisClass,
+results <- generatePrevalence(
+  prevalenceAnalysisList = prevalenceAnalysisClass,
   executionSettings = executionSettings
 )
+
+# Inspect what came back
+results
+results$prevalence
 ```
 
 
 ## Step 4: Export
 
-Now, we can write the results dataframe into `.csv` format for sharing results with `exportPrevalenceResults`
-Sometimes, we want to externally review the Sql queries used to generate the prevalence objects.
+Now, we can write the results into a portable bundle for sharing with `results$export()`.
+The bundle contains one `.csv` per result table plus a manifest, and can be read back with `loadPrevalenceResults()`.
+Sometimes, we want to externally review the SQL queries used to generate the prevalence objects.
 We can do this with `exportPrevalenceQuery`.
 
 ```{r}
 outputFolder <- here::here("results") |>
   fs::dir_create()
 
-# Export results to CSV format
-exportPrevalenceResults(
-  results = results,
-  outputFolder = outputFolder
-)
+# Export results to a bundle of CSV files
+results$export(outputFolder = outputFolder)
 
 # Save SQL query
 exportPrevalenceQuery(
   prevalenceAnalysisClass = prevalenceAnalysisClass,
+  executionSettings = executionSettings,
   outputFolder = outputFolder
 )
 ```
@@ -256,7 +275,9 @@ exp$addCohorts(tibble::tibble(
 exp$addPrevalenceTypes(list(
   createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
   createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "formal"),
-  createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "rough")
+  createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "rough"),
+  # same definition as above, but requiring a year of prior observation
+  createPrevalenceType("period_prevalence_pd3", lookBackDays = 365L, mode = "formal", leadInDays = 365L)
 ))
 
 # Add demographic constraints (age ranges)
@@ -270,6 +291,15 @@ exp$addPeriodsOfInterest(list(
   createYearlyRange(2016:2020)
 ))
 
+# Settings shared by every analysis in the grid
+exp$setCommonParameters(
+  strata = c("age", "gender"),
+  outputTypes = "prevalence",
+  useOnlyFirstObservationPeriod = FALSE
+)
+
+# Review the grid before running anything
+exp$viewDesign()
 ```
 
 ### Execute All Analyses

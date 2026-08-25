@@ -7,6 +7,18 @@ test_that("createPrevalenceType creates valid object", {
   expect_equal(pt$lookBackDays, 365L)
 })
 
+test_that("createPrevalenceType defaults leadInDays to zero and accepts a value", {
+  pt <- createPrevalenceType("point_prevalence", lookBackDays = 365)
+  expect_equal(pt$leadInDays, 0L)
+  expect_match(pt$getLeadInLabel(), "No lead-in")
+
+  pt <- createPrevalenceType("point_prevalence", lookBackDays = 365, leadInDays = 730L)
+  expect_equal(pt$leadInDays, 730L)
+  expect_match(pt$getLeadInLabel(), "730-day lead-in")
+
+  expect_error(createPrevalenceType("point_prevalence", lookBackDays = 365, leadInDays = -1L))
+})
+
 test_that("createPrevalenceType accepts all valid types", {
   expect_r6_class(createPrevalenceType("point_prevalence", 365), "PrevalenceType")
   expect_r6_class(createPrevalenceType("period_prevalence_pd2", Inf), "PrevalenceType")
@@ -57,7 +69,7 @@ test_that("createCohortPrevalenceAnalysis uses default parameters", {
     prevalenceType = prevalenceType
   )
 
-  expect_equal(analysis$minimumObservationLength, 0L)
+  expect_equal(analysis$prevalenceType$leadInDays, 0L)
   expect_equal(analysis$useOnlyFirstObservationPeriod, FALSE)
   expect_equal(analysis$multiplier, 100000L)
   expect_null(analysis$strata)
@@ -66,7 +78,7 @@ test_that("createCohortPrevalenceAnalysis uses default parameters", {
 test_that("createCohortPrevalenceAnalysis accepts custom parameters", {
   prevalentCohort <- createTargetCohort(1, "Test Cohort")
   periodOfInterest <- createYearlyRange(2020:2022)
-  prevalenceType <- createPrevalenceType("period_prevalence_pd3", lookBackDays = 0)
+  prevalenceType <- createPrevalenceType("period_prevalence_pd3", lookBackDays = 0, leadInDays = 365L)
   demographicConstraints <- createDemographicConstraints(ageMin = 18, ageMax = 65)
   populationCohort <- createPopulationCohort(99, "Population")
 
@@ -75,7 +87,6 @@ test_that("createCohortPrevalenceAnalysis accepts custom parameters", {
     prevalentCohort = prevalentCohort,
     periodOfInterest = periodOfInterest,
     prevalenceType = prevalenceType,
-    minimumObservationLength = 365L,
     useOnlyFirstObservationPeriod = TRUE,
     multiplier = 1000000L,
     strata = "age",
@@ -83,7 +94,7 @@ test_that("createCohortPrevalenceAnalysis accepts custom parameters", {
     populationCohort = populationCohort
   )
 
-  expect_equal(analysis$minimumObservationLength, 365L)
+  expect_equal(analysis$prevalenceType$leadInDays, 365L)
   expect_equal(analysis$useOnlyFirstObservationPeriod, TRUE)
   expect_equal(analysis$multiplier, 1000000L)
   expect_equal(analysis$strata, "age")

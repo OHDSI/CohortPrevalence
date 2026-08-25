@@ -27,7 +27,7 @@ Users have the option of selecting:
     - **rough**: Anchors prevalence to the `cohort_end_date`. A patient is considered prevalent if evidence of disease exists at any time up to and including the end of the cohort period. This provides a more inclusive estimate that captures disease identified during the period of interest.
     
 - Defining Eligible Observation Periods in the population
-    1) Minimum Observation Period Length: This is the required time that persons in the database must have been observed to be eligible. This can be any number in days; typical options would be 0 days or 365 days. 
+    1) Lead-in Window: the required days of continuous observation a person must accrue *before* the period of interest starts in order to enter the denominator. This can be any number in days; typical options would be 0 days or 365 days. Lead-in belongs to the prevalence definition, so it is set per prevalence type via `createPrevalenceType(leadInDays = )` and different prevalence types in the same experiment may use different values.
     2) First or any observation period: Determine whether to use first observation period or any observation period to evaluate the prevalence of a disease during the period of interest. In claims data, it is possible for patients to leave the database and return. 
 
 - Demographic Stratification: age, gender and race
@@ -53,10 +53,16 @@ Users have the option of selecting:
 # Create analysis specification
 analysis <- createCohortPrevalenceAnalysis(
   analysisId = 1L,
-  prevalentCohort = createPopulationCohort(name = "CKD", isoPeriod = "2020-2024"),
+  prevalentCohort = createTargetCohort(cohortId = 1L, cohortName = "CKD"),
   periodOfInterest = createYearlyRange(2020:2024),
-  prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
+  prevalenceType = createPrevalenceType(
+    "point_prevalence",
+    lookBackDays = 0L,
+    mode = "formal",
+    leadInDays = 365L   # require a year of prior observation to enter the denominator
+  ),
   demographicConstraints = createDemographicConstraints(ageMin = 18, ageMax = 150),
+  strata = c("age", "gender"),
   outputTypes = "prevalence"
 )
 
@@ -100,7 +106,7 @@ exp$addCohorts(tibble::tibble(
 exp$addPrevalenceTypes(list(
     createPrevalenceType("point_prevalence", lookBackDays = 0L, mode = "formal"),
     createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L, mode = "formal"),
-    createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L, mode = "rough")
+    createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L, mode = "rough", leadInDays = 365L)
   ))
 exp$addDemographicConstraints(list(
     createDemographicConstraints(ageMin = 18, ageMax = 150),
@@ -109,9 +115,14 @@ exp$addDemographicConstraints(list(
 exp$addPeriodsOfInterest(list(
     createYearlyRange(2015:2024)
   ))
+exp$setCommonParameters(
+  strata = c("age", "gender"),
+  outputTypes = "prevalence",
+  useOnlyFirstObservationPeriod = FALSE
+)
 exp$validate()
 
-# Preview specification (3 × 3 × 2 × 10 = 180 analyses)
+# Preview specification (3 cohorts × 3 prevalence types × 2 demographics × 1 period = 18 analyses)
 exp$viewDesign()        # Console table
 exp$viewDesign("html")  # Reactable (searchable/filterable)
 
@@ -124,7 +135,7 @@ results <- generatePrevalence(
   executionSettings = settings
 )
 
-# Dashboard shows all 180 analyses with filtering
+# Dashboard shows all 18 analyses with filtering
 # Note: explore() is not yet ready for use
 results$explore()
 ```

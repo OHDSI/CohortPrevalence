@@ -1,7 +1,7 @@
 #' Create a `PrevalenceType` object
 #'
 #' Constructs a `PrevalenceType` object specifying the prevalence type, lookback period,
-#' and calculation mode.
+#' lead-in requirement, and calculation mode.
 #'
 #' @param prevalenceType Character string specifying prevalence type. Must be one of:
 #' \itemize{
@@ -22,14 +22,19 @@
 #'     disease detected (still active) during the interval? This is a simpler detection-based
 #'     calculation.
 #' }
+#' @param leadInDays Integer number of days of continuous observation required before the start
+#'   of each period of interest. Defaults to `0L` (no lead-in requirement). Lead-in is a property
+#'   of the prevalence definition rather than a shared experiment setting, so different prevalence
+#'   types in the same experiment may use different values.
 #' @return A `PrevalenceType` R6 object.
 #' @export
 #'
-createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal") {
+createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
   pt <- PrevalenceType$new(
     prevalenceType = prevalenceType,
     lookBackDays = lookBackDays,
-    mode = mode
+    mode = mode,
+    leadInDays = leadInDays
   )
   return(pt)
 }
@@ -41,8 +46,8 @@ createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal") 
 #' @param analysisId Unique integer analysisId to identify the analysis (required).
 #' @param prevalentCohort A `TargetCohort` object specifying the cohort of interest (required).
 #' @param periodOfInterest A `PeriodOfInterest` object (required).
-#' @param prevalenceType A `PrevalenceType` object (required).
-#' @param minimumObservationLength: Integer specifying minimum observation length (optional).
+#' @param prevalenceType A `PrevalenceType` object (required). The lead-in requirement is carried
+#'   by this object via `createPrevalenceType(leadInDays = )`.
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
 #' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
@@ -60,7 +65,6 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            prevalentCohort,
                                            periodOfInterest,
                                            prevalenceType,
-                                           minimumObservationLength = 0L,
                                            useOnlyFirstObservationPeriod = FALSE,
                                            multiplier = 100000L,
                                            strata = NULL,
@@ -80,7 +84,6 @@ createCohortPrevalenceAnalysis <- function(analysisId,
     prevalentCohort = prevalentCohort,
     periodOfInterest = periodOfInterest,
     prevalenceType = prevalenceType,
-    minimumObservationLength = minimumObservationLength,
     useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
     multiplier = multiplier,
     strata = strata,

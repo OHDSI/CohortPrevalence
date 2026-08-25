@@ -34,7 +34,7 @@
 #'
 #' exp$addPrevalenceTypes(list(
 #'   createPrevalenceType("point", lookBackDays = 0L),
-#'   createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L),
+#'   createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L, leadInDays = 365L),
 #'   createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L)
 #' ))
 #'
@@ -105,7 +105,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
       # Validate each item has required structure
       for (i in seq_along(types_list)) {
         obj <- types_list[[i]]
-        if (!all(c("prevalenceType", "lookBackDays", "mode") %in% names(obj))) {
+        if (!all(c("prevalenceType", "lookBackDays", "mode", "leadInDays") %in% names(obj))) {
           stop(
             "Item ", i, " in types_list does not appear to be a valid prevalenceType object. ",
             "Use createPrevalenceType() to create objects."
@@ -169,25 +169,30 @@ CohortPrevalenceExperiment <- R6::R6Class(
     #' @description Set common parameters for all analyses
     #' @param strata Character vector of strata variables (e.g., c("age", "gender"))
     #' @param outputTypes Character vector of output types (e.g., "prevalence")
-    #' @param minimumObservationLength Integer minimum lead-in days before each POI start date
     #' @param useOnlyFirstObservationPeriod Logical. If TRUE, only first observation period per person is used
+    #' @param minimumObservationLength Removed. Lead-in days are now set per prevalence type via
+    #'   `createPrevalenceType(leadInDays = )`.
     #' @return Invisibly returns self for method chaining
     setCommonParameters = function(strata = NULL,
                                    outputTypes = NULL,
-                                   minimumObservationLength = 0L,
-                                   useOnlyFirstObservationPeriod = FALSE) {
+                                   useOnlyFirstObservationPeriod = FALSE,
+                                   minimumObservationLength = NULL) {
       if (!is.null(strata)) {
         checkmate::assert_character(strata, any.missing = FALSE)
       }
       if (!is.null(outputTypes)) {
         checkmate::assert_character(outputTypes, any.missing = FALSE)
       }
-      checkmate::assert_integerish(minimumObservationLength, len = 1)
+      if (!is.null(minimumObservationLength)) {
+        cli::cli_warn(c(
+          "{.arg minimumObservationLength} has been removed from {.fn setCommonParameters} and is ignored.",
+          "i" = "Set lead-in days per prevalence type with {.code createPrevalenceType(leadInDays = )}."
+        ))
+      }
       checkmate::assert_logical(useOnlyFirstObservationPeriod, len = 1)
 
       private$.strata <- strata
       private$.outputTypes <- outputTypes
-      private$.minimumObservationLength <- as.integer(minimumObservationLength)
       private$.useOnlyFirstObservationPeriod <- useOnlyFirstObservationPeriod
       invisible(self)
     },
@@ -268,6 +273,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
             cohortName = reactable::colDef(width = 140),
             prevalenceType = reactable::colDef(width = 120),
             lookBackDays = reactable::colDef(width = 80),
+            leadInDays = reactable::colDef(width = 80),
             ageMin = reactable::colDef(width = 60),
             ageMax = reactable::colDef(width = 60),
             genderIds = reactable::colDef(width = 80),
@@ -324,10 +330,10 @@ CohortPrevalenceExperiment <- R6::R6Class(
           prevalenceType = createPrevalenceType(
             prevalenceType = row$prevalenceType,
             lookBackDays = row$lookBackDays,
-            mode = row$mode
+            mode = row$mode,
+            leadInDays = row$leadInDays
           ),
           strata = row$strata[[1]],
-          minimumObservationLength = row$minimumObservationLength,
           useOnlyFirstObservationPeriod = row$useOnlyFirstObservationPeriod,
           demographicConstraints = createDemographicConstraints(
             ageMin = row$ageMin,
@@ -357,7 +363,6 @@ CohortPrevalenceExperiment <- R6::R6Class(
     .periodsOfInterest = NULL,
     .strata = NULL,
     .outputTypes = NULL,
-    .minimumObservationLength = 0L,
     .useOnlyFirstObservationPeriod = FALSE,
 
     # Expand periods of interest into flat specification rows
@@ -410,7 +415,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
       prevalence_spec <- tibble::tibble(
         prevalenceType = sapply(private$.prevalenceTypes, function(x) x$prevalenceType),
         lookBackDays = sapply(private$.prevalenceTypes, function(x) x$lookBackDays),
-        mode = sapply(private$.prevalenceTypes, function(x) x$mode)
+        mode = sapply(private$.prevalenceTypes, function(x) x$mode),
+        leadInDays = sapply(private$.prevalenceTypes, function(x) x$leadInDays)
       )
 
       # Convert demographic constraints list to tibble
@@ -434,16 +440,15 @@ CohortPrevalenceExperiment <- R6::R6Class(
           analysisId = dplyr::row_number(),
           strata = list(private$.strata),
           outputTypes = list(private$.outputTypes),
-          minimumObservationLength = private$.minimumObservationLength,
           useOnlyFirstObservationPeriod = private$.useOnlyFirstObservationPeriod
         ) |>
         dplyr::select(
           analysisId,
           cohortId, cohortName,
-          prevalenceType, lookBackDays, mode,
+          prevalenceType, lookBackDays, mode, leadInDays,
           ageMin, ageMax, genderIds,
           poiType, poiLabel, poiStart, poiEnd,
-          minimumObservationLength, useOnlyFirstObservationPeriod,
+          useOnlyFirstObservationPeriod,
           strata, outputTypes
         )
 

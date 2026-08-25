@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.0</span>
       </span>
     </div>
 
@@ -215,8 +215,8 @@ overall database (i.e. prevalence of hypertension in sitagliptin users).
 In this analysis, we care about the entire population, and so we leave
 the <code>populationCohort</code> option <code>NULL</code>.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">prevalentCohort</span> <span class="op">&lt;-</span> <span class="fu">createPrevalenceCohort</span><span class="op">(</span>cohortId <span class="op">=</span> <span class="fl">316866</span>,</span>
-<span>                                          cohortName <span class="op">=</span> <span class="st">"Hypertension"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">prevalentCohort</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createTargetCohort.html">createTargetCohort</a></span><span class="op">(</span>cohortId <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>                                      cohortName <span class="op">=</span> <span class="st">"Hypertension"</span><span class="op">)</span></span>
 <span><span class="co"># Yearly prevalence for periods 2016-2017, 2017-2018, etc.</span></span>
 <span><span class="va">periodOfInterest</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span>range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2016</span><span class="op">:</span><span class="fl">2020</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -228,85 +228,117 @@ the <code>populationCohort</code> option <code>NULL</code>.</p>
 <div class="section level2">
 <h2 id="step-2-prevalence-analysis-options">Step 2: Prevalence analysis options<a class="anchor" aria-label="anchor" href="#step-2-prevalence-analysis-options"></a>
 </h2>
-<p>Next, we define the options specific to the prevalence analysis. This
-includes a choice of numerator and denominator computational technique.
-<code>CohortPrevalence</code> uses operational definitions of prevalence
-from <a href="https://pubmed.ncbi.nlm.nih.gov/30588119/" class="external-link">Rassen et
-al</a>. Please see the vignette <code>prevalence</code> for definitions
-of the numerator and denominator choices.</p>
-<p>Beyond the numerator and denominator, we also create options for the
-length of lookback (and whether we only want to use observed time in the
-lookback), rate multiplier, minimum observation length, strata variables
-(default age and gender), and whether or not we want to use only the
-first observation period,</p>
+<p>Next, we define the options specific to the prevalence analysis. The
+numerator and denominator are chosen together through
+<code><a href="../reference/createPrevalenceType.html">createPrevalenceType()</a></code>. <code>CohortPrevalence</code> uses
+operational definitions of prevalence from <a href="https://pubmed.ncbi.nlm.nih.gov/30588119/" class="external-link">Rassen et al</a>.
+Please see the vignette <code>prevalence</code> for definitions of the
+numerator and denominator choices.</p>
+<p>A <code>PrevalenceType</code> bundles four settings:</p>
+<ul>
+<li>
+<code>prevalenceType</code>: one of <code>"point_prevalence"</code>
+(pn1 + pd1), <code>"period_prevalence_pd2"</code>,
+<code>"period_prevalence_pd3"</code>, or
+<code>"period_prevalence_pd4"</code>.</li>
+<li>
+<code>lookBackDays</code>: how far back to look for a qualifying
+event; <code>Inf</code> means complete historical lookback.</li>
+<li>
+<code>mode</code>: <code>"formal"</code> anchors on
+<code>cohort_start_date</code>, <code>"rough"</code> anchors on
+<code>cohort_end_date</code>.</li>
+<li>
+<code>leadInDays</code>: days of continuous observation a person
+must accrue <em>before</em> the period of interest starts in order to
+enter the denominator. The default <code>0L</code> keeps every
+observation period that overlaps the period of interest.</li>
+</ul>
+<p>Beyond the prevalence type, we set the demographic constraints of the
+population, the rate multiplier, the strata variables, and whether we
+want to use only the first observation period.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">analysisId</span> <span class="op">&lt;-</span> <span class="fl">123</span> <span class="co"># Any unique integer ID to define this analysis</span></span>
 <span></span>
-<span><span class="co"># Select numerator and denominator options</span></span>
-<span><span class="va">numeratorType</span> <span class="op">&lt;-</span> <span class="st">"pn1"</span> <span class="co">#pn1 or pn2</span></span>
-<span><span class="va">denominatorType</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createDenominatorType.html">createDenominatorType</a></span><span class="op">(</span>denomType <span class="op">=</span> <span class="st">"pd3"</span><span class="op">)</span> <span class="co">#pd1, pd2, pd3, or pd4</span></span>
+<span><span class="co"># Select the prevalence type (numerator + denominator), lookback, mode, and lead-in</span></span>
+<span><span class="va">prevalenceType</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span></span>
+<span>  prevalenceType <span class="op">=</span> <span class="st">"period_prevalence_pd3"</span>,</span>
+<span>  lookBackDays <span class="op">=</span> <span class="fl">99999L</span>,</span>
+<span>  mode <span class="op">=</span> <span class="st">"formal"</span>,</span>
+<span>  leadInDays <span class="op">=</span> <span class="fl">0L</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Set lookback period options</span></span>
-<span><span class="va">lookBackOptions</span> <span class="op">&lt;-</span> <span class="fu">createLookBackOptions</span><span class="op">(</span>lookBackDays <span class="op">=</span> <span class="fl">99999L</span>,</span>
-<span>                                         useObservedTimeOnly <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="co"># Constrain the population by age and gender</span></span>
+<span><span class="va">demographicConstraints</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span></span>
+<span>  ageMin <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  ageMax <span class="op">=</span> <span class="fl">150</span>,</span>
+<span>  genderIds <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">8507</span>, <span class="fl">8532</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Set strata options - NULL by default uses age and gender</span></span>
+<span><span class="co"># Set strata options - NULL means no stratification</span></span>
 <span><span class="va">strata</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
 <span></span>
 <span><span class="co"># Set other specifications</span></span>
-<span><span class="va">minimumObservationLength</span> <span class="op">&lt;-</span> <span class="fl">0L</span></span>
 <span><span class="va">useOnlyFirstObservationPeriod</span> <span class="op">&lt;-</span> <span class="cn">FALSE</span></span>
-<span><span class="va">multiplier</span> <span class="op">&lt;-</span> <span class="fl">100000</span></span>
+<span><span class="va">multiplier</span> <span class="op">&lt;-</span> <span class="fl">100000L</span></span>
 <span></span>
 <span><span class="va">prevalenceAnalysisClass</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/createCohortPrevalenceAnalysis.html">createCohortPrevalenceAnalysis</a></span><span class="op">(</span></span>
 <span>  analysisId <span class="op">=</span> <span class="va">analysisId</span>,</span>
 <span>  prevalentCohort <span class="op">=</span> <span class="va">prevalentCohort</span>,</span>
 <span>  periodOfInterest <span class="op">=</span> <span class="va">periodOfInterest</span>,</span>
-<span>  lookBackOptions <span class="op">=</span> <span class="va">lookBackOptions</span>,</span>
-<span>  numeratorType <span class="op">=</span> <span class="va">numeratorType</span>,</span>
-<span>  denominatorType <span class="op">=</span> <span class="va">denominatorType</span>,</span>
-<span>  minimumObservationLength <span class="op">=</span>  <span class="va">minimumObservationLength</span>,</span>
-<span>  useOnlyFirstObservationPeriod <span class="op">=</span>  <span class="va">useOnlyFirstObservationPeriod</span>,</span>
+<span>  prevalenceType <span class="op">=</span> <span class="va">prevalenceType</span>,</span>
+<span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="va">useOnlyFirstObservationPeriod</span>,</span>
 <span>  multiplier <span class="op">=</span> <span class="va">multiplier</span>,</span>
 <span>  strata <span class="op">=</span> <span class="va">strata</span>,</span>
-<span>  populationCohort <span class="op">=</span> <span class="cn">NULL</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span>  demographicConstraints <span class="op">=</span> <span class="va">demographicConstraints</span>,</span>
+<span>  populationCohort <span class="op">=</span> <span class="va">populationCohort</span>,</span>
+<span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Review the assembled settings</span></span>
+<span><span class="va">prevalenceAnalysisClass</span><span class="op">$</span><span class="fu">viewAnalysisInfo</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-3-run-analyses">Step 3: Run analyses<a class="anchor" aria-label="anchor" href="#step-3-run-analyses"></a>
 </h2>
 <p>The <code>prevalenceAnalysisClass</code> object is now a wrapped-up
 package of all our analysis specifications. Using this object, we can
-now run the analysis with <code>generateSinglePrevalence</code> and our
-previously defined database connection settings.</p>
+now run the analysis with <code>generatePrevalence</code> and our
+previously defined database connection settings.
+<code><a href="../reference/generatePrevalence.html">generatePrevalence()</a></code> accepts either a single analysis
+object or a list of them, and returns a <code>PrevalenceResults</code>
+object.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Results</span></span>
-<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu">generateSinglePrevalence</span><span class="op">(</span></span>
-<span>  prevalenceAnalysisClass <span class="op">=</span> <span class="va">prevalenceAnalysisClass</span>,</span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/generatePrevalence.html">generatePrevalence</a></span><span class="op">(</span></span>
+<span>  prevalenceAnalysisList <span class="op">=</span> <span class="va">prevalenceAnalysisClass</span>,</span>
 <span>  executionSettings <span class="op">=</span> <span class="va">executionSettings</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Inspect what came back</span></span>
+<span><span class="va">results</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="va">prevalence</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="step-4-export">Step 4: Export<a class="anchor" aria-label="anchor" href="#step-4-export"></a>
 </h2>
-<p>Now, we can write the results dataframe into <code>.csv</code> format
-for sharing results with <code>exportPrevalenceResults</code> Sometimes,
-we want to externally review the Sql queries used to generate the
-prevalence objects. We can do this with
-<code>exportPrevalenceQuery</code>.</p>
+<p>Now, we can write the results into a portable bundle for sharing with
+<code>results$export()</code>. The bundle contains one <code>.csv</code>
+per result table plus a manifest, and can be read back with
+<code><a href="../reference/loadPrevalenceResults.html">loadPrevalenceResults()</a></code>. Sometimes, we want to externally
+review the SQL queries used to generate the prevalence objects. We can
+do this with <code>exportPrevalenceQuery</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">outputFolder</span> <span class="op">&lt;-</span> <span class="fu">here</span><span class="fu">::</span><span class="fu"><a href="https://here.r-lib.org/reference/here.html" class="external-link">here</a></span><span class="op">(</span><span class="st">"results"</span><span class="op">)</span> <span class="op">|&gt;</span></span>
 <span>  <span class="fu">fs</span><span class="fu">::</span><span class="fu"><a href="https://fs.r-lib.org/reference/create.html" class="external-link">dir_create</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Export results to CSV format</span></span>
-<span><span class="fu">exportPrevalenceResults</span><span class="op">(</span></span>
-<span>  results <span class="op">=</span> <span class="va">results</span>,</span>
-<span>  outputFolder <span class="op">=</span> <span class="va">outputFolder</span></span>
-<span><span class="op">)</span></span>
+<span><span class="co"># Export results to a bundle of CSV files</span></span>
+<span><span class="va">results</span><span class="op">$</span><span class="fu">export</span><span class="op">(</span>outputFolder <span class="op">=</span> <span class="va">outputFolder</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Save SQL query</span></span>
 <span><span class="fu"><a href="../reference/exportPrevalenceQuery.html">exportPrevalenceQuery</a></span><span class="op">(</span></span>
 <span>  prevalenceAnalysisClass <span class="op">=</span> <span class="va">prevalenceAnalysisClass</span>,</span>
+<span>  executionSettings <span class="op">=</span> <span class="va">executionSettings</span>,</span>
 <span>  outputFolder <span class="op">=</span> <span class="va">outputFolder</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -338,7 +370,9 @@ a Cartesian product expansion.</p>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">addPrevalenceTypes</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"point_prevalence"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
 <span>  <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"rough"</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"rough"</span><span class="op">)</span>,</span>
+<span>  <span class="co"># same definition as above, but requiring a year of prior observation</span></span>
+<span>  <span class="fu"><a href="../reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"formal"</span>, leadInDays <span class="op">=</span> <span class="fl">365L</span><span class="op">)</span></span>
 <span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Add demographic constraints (age ranges)</span></span>
@@ -350,7 +384,17 @@ a Cartesian product expansion.</p>
 <span><span class="co"># Add periods of interest</span></span>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">addPeriodsOfInterest</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="../reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span><span class="fl">2016</span><span class="op">:</span><span class="fl">2020</span><span class="op">)</span></span>
-<span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Settings shared by every analysis in the grid</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">setCommonParameters</span><span class="op">(</span></span>
+<span>  strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"gender"</span><span class="op">)</span>,</span>
+<span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span>,</span>
+<span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Review the grid before running anything</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">viewDesign</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="execute-all-analyses">Execute All Analyses<a class="anchor" aria-label="anchor" href="#execute-all-analyses"></a>

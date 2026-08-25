@@ -4,7 +4,12 @@
 \alias{createPrevalenceType}
 \title{Create a \code{PrevalenceType} object}
 \usage{
-createPrevalenceType(prevalenceType, lookBackDays, mode = "formal")
+createPrevalenceType(
+  prevalenceType,
+  lookBackDays,
+  mode = "formal",
+  leadInDays = 0L
+)
 }
 \arguments{
 \item{prevalenceType}{Character string specifying prevalence type. Must be one of:
@@ -28,11 +33,16 @@ asks: did the disease START within the lookback window relative to the period of
 disease detected (still active) during the interval? This is a simpler detection-based
 calculation.
 }}
+
+\item{leadInDays}{Integer number of days of continuous observation required before the start
+of each period of interest. Defaults to \code{0L} (no lead-in requirement). Lead-in is a property
+of the prevalence definition rather than a shared experiment setting, so different prevalence
+types in the same experiment may use different values.}
 }
 \value{
 A \code{PrevalenceType} R6 object.
 }
 \description{
 Constructs a \code{PrevalenceType} object specifying the prevalence type, lookback period,
-and calculation mode.
+lead-in requirement, and calculation mode.
 }

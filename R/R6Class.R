@@ -9,7 +9,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           prevalentCohort,
                           periodOfInterest,
                           prevalenceType,
-                          minimumObservationLength = 0L,
                           useOnlyFirstObservationPeriod = FALSE,
                           multiplier = 100000,
                           strata = NULL,
@@ -36,11 +35,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # set prevalenceType
       checkmate::assert_class(x = prevalenceType, classes = "PrevalenceType")
       private[[".prevalenceType"]] <- prevalenceType
-
-
-      # set minimumObservationLength
-      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
-      private[[".minimumObservationLength"]] <- minimumObservationLength
 
       # set useOnlyFirstObservationPeriod
       checkmate::assert_logical(x = useOnlyFirstObservationPeriod, len = 1)
@@ -185,8 +179,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       renderedSql <- SqlRender::render(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-        min_obs_time = self$minimumObservationLength,
-        use_lead_in = self$minimumObservationLength > 0,
+        lead_in_days = self$prevalenceType$leadInDays,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
@@ -209,7 +202,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         self$periodOfInterest$viewPeriodOfInterest(),
         self$prevalenceType$viewPrevalenceType(),
         glue::glue("Output Types ==> {paste0(private$.outputTypes, collapse = ', ')}"),
-        glue::glue("Observation Period Eligibility ==> Min Observation Period Length: {self$minimumObservationLength} | Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
+        glue::glue("Observation Period Eligibility ==> Using First Observation Period: {self$useOnlyFirstObservationPeriod}"),
         glue::glue("Strata ==> {paste0(self$strata, collapse = ', ')}"),
         glue::glue("Demographic Constraint ==> ageRange: {self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}; genderIds: {paste0(self$demographicConstraints$genderIds, collapse =', ')}")
       ) |>
@@ -230,7 +223,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
 
       # prep op
-      ope <- glue::glue("obsLength: {self$minimumObservationLength} | firstObs: {self$useOnlyFirstObservationPeriod}")
+      ope <- glue::glue("firstObs: {self$useOnlyFirstObservationPeriod}")
       demoConAge <- glue::glue("{self$demographicConstraints$ageMin} - {self$demographicConstraints$ageMax}")
       demoConGender <- glue::glue("{paste0(self$demographicConstraints$genderIds, collapse =', ')}")
       
@@ -246,6 +239,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         poi = poi,
         prevalenceType = self$prevalenceType$getPrevalenceLabel(),
         lookBackDays = self$prevalenceType$getLookbackLabel(),
+        leadInDays = self$prevalenceType$leadInDays,
         numerator = self$prevalenceType$getNumeratorType(),
         denominator = self$prevalenceType$getDenominatorType(),
         prevalenceMode = ifelse(self$prevalenceType$mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)"),
@@ -342,7 +336,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .prevalentCohort = NULL,
     .periodOfInterest = NULL,
     .prevalenceType = NULL,
-    .minimumObservationLength = NULL,
     .useOnlyFirstObservationPeriod = NULL,
     .multiplier = NULL,
     .strata = NULL,
@@ -392,14 +385,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       }
       checkmate::assert_class(x = prevalenceType, classes = "PrevalenceType")
       private$.prevalenceType <- value
-    },
-
-    minimumObservationLength = function(value) {
-      if (missing(value)) {
-        return(private$.minimumObservationLength)
-      }
-      checkmate::assert_integerish(x = minimumObservationLength, len = 1)
-      private$.minimumObservationLength <- value
     },
 
     useOnlyFirstObservationPeriod = function(value) {
@@ -597,8 +582,7 @@ IncidenceAnalysis <- R6::R6Class(
       renderedSql <- SqlRender::render(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-        min_obs_time = self$minimumObservationLength,
-        use_lead_in = self$minimumObservationLength > 0,
+        lead_in_days = self$minimumObservationLength,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
@@ -756,7 +740,7 @@ IncidenceAnalysis <- R6::R6Class(
 PrevalenceType <- R6::R6Class(
   classname = "PrevalenceType",
   public = list(
-    initialize = function(prevalenceType, lookBackDays, mode = "formal") {
+    initialize = function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
       
       # Validate prevalenceType is one of the valid options
       validTypes <- c(
@@ -778,6 +762,10 @@ PrevalenceType <- R6::R6Class(
         checkmate::check_true(is.infinite(lookBackDays))
       )
       private[[".lookBackDays"]] <- lookBackDays
+      
+      # Validate leadInDays - required days of observation before the POI start date
+      checkmate::assert_integerish(x = leadInDays, len = 1, lower = 0)
+      private[[".leadInDays"]] <- as.integer(leadInDays)
       
     },
     
@@ -806,8 +794,8 @@ PrevalenceType <- R6::R6Class(
     getPrevalenceLabel = function() {
       labelMap <- list(
         "point_prevalence" = "Point Prevalence",
-        "period_prevalence_pd2" = "Period Prevalence (at least 1 day)",
-        "period_prevalence_pd3" = "Period Prevalence (complete period)",
+        "period_prevalence_pd2" = "Period Prevalence (complete period)", 
+        "period_prevalence_pd3" = "Period Prevalence (at least 1 day)",
         "period_prevalence_pd4" = "Period Prevalence (at least n days)"
       )
       return(labelMap[[private$.prevalenceType]])
@@ -838,10 +826,21 @@ PrevalenceType <- R6::R6Class(
       }
     },
     
+    # Getter: returns human-readable lead-in label
+    getLeadInLabel = function() {
+      lid <- private$.leadInDays
+      if (lid == 0) {
+        return("No lead-in")
+      } else {
+        return(glue::glue("{lid}-day lead-in"))
+      }
+    },
+    
     # View method: display full prevalence type configuration
     viewPrevalenceType = function() {
       prevalenceLabel <- self$getPrevalenceLabel()
       lookbackLabel <- self$getLookbackLabel()
+      leadInLabel <- self$getLeadInLabel()
       numerator <- self$getNumeratorType()
       denominator <- self$getDenominatorType()
       modeLabel <- ifelse(private$.mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)")
@@ -850,7 +849,8 @@ PrevalenceType <- R6::R6Class(
         glue::glue("Prevalence Type ==> {prevalenceLabel}"),
         glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
         glue::glue("  Mode: {modeLabel}"),
-        glue::glue("  Lookback: {lookbackLabel}")
+        glue::glue("  Lookback: {lookbackLabel}"),
+        glue::glue("  Lead-in: {leadInLabel}")
       ) |> glue::glue_collapse("\n")
       
       return(txt)
@@ -860,7 +860,8 @@ PrevalenceType <- R6::R6Class(
   private = list(
     .prevalenceType = NULL,
     .lookBackDays = NULL,
-    .mode = NULL
+    .mode = NULL,
+    .leadInDays = 0L
   ),
   active = list(
     
@@ -895,6 +896,14 @@ PrevalenceType <- R6::R6Class(
       }
       checkmate::assert_choice(x = value, choices = c("formal", "rough"))
       private$.mode <- value
+    },
+    
+    leadInDays = function(value) {
+      if (missing(value)) {
+        return(private$.leadInDays)
+      }
+      checkmate::assert_integerish(x = value, len = 1, lower = 0)
+      private$.leadInDays <- as.integer(value)
     }
   )
 )

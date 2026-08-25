@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.0</span>
       </span>
     </div>
 
@@ -54,6 +54,26 @@
       
     </div>
 
+    <div class="section level2">
+<h2 class="page-header" data-toc-text="1.2.0" id="cohortprevalence-v120">CohortPrevalence v1.2.0<a class="anchor" aria-label="anchor" href="#cohortprevalence-v120"></a></h2>
+<div class="section level3">
+<h3 id="feature-enhancements-1-2-0">Feature Enhancements<a class="anchor" aria-label="anchor" href="#feature-enhancements-1-2-0"></a></h3>
+<ul><li>Lead-in is now a property of the prevalence definition: <code><a href="../reference/createPrevalenceType.html">createPrevalenceType()</a></code> gains a <code>leadInDays</code> argument, so different prevalence types within one experiment can require different lead-in windows.</li>
+<li>Change <code>obsPopYear.sql</code> to handle more streamlined approach to lead in parameter</li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-1-2-0">Breaking Changes<a class="anchor" aria-label="anchor" href="#breaking-changes-1-2-0"></a></h3>
+<ul><li>
+<code>minimumObservationLength</code> has been removed from the prevalence API. <code><a href="../reference/createCohortPrevalenceAnalysis.html">createCohortPrevalenceAnalysis()</a></code> and <code>CohortPrevalenceExperiment$setCommonParameters()</code> no longer accept it; use <code>createPrevalenceType(leadInDays = )</code> instead. Passing it to <code>setCommonParameters()</code> warns and is ignored. <code><a href="../reference/createRassenIncidenceAnalysis.html">createRassenIncidenceAnalysis()</a></code> keeps <code>minimumObservationLength</code> since incidence analyses have no prevalence type.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-1-2-0">Bug Fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-1-2-0"></a></h3>
+<ul><li>pd2 requires the observation end be after calendar end #25</li>
+<li>incorrect labels for pd2 and pd3 #23</li>
+<li>Updated vignette to work with latest API</li>
+<li>Minor refactor to <code>obsPop.sql</code> to improve efficency</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="page-header" data-toc-text="1.1.0" id="cohortprevalence-v110">CohortPrevalence v1.1.0<a class="anchor" aria-label="anchor" href="#cohortprevalence-v110"></a></h2>
 <div class="section level3">
