@@ -7,7 +7,7 @@ test_that("CohortPrevalenceExperiment carries observation settings into spec and
   ))
 
   exp$addPrevalenceTypes(list(
-    createPrevalenceType("point_prevalence", lookBackDays = 365L)
+    createPrevalenceType("point_prevalence", lookBackDays = 365L, leadInDays = 365L)
   ))
 
   exp$addDemographicConstraints(list(
@@ -21,18 +21,26 @@ test_that("CohortPrevalenceExperiment carries observation settings into spec and
   exp$setCommonParameters(
     strata = c("age", "gender"),
     outputTypes = "prevalence",
-    minimumObservationLength = 365L,
     useOnlyFirstObservationPeriod = TRUE
   )
 
   spec <- exp$getSpecification()
-  expect_equal(spec$minimumObservationLength, 365L)
+  expect_equal(spec$leadInDays, 365L)
   expect_true(spec$useOnlyFirstObservationPeriod)
 
   analyses <- exp$define()
   expect_length(analyses, 1)
-  expect_equal(analyses[[1]]$minimumObservationLength, 365L)
+  expect_equal(analyses[[1]]$prevalenceType$leadInDays, 365L)
   expect_true(analyses[[1]]$useOnlyFirstObservationPeriod)
+})
+
+test_that("CohortPrevalenceExperiment warns when minimumObservationLength is passed to setCommonParameters", {
+  exp <- CohortPrevalenceExperiment$new("removed common parameter")
+
+  expect_warning(
+    exp$setCommonParameters(outputTypes = "prevalence", minimumObservationLength = 365L),
+    "removed"
+  )
 })
 
 
