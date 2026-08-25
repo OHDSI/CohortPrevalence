@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.0</span>
       </span>
     </div>
 
@@ -112,7 +112,7 @@
 <li>
 <p>Defining Eligible Observation Periods in the population</p>
 <ol style="list-style-type: decimal">
-<li>Minimum Observation Period Length: This is the required time that persons in the database must have been observed to be eligible. This can be any number in days; typical options would be 0 days or 365 days.</li>
+<li>Lead-in Window: the required days of continuous observation a person must accrue <em>before</em> the period of interest starts in order to enter the denominator. This can be any number in days; typical options would be 0 days or 365 days. Lead-in belongs to the prevalence definition, so it is set per prevalence type via <code>createPrevalenceType(leadInDays = )</code> and different prevalence types in the same experiment may use different values.</li>
 <li>First or any observation period: Determine whether to use first observation period or any observation period to evaluate the prevalence of a disease during the period of interest. In claims data, it is possible for patients to leave the database and return.</li>
 </ol>
 </li>
@@ -152,10 +152,16 @@
 <code class="sourceCode R"><span><span class="co"># Create analysis specification</span></span>
 <span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/createCohortPrevalenceAnalysis.html">createCohortPrevalenceAnalysis</a></span><span class="op">(</span></span>
 <span>  analysisId <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  prevalentCohort <span class="op">=</span> <span class="fu"><a href="reference/createPopulationCohort.html">createPopulationCohort</a></span><span class="op">(</span>name <span class="op">=</span> <span class="st">"CKD"</span>, isoPeriod <span class="op">=</span> <span class="st">"2020-2024"</span><span class="op">)</span>,</span>
+<span>  prevalentCohort <span class="op">=</span> <span class="fu"><a href="reference/createTargetCohort.html">createTargetCohort</a></span><span class="op">(</span>cohortId <span class="op">=</span> <span class="fl">1L</span>, cohortName <span class="op">=</span> <span class="st">"CKD"</span><span class="op">)</span>,</span>
 <span>  periodOfInterest <span class="op">=</span> <span class="fu"><a href="reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span><span class="fl">2020</span><span class="op">:</span><span class="fl">2024</span><span class="op">)</span>,</span>
-<span>  prevalenceType <span class="op">=</span> <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"point_prevalence"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
+<span>  prevalenceType <span class="op">=</span> <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span></span>
+<span>    <span class="st">"point_prevalence"</span>,</span>
+<span>    lookBackDays <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>    mode <span class="op">=</span> <span class="st">"formal"</span>,</span>
+<span>    leadInDays <span class="op">=</span> <span class="fl">365L</span>   <span class="co"># require a year of prior observation to enter the denominator</span></span>
+<span>  <span class="op">)</span>,</span>
 <span>  demographicConstraints <span class="op">=</span> <span class="fu"><a href="reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span>ageMin <span class="op">=</span> <span class="fl">18</span>, ageMax <span class="op">=</span> <span class="fl">150</span><span class="op">)</span>,</span>
+<span>  strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"gender"</span><span class="op">)</span>,</span>
 <span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -198,7 +204,7 @@
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">addPrevalenceTypes</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"point_prevalence"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd2"</span>, lookBackDays <span class="op">=</span> <span class="fl">365L</span>, mode <span class="op">=</span> <span class="st">"formal"</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"rough"</span><span class="op">)</span></span>
+<span>    <span class="fu"><a href="reference/createPrevalenceType.html">createPrevalenceType</a></span><span class="op">(</span><span class="st">"period_prevalence_pd3"</span>, lookBackDays <span class="op">=</span> <span class="fl">0L</span>, mode <span class="op">=</span> <span class="st">"rough"</span>, leadInDays <span class="op">=</span> <span class="fl">365L</span><span class="op">)</span></span>
 <span>  <span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">addDemographicConstraints</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="reference/createDemographicConstraints.html">createDemographicConstraints</a></span><span class="op">(</span>ageMin <span class="op">=</span> <span class="fl">18</span>, ageMax <span class="op">=</span> <span class="fl">150</span><span class="op">)</span>,</span>
@@ -207,9 +213,14 @@
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">addPeriodsOfInterest</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="reference/createYearlyRange.html">createYearlyRange</a></span><span class="op">(</span><span class="fl">2015</span><span class="op">:</span><span class="fl">2024</span><span class="op">)</span></span>
 <span>  <span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">exp</span><span class="op">$</span><span class="fu">setCommonParameters</span><span class="op">(</span></span>
+<span>  strata <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"age"</span>, <span class="st">"gender"</span><span class="op">)</span>,</span>
+<span>  outputTypes <span class="op">=</span> <span class="st">"prevalence"</span>,</span>
+<span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">validate</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Preview specification (3 × 3 × 2 × 10 = 180 analyses)</span></span>
+<span><span class="co"># Preview specification (3 cohorts × 3 prevalence types × 2 demographics × 1 period = 18 analyses)</span></span>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">viewDesign</span><span class="op">(</span><span class="op">)</span>        <span class="co"># Console table</span></span>
 <span><span class="va">exp</span><span class="op">$</span><span class="fu">viewDesign</span><span class="op">(</span><span class="st">"html"</span><span class="op">)</span>  <span class="co"># Reactable (searchable/filterable)</span></span>
 <span></span>
@@ -222,7 +233,7 @@
 <span>  executionSettings <span class="op">=</span> <span class="va">settings</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Dashboard shows all 180 analyses with filtering</span></span>
+<span><span class="co"># Dashboard shows all 18 analyses with filtering</span></span>
 <span><span class="co"># Note: explore() is not yet ready for use</span></span>
 <span><span class="va">results</span><span class="op">$</span><span class="fu">explore</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
@@ -397,6 +408,7 @@
 <li>Klaus Bondt <br><small class="roles"> Author </small>  </li>
 <li>Asieh Golozar <br><small class="roles"> Author </small>  </li>
 <li>Kelly Li <br><small class="roles"> Maintainer </small>  </li>
+<li><a href="authors.html">More about authors...</a></li>
 </ul>
 </div>
 

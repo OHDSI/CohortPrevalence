@@ -20,7 +20,7 @@ analysis definitions with full provenance tracking."><!-- mathjax --><script src
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.1.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.0</span>
       </span>
     </div>
 
@@ -97,7 +97,7 @@ analysis definitions with full provenance tracking.</p>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a></span>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>exp<span class="sc">$</span><span class="fu">addPrevalenceTypes</span>(<span class="fu">list</span>(</span>
 <span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>  <span class="fu">createPrevalenceType</span>(<span class="st">"point"</span>, <span class="at">lookBackDays =</span> <span class="dv">0</span><span class="dt">L</span>),</span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="fu">createPrevalenceType</span>(<span class="st">"period_prevalence_pd2"</span>, <span class="at">lookBackDays =</span> <span class="dv">365</span><span class="dt">L</span>),</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>  <span class="fu">createPrevalenceType</span>(<span class="st">"period_prevalence_pd2"</span>, <span class="at">lookBackDays =</span> <span class="dv">365</span><span class="dt">L</span>, <span class="at">leadInDays =</span> <span class="dv">365</span><span class="dt">L</span>),</span>
 <span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  <span class="fu">createPrevalenceType</span>(<span class="st">"period_prevalence_pd3"</span>, <span class="at">lookBackDays =</span> <span class="dv">0</span><span class="dt">L</span>)</span>
 <span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>))</span>
 <span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a></span>
@@ -253,8 +253,8 @@ analysis definitions with full provenance tracking.</p>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">CohortPrevalenceExperiment</span><span class="op">$</span><span class="fu">setCommonParameters</span><span class="op">(</span></span>
 <span>  strata <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  outputTypes <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  minimumObservationLength <span class="op">=</span> <span class="fl">0L</span>,</span>
-<span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  useOnlyFirstObservationPeriod <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  minimumObservationLength <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -268,12 +268,13 @@ analysis definitions with full provenance tracking.</p>
 <dd><p>Character vector of output types (e.g., "prevalence")</p></dd>
 
 
-<dt><code>minimumObservationLength</code></dt>
-<dd><p>Integer minimum lead-in days before each POI start date</p></dd>
-
-
 <dt><code>useOnlyFirstObservationPeriod</code></dt>
 <dd><p>Logical. If TRUE, only first observation period per person is used</p></dd>
+
+
+<dt><code>minimumObservationLength</code></dt>
+<dd><p>Removed. Lead-in days are now set per prevalence type via
+<code>createPrevalenceType(leadInDays = )</code>.</p></dd>
 
 
 </dl><p></p></div>

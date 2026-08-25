@@ -4,6 +4,7 @@ CohortPrevalence v1.2.0
 ## Feature Enhancements
 
 - Lead-in is now a property of the prevalence definition: `createPrevalenceType()` gains a `leadInDays` argument, so different prevalence types within one experiment can require different lead-in windows.
+- Change `obsPopYear.sql` to handle more streamlined approach to lead in parameter
 
 ## Breaking Changes
 
@@ -13,6 +14,8 @@ CohortPrevalence v1.2.0
 
 - pd2 requires the observation end be after calendar end #25
 - incorrect labels for pd2 and pd3 #23
+- Updated vignette to work with latest API
+- Minor refactor to `obsPop.sql` to improve efficency
 
 CohortPrevalence v1.1.0
 =======================
