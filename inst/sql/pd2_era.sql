@@ -26,7 +26,10 @@ FROM (
     /* Get qualified events that are observed over the complete poi */
     SELECT *
     FROM #obsPopYear
-    WHERE calendar_start_date >= observation_period_start_date AND calendar_end_date < observation_period_end_date
+    /* issue 25 - keep the POI as a half-open interval [start, end) while allowing
+       observation periods to end exactly on the POI end boundary. */
+    WHERE calendar_start_date >= observation_period_start_date
+      AND calendar_end_date <= DATEADD(day, 1, observation_period_end_date)
   ) diff
 ) ranked
 WHERE rn1 = 1;

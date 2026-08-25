@@ -1,3 +1,11 @@
+CohortPrevalence v1.2.0
+=======================
+
+## Bug Fixes
+
+- pd2 requires the observation end be after calendar end #25
+- incorrect labels for pd2 and pd3 #23
+
 CohortPrevalence v1.1.0
 =======================
 
