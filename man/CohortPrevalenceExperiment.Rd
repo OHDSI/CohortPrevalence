@@ -42,7 +42,7 @@ exp$addCohorts(tibble::tibble(
 
 exp$addPrevalenceTypes(list(
   createPrevalenceType("point", lookBackDays = 0L),
-  createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L),
+  createPrevalenceType("period_prevalence_pd2", lookBackDays = 365L, leadInDays = 365L),
   createPrevalenceType("period_prevalence_pd3", lookBackDays = 0L)
 ))
 
@@ -200,8 +200,8 @@ Set common parameters for all analyses
 \if{html}{\out{<div class="r">}}\preformatted{CohortPrevalenceExperiment$setCommonParameters(
   strata = NULL,
   outputTypes = NULL,
-  minimumObservationLength = 0L,
-  useOnlyFirstObservationPeriod = FALSE
+  useOnlyFirstObservationPeriod = FALSE,
+  minimumObservationLength = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -212,9 +212,10 @@ Set common parameters for all analyses
 
 \item{\code{outputTypes}}{Character vector of output types (e.g., "prevalence")}
 
-\item{\code{minimumObservationLength}}{Integer minimum lead-in days before each POI start date}
-
 \item{\code{useOnlyFirstObservationPeriod}}{Logical. If TRUE, only first observation period per person is used}
+
+\item{\code{minimumObservationLength}}{Removed. Lead-in days are now set per prevalence type via
+\code{createPrevalenceType(leadInDays = )}.}
 }
 \if{html}{\out{</div>}}
 }

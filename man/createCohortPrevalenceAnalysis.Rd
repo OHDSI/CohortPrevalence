@@ -10,7 +10,6 @@ createCohortPrevalenceAnalysis(
   prevalentCohort,
   periodOfInterest,
   prevalenceType,
-  minimumObservationLength = 0L,
   useOnlyFirstObservationPeriod = FALSE,
   multiplier = 100000L,
   strata = NULL,
@@ -27,7 +26,8 @@ createCohortPrevalenceAnalysis(
 
 \item{periodOfInterest}{A \code{PeriodOfInterest} object (required).}
 
-\item{prevalenceType}{A \code{PrevalenceType} object (required).}
+\item{prevalenceType}{A \code{PrevalenceType} object (required). The lead-in requirement is carried
+by this object via \code{createPrevalenceType(leadInDays = )}.}
 
 \item{useOnlyFirstObservationPeriod}{Logical: \code{TRUE} to restrict analysis to the first observation period (optional).}
 
@@ -43,8 +43,6 @@ createCohortPrevalenceAnalysis(
 \strong{Warning}: The \code{"drugs"} output type is experimental and should be used with caution. Results may be subject to future changes.}
 
 \item{drugConceptSets}{Optional list of Capr ConceptSetItems. Required if \code{"drugs"} is in \code{outputTypes}, otherwise ignored.}
-
-\item{minimumObservationLength:}{Integer specifying minimum observation length (optional).}
 }
 \value{
 A \code{CohortPrevalenceAnalysis} R6 object.
