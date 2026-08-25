@@ -179,8 +179,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       renderedSql <- SqlRender::render(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-        min_obs_time = self$prevalenceType$leadInDays,
-        use_lead_in = self$prevalenceType$leadInDays > 0,
+        lead_in_days = self$prevalenceType$leadInDays,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
@@ -583,8 +582,7 @@ IncidenceAnalysis <- R6::R6Class(
       renderedSql <- SqlRender::render(
         sql,
         cdm_database_schema = executionSettings$cdmDatabaseSchema,
-        min_obs_time = self$minimumObservationLength,
-        use_lead_in = self$minimumObservationLength > 0,
+        lead_in_days = self$minimumObservationLength,
         use_first_op = self$useOnlyFirstObservationPeriod,
         cohort_database_schema = executionSettings$workDatabaseSchema,
         cohort_table = executionSettings$cohortTable,
