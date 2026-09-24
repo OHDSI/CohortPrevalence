@@ -10,7 +10,7 @@ WITH withCase AS (
   -- flag every eligible row (one per cohort episode) as a case or not, before collapsing
   SELECT *,
     CASE WHEN
-      cohort_start_date <= calendar_end_date
+      cohort_start_date < calendar_end_date
       AND @anchor_date >= DATEADD(day, -@lookback, calendar_start_date)
     THEN 1 ELSE 0 END AS case_event
   FROM #obsPopYear

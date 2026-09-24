@@ -13,7 +13,7 @@ WITH withCase AS (
        this condition does not require the era to have ended by POI day 1; a cohort
        starting by day 1 but ending later can qualify. */
     CASE WHEN
-      cohort_start_date <= calendar_start_date
+      cohort_start_date < calendar_start_date
       AND @anchor_date >= DATEADD(day, -@lookback, calendar_start_date)
     THEN 1 ELSE 0 END AS case_event
   FROM #obsPopYear
