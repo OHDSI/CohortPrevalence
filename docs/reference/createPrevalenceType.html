@@ -18,7 +18,7 @@ lead-in requirement, and calculation mode."><!-- mathjax --><script src="https:/
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">CohortPrevalence</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.0</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.2.1</span>
       </span>
     </div>
 
@@ -66,7 +66,8 @@ lead-in requirement, and calculation mode.</p>
 <span>  <span class="va">prevalenceType</span>,</span>
 <span>  <span class="va">lookBackDays</span>,</span>
 <span>  mode <span class="op">=</span> <span class="st">"formal"</span>,</span>
-<span>  leadInDays <span class="op">=</span> <span class="fl">0L</span></span>
+<span>  leadInDays <span class="op">=</span> <span class="fl">0L</span>,</span>
+<span>  sufficientDays <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -101,6 +102,11 @@ calculation.</p></li>
 of each period of interest. Defaults to <code>0L</code> (no lead-in requirement). Lead-in is a property
 of the prevalence definition rather than a shared experiment setting, so different prevalence
 types in the same experiment may use different values.</p></dd>
+
+
+<dt>sufficientDays</dt>
+<dd><p>Positive integer minimum days observed during the period of interest.
+Required when <code>prevalenceType = "period_prevalence_pd4"</code>; must be <code>NULL</code> for other types.</p></dd>
 
 </dl></div>
     <div id="value">

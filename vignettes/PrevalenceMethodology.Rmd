@@ -111,10 +111,10 @@ Among patients satisfying the eligibility criteria, their contribution to the at
 
 | Option | Definition |
 |--------|------------|
-| **pd₁** (Day 1 population) | Patients observable on the first day of the Period of Interest |
-| **pd₂** (Complete-period population) | Patients observable for the entire Period of Interest |
-| **pd₃** (Any-time population) | Patients observable on any day during the Period of Interest |
-| **pd₄** (Sufficient-time population) | Patients observable for at least n days during the Period of Interest |
+| **pd1** (Day 1 population) | Patients observable on the first day of the Period of Interest |
+| **pd2** (Complete-period population) | Patients observable for the entire Period of Interest |
+| **pd3** (Any-time population) | Patients observable on any day during the Period of Interest |
+| **pd4** (Sufficient-time population) | Patients observable for at least n days during the Period of Interest |
 
 ### 2.3 Time of Prevalence Estimation
 
@@ -179,8 +179,8 @@ The following examples use Disease X, a chronic condition for which patients are
 - Dark teal = membership in the numerator cohort
 - Gold diamond = diagnosis events
 - Red dashed line = index date or Period of Interest
-- ✓ = patient included in numerator
-- ✗ = patient excluded
+- check = patient included in numerator
+- x = patient excluded
 
 ### Example 1: Complete Point Prevalence on December 31, 2022
 
