@@ -23,7 +23,27 @@ test_that("createPrevalenceType accepts all valid types", {
   expect_r6_class(createPrevalenceType("point_prevalence", 365), "PrevalenceType")
   expect_r6_class(createPrevalenceType("period_prevalence_pd2", Inf), "PrevalenceType")
   expect_r6_class(createPrevalenceType("period_prevalence_pd3", Inf), "PrevalenceType")
-  expect_r6_class(createPrevalenceType("period_prevalence_pd4", Inf), "PrevalenceType")
+  expect_r6_class(createPrevalenceType("period_prevalence_pd4", Inf, sufficientDays = 90L), "PrevalenceType")
+  expect_error(createPrevalenceType("period_prevalence_pd4", Inf), "sufficientDays")
+  expect_error(createPrevalenceType("period_prevalence_pd4", Inf, sufficientDays = 0L))
+  expect_error(createPrevalenceType("period_prevalence_pd2", Inf, sufficientDays = 90L))
+})
+
+test_that("PD4 sufficientDays is retained and displayed", {
+  pt <- createPrevalenceType("period_prevalence_pd4", 365, sufficientDays = 90L)
+
+  expect_equal(pt$getSufficientDays(), 90L)
+  expect_equal(pt$sufficientDays, 90L)
+  expect_match(pt$viewPrevalenceType(), "Minimum observed days in POI: 90")
+})
+
+test_that("PD4 can be selected after setting its threshold", {
+  pt <- createPrevalenceType("period_prevalence_pd3", 365)
+
+  pt$sufficientDays <- 90L
+  pt$prevalenceType <- "period_prevalence_pd4"
+
+  expect_equal(pt$getSufficientDays(), 90L)
 })
 
 test_that("createPrevalenceType coerces 0 to Inf", {
@@ -36,7 +56,7 @@ test_that("createPrevalenceType coerces 0 to Inf", {
   pt <- createPrevalenceType("period_prevalence_pd3", 0)
   expect_true(is.infinite(pt$lookBackDays))
 
-  pt <- createPrevalenceType("period_prevalence_pd4", 0)
+  pt <- createPrevalenceType("period_prevalence_pd4", 0, sufficientDays = 90L)
   expect_true(is.infinite(pt$lookBackDays))
 })
 

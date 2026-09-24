@@ -36,11 +36,17 @@ dir.create(path = "./extras/pdf_vignette/", showWarnings = FALSE)
 # render markdown to pdf
 
 ### start study
-rmarkdown::render("vignettes/SinglePrevalenceAnalyses.Rmd",
-                  output_file = "../extras/pdf_vignette/SinglePrevalenceAnalyses.pdf",
+rmarkdown::render("vignettes/RunPrevalenceAnalyses.Rmd",
+                  output_file = "../extras/pdf_vignette/RunPrevalenceAnalyses.pdf",
                   rmarkdown::pdf_document(latex_engine = "pdflatex", toc = TRUE, number_sections = TRUE))
-unlink("extras/pdf_vignette/SinglePrevalenceAnalyses.tex")
+unlink("extras/pdf_vignette/RunPrevalenceAnalyses.tex")
 
+
+### prev methods
+rmarkdown::render("vignettes/PrevalenceMethodology.Rmd",
+                  output_file = "../extras/pdf_vignette/PrevalenceMethodology.pdf",
+                  rmarkdown::pdf_document(latex_engine = "pdflatex", toc = TRUE, number_sections = TRUE))
+unlink("extras/pdf_vignette/PrevalenceMethodology.tex")
 
 # 4) build site ------------------------
 pkgdown::build_site()

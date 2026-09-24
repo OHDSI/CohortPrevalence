@@ -8,7 +8,8 @@ createPrevalenceType(
   prevalenceType,
   lookBackDays,
   mode = "formal",
-  leadInDays = 0L
+  leadInDays = 0L,
+  sufficientDays = NULL
 )
 }
 \arguments{
@@ -38,6 +39,9 @@ calculation.
 of each period of interest. Defaults to \code{0L} (no lead-in requirement). Lead-in is a property
 of the prevalence definition rather than a shared experiment setting, so different prevalence
 types in the same experiment may use different values.}
+
+\item{sufficientDays}{Positive integer minimum days observed during the period of interest.
+Required when \code{prevalenceType = "period_prevalence_pd4"}; must be \code{NULL} for other types.}
 }
 \value{
 A \code{PrevalenceType} R6 object.
