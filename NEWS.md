@@ -1,3 +1,11 @@
+CohortPrevalence v1.2.1
+=======================
+
+## Bug Fixes
+
+- correct pd.sql files to select the appropriate case and remove row rank operation causing an undercount
+- enable sql assembly for pd4 when sufficientDays is supplied
+
 CohortPrevalence v1.2.0
 =======================
 

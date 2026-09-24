@@ -26,15 +26,19 @@
 #'   of each period of interest. Defaults to `0L` (no lead-in requirement). Lead-in is a property
 #'   of the prevalence definition rather than a shared experiment setting, so different prevalence
 #'   types in the same experiment may use different values.
+#' @param sufficientDays Positive integer minimum days observed during the period of interest.
+#'   Required when `prevalenceType = "period_prevalence_pd4"`; must be `NULL` for other types.
 #' @return A `PrevalenceType` R6 object.
 #' @export
 #'
-createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
+createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L,
+                                 sufficientDays = NULL) {
   pt <- PrevalenceType$new(
     prevalenceType = prevalenceType,
     lookBackDays = lookBackDays,
     mode = mode,
-    leadInDays = leadInDays
+    leadInDays = leadInDays,
+    sufficientDays = sufficientDays
   )
   return(pt)
 }
