@@ -9,6 +9,9 @@ DROP TABLE IF EXISTS #allEvents;
 CREATE TEMP TABLE #allEvents AS
 WITH withCase AS (
   SELECT *,
+    /* TODO: Review rough-mode PN1 semantics. When @anchor_date is cohort_end_date,
+       this condition does not require the era to have ended by POI day 1; a cohort
+       starting by day 1 but ending later can qualify. */
     CASE WHEN
       cohort_start_date <= calendar_start_date
       AND @anchor_date >= DATEADD(day, -@lookback, calendar_start_date)

@@ -132,6 +132,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
 
       # get the denom file based on denominator type (always uses era pattern)
       denomType <- self$prevalenceType$getDenominatorType()
+      sufficientDays <- self$prevalenceType$getSufficientDays()
       
       # Start with base SQL (always needed)
       sqlComponents <- c(yearRangeSql, obsPopSql, obsPopYearSql)
@@ -231,6 +232,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       # prep outputTypes
       outputs <- paste0(private$.outputTypes, collapse = ", ")
 
+      sufficientDays <- NA_integer_
+
+      if (self$prevalenceType$getDenominatorType() == "pd4") {
+        sufficientDays <- self$prevalenceType$getSufficientDays()
+      } else {
+        sufficientDays <- NA_integer_
+      }
+
       tb <- tibble::tibble(
         analysisId = self$analysisId,
         analysisTag = self$analysisTag,
@@ -243,6 +252,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         numerator = self$prevalenceType$getNumeratorType(),
         denominator = self$prevalenceType$getDenominatorType(),
         prevalenceMode = ifelse(self$prevalenceType$mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)"),
+        sufficientDays = sufficientDays,
         obsPeriod = ope,
         outputTypes = outputs,
         demoConAge = demoConAge,
@@ -740,7 +750,8 @@ IncidenceAnalysis <- R6::R6Class(
 PrevalenceType <- R6::R6Class(
   classname = "PrevalenceType",
   public = list(
-    initialize = function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L) {
+    initialize = function(prevalenceType, lookBackDays, mode = "formal", leadInDays = 0L,
+                sufficientDays = NULL) {
       
       # Validate prevalenceType is one of the valid options
       validTypes <- c(
@@ -767,6 +778,16 @@ PrevalenceType <- R6::R6Class(
       checkmate::assert_integerish(x = leadInDays, len = 1, lower = 0)
       private[[".leadInDays"]] <- as.integer(leadInDays)
       
+      # Validate and store the PD4 minimum observed-day threshold
+      private[[".sufficientDays"]] <- NULL
+
+      if (prevalenceType == "period_prevalence_pd4") {
+        checkmate::assert_integerish(x = sufficientDays, len = 1, lower = 1)
+        private[[".sufficientDays"]] <- as.integer(sufficientDays)
+      } else {
+        checkmate::assert_null(sufficientDays)
+      }
+
     },
     
     # Getter: returns the numerator type (pn1 or pn2)
@@ -835,6 +856,11 @@ PrevalenceType <- R6::R6Class(
         return(glue::glue("{lid}-day lead-in"))
       }
     },
+
+    # Getter: returns the PD4 minimum observed days threshold, if configured
+    getSufficientDays = function() {
+      return(private$.sufficientDays)
+    },
     
     # View method: display full prevalence type configuration
     viewPrevalenceType = function() {
@@ -844,13 +870,22 @@ PrevalenceType <- R6::R6Class(
       numerator <- self$getNumeratorType()
       denominator <- self$getDenominatorType()
       modeLabel <- ifelse(private$.mode == "formal", "Formal (cohort_start_date)", "Rough (cohort_end_date)")
+
+      sufficientDaysLabel <- character()
+
+      if (private$.prevalenceType == "period_prevalence_pd4") {
+        sufficientDaysLabel <- glue::glue("  Minimum observed days in POI: {private$.sufficientDays}")
+      } else {
+        sufficientDaysLabel <- character()
+      }
       
       txt <- c(
         glue::glue("Prevalence Type ==> {prevalenceLabel}"),
         glue::glue("  Numerator: {numerator} | Denominator: {denominator}"),
         glue::glue("  Mode: {modeLabel}"),
         glue::glue("  Lookback: {lookbackLabel}"),
-        glue::glue("  Lead-in: {leadInLabel}")
+        glue::glue("  Lead-in: {leadInLabel}"),
+        sufficientDaysLabel
       ) |> glue::glue_collapse("\n")
       
       return(txt)
@@ -861,7 +896,8 @@ PrevalenceType <- R6::R6Class(
     .prevalenceType = NULL,
     .lookBackDays = NULL,
     .mode = NULL,
-    .leadInDays = 0L
+    .leadInDays = 0L,
+    .sufficientDays = NULL
   ),
   active = list(
     
@@ -876,6 +912,9 @@ PrevalenceType <- R6::R6Class(
         "period_prevalence_pd4"
       )
       checkmate::assert_choice(x = value, choices = validTypes)
+      if (value == "period_prevalence_pd4" && is.null(private$.sufficientDays)) {
+        stop("sufficientDays must be set before changing prevalenceType to PD4")
+      }
       private$.prevalenceType <- value
     },
     
@@ -904,6 +943,14 @@ PrevalenceType <- R6::R6Class(
       }
       checkmate::assert_integerish(x = value, len = 1, lower = 0)
       private$.leadInDays <- as.integer(value)
+    },
+
+    sufficientDays = function(value) {
+      if (missing(value)) {
+        return(private$.sufficientDays)
+      }
+      checkmate::assert_integerish(x = value, len = 1, lower = 1)
+      private$.sufficientDays <- as.integer(value)
     }
   )
 )
