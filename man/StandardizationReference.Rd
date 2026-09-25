@@ -279,24 +279,20 @@ Numeric vector of valid truncation points
 \subsection{Method \code{mapAgesToReference()}}{
 Map single-year ages to reference age group labels
 
-Converts a character/numeric vector of ages (some possibly \"N+\" labels from
-right truncation) to the reference's age label format so prevalence data can
-be joined to reference weights by (age, gender).
-
-Works generically for any reference type:
-\itemize{
-\item Already-truncated \"N+\" values pass through unchanged
-\item Single-year references (Decennial Census): zero-pad numeric values
-\item Grouped references (ACS, WHO): lookup which group each numeric age falls into
-}
+Converts ages to the exact labels used by the reference population. Numeric
+ages are matched to parsed reference intervals, including single-year labels
+with or without zero padding. Plus-suffixed values are accepted only when
+they match a native open-ended label or the requested right truncation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values, rightTruncation = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{age_values}}{Character/numeric vector. May contain \"N+\" suffix values or numeric strings.}
+
+\item{\code{rightTruncation}}{Optional numeric threshold used to create a supported \"N+\" label.}
 }
 \if{html}{\out{</div>}}
 }

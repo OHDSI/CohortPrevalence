@@ -746,8 +746,26 @@ standardize_prevalence <- function(
   }
 
   # ── Step 3: Map crude ages → reference group labels ──
-  # Handles: "N+" pass-through, numeric → single-year zero-pad, numeric → grouped lookup
-  prev_clean$age <- referencePopulation$mapAgesToReference(prev_clean$age)
+  ages_before_mapping <- prev_clean$age
+  mapped_ages <- referencePopulation$mapAgesToReference(
+    age_values = ages_before_mapping,
+    rightTruncation = ageRightTruncation
+  )
+  unmapped_ages <- is.na(mapped_ages)
+
+  if (any(unmapped_ages)) {
+    unmapped_description <- paste0(
+      "analysisId=", prev_clean$analysisId[unmapped_ages],
+      ", spanLabel=", prev_clean$spanLabel[unmapped_ages],
+      ", age=", ages_before_mapping[unmapped_ages]
+    )
+    cli::cli_abort(c(
+      "Prevalence ages could not be mapped to the reference population:",
+      stats::setNames(unmapped_description, rep("x", length(unmapped_description)))
+    ))
+  }
+
+  prev_clean$age <- mapped_ages
 
   # ── Step 4: Summarize by mapped groups ──
   prev_grouped <- prev_clean |>
@@ -1344,29 +1362,47 @@ StandardizationReference <- R6::R6Class(
 
     #' @description Map single-year ages to reference age group labels
     #'
-    #' Converts a character/numeric vector of ages (some possibly \"N+\" labels from
-    #' right truncation) to the reference's age label format so prevalence data can
-    #' be joined to reference weights by (age, gender).
-    #'
-    #' Works generically for any reference type:
-    #'   - Already-truncated \"N+\" values pass through unchanged
-    #'   - Single-year references (Decennial Census): zero-pad numeric values
-    #'   - Grouped references (ACS, WHO): lookup which group each numeric age falls into
+    #' Converts ages to the exact labels used by the reference population. Numeric
+    #' ages are matched to parsed reference intervals, including single-year labels
+    #' with or without zero padding. Plus-suffixed values are accepted only when
+    #' they match a native open-ended label or the requested right truncation.
     #'
     #' @param age_values Character/numeric vector. May contain \"N+\" suffix values or numeric strings.
+    #' @param rightTruncation Optional numeric threshold used to create a supported \"N+\" label.
     #' @return Character vector of reference-formatted age labels
-    mapAgesToReference = function(age_values) {
+    mapAgesToReference = function(age_values, rightTruncation = NULL) {
       # Convert to character if not already
       age_values <- as.character(age_values)
 
       parsed_ages <- .parse_age_labels(unique(private$.data$age))
-      is_grouped <- any(parsed_ages$age_type != "single")
 
       # Process each age value
       result <- sapply(age_values, function(age_str) {
-        # If already contains "+", it's already truncated — pass through
-        if (grepl("\\+", age_str)) {
-          return(age_str)
+        if (is.na(age_str)) {
+          return(NA_character_)
+        }
+
+        # Preserve only plus-suffixed labels supported by this reference/truncation.
+        if (grepl("\\+$", age_str)) {
+          matching_open_label <- which(
+            parsed_ages$label == age_str & parsed_ages$age_type == "open"
+          )
+
+          if (length(matching_open_label) > 0) {
+            if (!is.null(rightTruncation) &&
+                parsed_ages$min_age[matching_open_label[[1]]] >= rightTruncation) {
+              return(paste0(rightTruncation, "+"))
+            }
+
+            return(age_str)
+          }
+
+          if (!is.null(rightTruncation) &&
+              identical(age_str, paste0(rightTruncation, "+"))) {
+            return(age_str)
+          }
+
+          return(NA_character_)
         }
 
         # Convert to numeric for mapping
@@ -1376,18 +1412,18 @@ StandardizationReference <- R6::R6Class(
           return(NA_character_)
         }
 
-        if (!is_grouped) {
-          # Single-year reference: zero-pad to "000", "001", etc.
-          return(sprintf("%03d", age_num))
-        }
-
-        # Grouped reference: find the parsed interval containing this age.
+        # Find the reference interval containing this age and use its actual label.
         idx <- which(
           age_num >= parsed_ages$min_age & age_num <= parsed_ages$max_age
         )
         if (length(idx) == 0) {
           return(NA_character_)
         }
+
+        if (!is.null(rightTruncation) && age_num >= rightTruncation) {
+          return(paste0(rightTruncation, "+"))
+        }
+
         return(parsed_ages$label[idx[1]])
       }, USE.NAMES = FALSE)
 

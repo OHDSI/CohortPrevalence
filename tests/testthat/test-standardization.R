@@ -152,6 +152,8 @@ test_that("mapping and truncation use the same parsed age bands", {
     reference$mapAgesToReference(c(2, 7, 10)),
     c("Under 5", "5-9", "10+")
   )
+  expect_equal(reference$mapAgesToReference("10+"), "10+")
+  expect_true(is.na(reference$mapAgesToReference("11+")))
   expect_equal(reference$getValidTruncationPoints(), c(0, 5, 10))
   expect_equal(reference$validateRightTruncation(5), 5)
   expect_error(reference$validateRightTruncation(7), "falls within group '5-9'")
@@ -159,6 +161,68 @@ test_that("mapping and truncation use the same parsed age bands", {
   truncated <- reference$getAdjustedReference(rightTruncation = 5)
   expect_setequal(truncated$age, c("Under 5", "5+"))
   expect_equal(truncated$population[truncated$age == "5+"], 150)
+})
+
+test_that("single-year ages map to each reference's exact age labels", {
+  label_cases <- list(
+    list(labels = c("018", "019"), expected = c("018", "019")),
+    list(labels = c("18", "19"), expected = c("18", "19"))
+  )
+
+  for (case in label_cases) {
+    reference <- CohortPrevalence:::StandardizationReference$new(
+      name = "Single-year reference",
+      country = "Test",
+      year = 2020L,
+      source = "Unit test",
+      data = data.frame(
+        age = case$labels,
+        gender = "Female",
+        population = c(100, 100),
+        stringsAsFactors = FALSE
+      )
+    )
+
+    expect_equal(reference$mapAgesToReference(c(18, 19)), case$expected)
+    expect_true(is.na(reference$mapAgesToReference(20)))
+    expect_true(is.na(reference$mapAgesToReference(NA_character_)))
+    expect_equal(
+      reference$mapAgesToReference("18+", rightTruncation = 18),
+      "18+"
+    )
+    expect_true(is.na(
+      reference$mapAgesToReference("19+", rightTruncation = 18)
+    ))
+  }
+})
+
+test_that("standardization maps generated truncation labels to adjusted reference cells", {
+  result <- CohortPrevalence:::standardize_prevalence(
+    prevalenceData = make_standardization_test_prevalence(),
+    referencePopulation = make_standardization_test_reference(),
+    ageRightTruncation = 30
+  )
+
+  expect_equal(nrow(result), 4L)
+  expect_true(all(is.finite(result$stdStat)))
+})
+
+test_that("standardization reports unmapped ages with analysis context", {
+  prevalence <- make_standardization_test_prevalence()
+  prevalence$age[1] <- 99
+  expected_detail <- paste0(
+    "analysisId=", prevalence$analysisId[[1]],
+    ", spanLabel=", prevalence$spanLabel[[1]],
+    ", age=99"
+  )
+
+  expect_error(
+    CohortPrevalence:::standardize_prevalence(
+      prevalenceData = prevalence,
+      referencePopulation = make_standardization_test_reference()
+    ),
+    expected_detail
+  )
 })
 
 test_that("standardization errors when a span is missing an analysis stratum", {
