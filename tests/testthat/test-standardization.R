@@ -80,6 +80,29 @@ test_that("standardization uses separate reference weights per analysis", {
   expect_equal(as.character(adult_results$spanLabel), c("2020", "2021"))
 })
 
+test_that("reference data access does not calculate weights", {
+  reference <- make_standardization_test_reference()
+  reference_data <- reference$getData()
+
+  expect_false("weight" %in% names(reference_data))
+  expect_named(reference_data, c("age", "gender", "population"))
+})
+
+test_that("ACS age-sex mapping returns counts without precomputed weights", {
+  groups <- CohortPrevalence:::acs_age_groups()
+  acs_raw <- data.frame(
+    variable = c(groups$male_variable, groups$female_variable),
+    estimate = rep(100, 46),
+    year = rep(2020L, 46),
+    stringsAsFactors = FALSE
+  )
+
+  mapped_data <- CohortPrevalence:::map_acs_b01001_to_age_sex(acs_raw)
+
+  expect_equal(nrow(mapped_data), 46L)
+  expect_false("weight" %in% names(mapped_data))
+})
+
 test_that("standardization errors when a span is missing an analysis stratum", {
   prevalence <- make_standardization_test_prevalence()
   prevalence <- prevalence[
@@ -172,6 +195,7 @@ test_that("filtered reference helper warns while remaining available", {
   )
 
   expect_setequal(filtered_reference$age, c("018", "030"))
+  expect_false("weight" %in% names(filtered_reference))
 })
 
 test_that("adjusted reference applies only right truncation", {
@@ -179,7 +203,7 @@ test_that("adjusted reference applies only right truncation", {
   truncated_reference <- reference$getAdjustedReference(rightTruncation = 30)
 
   expect_setequal(truncated_reference$age, c("005", "018", "30+"))
-  expect_equal(sum(truncated_reference$weight), 1)
+  expect_false("weight" %in% names(truncated_reference))
   expect_equal(
     truncated_reference$population[truncated_reference$age == "30+"],
     c(700, 700)

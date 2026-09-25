@@ -5,13 +5,14 @@
 \title{StandardizationReference R6 Class}
 \description{
 Encapsulates a reference population for direct method standardization.
-Stores population weights by age and gender with metadata.
+Stores population counts by age and gender with metadata. Weights are
+calculated by the standardization procedure for each analysis.
 }
 \details{
 The StandardizationReference class provides a structured way to manage
 reference populations used for age-sex standardization. It validates
-data structure, auto-calculates weights as proportions, and provides
-methods for accessing and manipulating reference data.
+data structure and provides methods for accessing and manipulating
+reference data.
 }
 \examples{
 \dontrun{
@@ -131,7 +132,7 @@ Get the full reference data frame
 }
 
 \subsection{Returns}{
-Data frame with columns: age, gender, population, weight
+Data frame with columns: age, gender, and population
 }
 }
 \if{html}{\out{<hr>}}
@@ -190,7 +191,7 @@ List with name, country, year, source, reference
 \if{html}{\out{<a id="method-StandardizationReference-getFilteredReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getFilteredReference}{}}}
 \subsection{Method \code{getFilteredReference()}}{
-Filter the reference to demographic bounds and re-normalize weights.
+Filter the reference to demographic bounds.
 This helper is deprecated and will be removed in a future release; use
 \code{getData()} and apply filtering explicitly.
 \subsection{Usage}{
@@ -207,14 +208,14 @@ This helper is deprecated and will be removed in a future release; use
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Data frame filtered and re-normalized to bounds
+Filtered data frame with age, gender, and population columns
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getAdjustedReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAdjustedReference}{}}}
 \subsection{Method \code{getAdjustedReference()}}{
-Apply age truncation and recalculate reference weights
+Apply age truncation and aggregate population counts
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(rightTruncation)}\if{html}{\out{</div>}}
 }
@@ -227,7 +228,7 @@ Apply age truncation and recalculate reference weights
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Data frame with truncated age groups and normalized weights
+Data frame with truncated age groups and aggregated population counts
 }
 }
 \if{html}{\out{<hr>}}

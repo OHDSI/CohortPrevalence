@@ -19,7 +19,6 @@ Data frame with columns: age, gender, population, year (sorted by year, then gen
 \item age: Age group label
 \item gender: "Male" or "Female"
 \item population: Population estimate (numeric)
-\item weight: Population weight (population / total_population)
 \item year: Year of estimate
 }
 }

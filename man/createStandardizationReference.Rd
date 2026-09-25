@@ -35,8 +35,10 @@ Create a Standardization Reference from User Data
 }
 \details{
 The data frame should have one row per age-gender combination.
-Population values should be absolute counts (not proportions).
-Weights are automatically calculated as population / total_population.
+Population values should be absolute counts (not proportions). Standardization
+calculates weights from the matched strata separately for each analysis.
+Reference objects and their data-access methods store and return population
+counts only; they do not calculate weights.
 }
 \examples{
 \dontrun{

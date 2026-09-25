@@ -92,7 +92,7 @@ source("R/StandardizationReference.R")  # Must be loaded first!
 
 This class:
 - Validates data structure (requires: age, gender, population columns)
-- Auto-calculates weights (population / sum(population))
+- Stores population counts; analysis-specific weights are calculated during standardization
 - Stores metadata (name, country, year, source, DOI)
 - Provides methods for filtering, truncation, and adjustment
 

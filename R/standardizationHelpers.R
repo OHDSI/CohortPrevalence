@@ -15,8 +15,10 @@
 #'
 #' @details
 #' The data frame should have one row per age-gender combination.
-#' Population values should be absolute counts (not proportions).
-#' Weights are automatically calculated as population / total_population.
+#' Population values should be absolute counts (not proportions). Standardization
+#' calculates weights from the matched strata separately for each analysis.
+#' Reference objects and their data-access methods store and return population
+#' counts only; they do not calculate weights.
 #'
 #' @examples
 #' \dontrun{
@@ -330,7 +332,6 @@ acs_age_groups <- function() {
 #'   - age: Age group label
 #'   - gender: "Male" or "Female"
 #'   - population: Population estimate (numeric)
-#'   - weight: Population weight (population / total_population)
 #'   - year: Year of estimate
 #'
 #' @details
@@ -353,12 +354,6 @@ map_acs_b01001_to_age_sex <- function(acs_raw_df) {
     )
   }
 
-  # Extract total population (B01001_001) for each year
-  total_pop <- acs_raw_df |>
-    dplyr::filter(variable == "B01001_001") |>
-    dplyr::select(year, total_population = estimate) |>
-    dplyr::mutate(total_population = as.numeric(total_population))
-
   # Build variable-to-group lookup from canonical ACS table
   groups <- acs_age_groups()
   var_lookup <- data.frame(
@@ -373,12 +368,7 @@ map_acs_b01001_to_age_sex <- function(acs_raw_df) {
     dplyr::filter(variable %in% var_lookup$variable) |>
     dplyr::left_join(var_lookup, by = "variable") |>
     dplyr::select(age, gender, population = estimate, year) |>
-    dplyr::left_join(total_pop, by = "year") |>
-    dplyr::mutate(
-      population = as.numeric(population),
-      weight = population / total_population
-    ) |>
-    dplyr::select(age, gender, population, weight, year) |>
+    dplyr::mutate(population = as.numeric(population)) |>
     dplyr::arrange(year, gender, age)
 
   # Validate: should have exactly 46 rows per year (23 age groups × 2 genders)

@@ -930,13 +930,14 @@ standardize_prevalence <- function(
 #'
 #' @description
 #' Encapsulates a reference population for direct method standardization.
-#' Stores population weights by age and gender with metadata.
+#' Stores population counts by age and gender with metadata. Weights are
+#' calculated by the standardization procedure for each analysis.
 #'
 #' @details
 #' The StandardizationReference class provides a structured way to manage
 #' reference populations used for age-sex standardization. It validates
-#' data structure, auto-calculates weights as proportions, and provides
-#' methods for accessing and manipulating reference data.
+#' data structure and provides methods for accessing and manipulating
+#' reference data.
 #'
 #' @examples
 #' \dontrun{
@@ -1013,15 +1014,12 @@ StandardizationReference <- R6::R6Class(
       private$.source <- source
       private$.reference <- reference
 
-      # Calculate weights and store data
+      # Store reference counts; standardization calculates weights per analysis.
       private$.data <- data |>
         dplyr::mutate(
           age = as.character(age),
           gender = as.character(gender),
           population = as.numeric(population)
-        ) |>
-        dplyr::mutate(
-          weight = population / sum(population)
         ) |>
         dplyr::arrange(gender, age)
     },
@@ -1047,7 +1045,7 @@ StandardizationReference <- R6::R6Class(
     },
 
     #' @description Get the full reference data frame
-    #' @return Data frame with columns: age, gender, population, weight
+    #' @return Data frame with columns: age, gender, and population
     getData = function() {
       private$.data
     },
@@ -1082,14 +1080,14 @@ StandardizationReference <- R6::R6Class(
       )
     },
 
-    #' @description Filter the reference to demographic bounds and re-normalize weights.
+    #' @description Filter the reference to demographic bounds.
     #' This helper is deprecated and will be removed in a future release; use
     #' `getData()` and apply filtering explicitly.
     #'
     #' @param ageMin Minimum age (inclusive)
     #' @param ageMax Maximum age (inclusive)
     #'
-    #' @return Data frame filtered and re-normalized to bounds
+    #' @return Filtered data frame with age, gender, and population columns
     getFilteredReference = function(ageMin = NULL, ageMax = NULL) {
 
       cli::cli_warn(c(
@@ -1116,20 +1114,14 @@ StandardizationReference <- R6::R6Class(
         result <- dplyr::filter(result, age_is_in_bounds)
       }
 
-      # Re-normalize weights to filtered subset
-      result <- result |>
-        dplyr::mutate(
-          weight = population / sum(population)
-        )
-
       result
     },
 
-    #' @description Apply age truncation and recalculate reference weights
+    #' @description Apply age truncation and aggregate population counts
     #'
     #' @param rightTruncation Numeric age threshold for truncation
     #'
-    #' @return Data frame with truncated age groups and normalized weights
+    #' @return Data frame with truncated age groups and aggregated population counts
     getAdjustedReference = function(rightTruncation) {
       result <- private$.data
 
@@ -1150,12 +1142,6 @@ StandardizationReference <- R6::R6Class(
         dplyr::summarise(
           population = sum(population),
           .groups = "drop"
-        )
-
-      # Recalculate weights after any truncation and population aggregation.
-      result <- result |>
-        dplyr::mutate(
-          weight = population / sum(population)
         )
 
       result
