@@ -11,8 +11,9 @@ calculated by the standardization procedure for each analysis.
 \details{
 The StandardizationReference class provides a structured way to manage
 reference populations used for age-sex standardization. It validates
-data structure and provides methods for accessing and manipulating
-reference data.
+unique age/gender cells, supported non-overlapping age bands, and finite,
+non-negative population counts with a finite positive total. It provides
+methods for accessing and manipulating reference data.
 }
 \examples{
 \dontrun{
@@ -102,7 +103,9 @@ Create a new StandardizationReference
 
 \item{\code{source}}{Character. Data source description}
 
-\item{\code{data}}{Data frame with columns: age, gender, population}
+\item{\code{data}}{Data frame with columns: age, gender, population
+Age labels must be single ages, inclusive ranges, open-ended bands, or
+Under N bands; age/gender pairs must be unique.}
 
 \item{\code{reference}}{Character. URL or reference to access the source data}
 }
@@ -223,7 +226,8 @@ Apply age truncation and aggregate population counts
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{rightTruncation}}{Numeric age threshold for truncation}
+\item{\code{rightTruncation}}{Numeric age threshold for truncation
+Must be a finite, non-negative integer supported by this reference.}
 }
 \if{html}{\out{</div>}}
 }

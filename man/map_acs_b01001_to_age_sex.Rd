@@ -10,7 +10,7 @@ map_acs_b01001_to_age_sex(acs_raw_df)
 \item{acs_raw_df}{Data frame with columns: GEOID, NAME, variable, estimate, moe, year
 \itemize{
 \item Typically output from tidycensus::get_acs(table = "B01001", ...)
-\item Must include year column
+\item Must include year and B01001_001 total rows
 }}
 }
 \value{
@@ -28,5 +28,6 @@ and transforms it into tidy format with age, gender, population, and year column
 }
 \details{
 Filters to only B01001 age-gender variables (excludes B01001_001 total and subtotals).
-Validates output: exactly 46 rows per year (23 age groups × 2 genders).
+Requires B01001_001 totals and validates complete 46-cell coverage and
+reconciliation of age/sex estimates to the total for every year.
 }

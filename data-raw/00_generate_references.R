@@ -33,15 +33,6 @@ tryCatch({
   cli::cli_alert_danger("Japan Census 2020 FAILED: {e$message}\n")
 })
 
-# Generate WHO World Standard 2008
-cli::cli_h2("3. WHO World Standard 2008")
-tryCatch({
-  source("data-raw/who_standard/process_who_2008.R")
-  cli::cli_alert_success("WHO World Standard 2008 completed\n")
-}, error = function(e) {
-  cli::cli_alert_danger("WHO World Standard 2008 FAILED: {e$message}\n")
-})
-
 # Summary
 cli::cli_h1("Reference Data Generation Complete")
 cli::cli_inform("All reference populations saved to data/\n")
@@ -58,7 +49,6 @@ cli::cli_inform("\nReferences are now available via:")
 cli::cli_code('
 data("usa_census_2020")
 data("japan_census_2020")
-data("who_world_standard")
 
 # Or use helper functions:
 ref <- getStandardizationReference("usa_census_2020")

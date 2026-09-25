@@ -107,7 +107,7 @@ importStandardizationReference <- function(
 #' Get Built-in Standardization Reference
 #'
 #' @param name Character. Name of reference to retrieve.
-#'   Valid options: "usa_census_2020", "japan_census_2020", "who_world_standard"
+#'   Valid options: "usa_census_2020", "japan_census_2020"
 #'
 #' @return StandardizationReference object
 #'
@@ -115,12 +115,11 @@ importStandardizationReference <- function(
 #' \dontrun{
 #'   usa_ref <- getStandardizationReference("usa_census_2020")
 #'   japan_ref <- getStandardizationReference("japan_census_2020")
-#'   who_ref <- getStandardizationReference("who_world_standard")
 #' }
 #'
 #' @export
 getStandardizationReference <- function(name) {
-  valid_refs <- c("usa_census_2020", "japan_census_2020", "who_world_standard")
+  valid_refs <- c("usa_census_2020", "japan_census_2020")
 
   if (!name %in% valid_refs) {
     stop(
@@ -152,10 +151,10 @@ getStandardizationReference <- function(name) {
 #' @export
 listStandardizationReferences <- function() {
   refs <- data.frame(
-    name = c("usa_census_2020", "japan_census_2020", "who_world_standard"),
-    country = c("United States", "Japan", "World"),
-    year = c(2020L, 2020L, 2008L),
-    status = c("Active", "Active", "Active"),
+    name = c("usa_census_2020", "japan_census_2020"),
+    country = c("United States", "Japan"),
+    year = c(2020L, 2020L),
+    status = c("Active", "Active"),
     stringsAsFactors = FALSE
   )
 
@@ -326,7 +325,7 @@ acs_age_groups <- function() {
 #'
 #' @param acs_raw_df Data frame with columns: GEOID, NAME, variable, estimate, moe, year
 #'   - Typically output from tidycensus::get_acs(table = "B01001", ...)
-#'   - Must include year column
+#'   - Must include year and B01001_001 total rows
 #'
 #' @return Data frame with columns: age, gender, population, year (sorted by year, then gender, then age)
 #'   - age: Age group label
@@ -336,22 +335,30 @@ acs_age_groups <- function() {
 #'
 #' @details
 #' Filters to only B01001 age-gender variables (excludes B01001_001 total and subtotals).
-#' Validates output: exactly 46 rows per year (23 age groups × 2 genders).
+#' Requires B01001_001 totals and validates complete 46-cell coverage and
+#' reconciliation of age/sex estimates to the total for every year.
 map_acs_b01001_to_age_sex <- function(acs_raw_df) {
   # Validate input
   if (!is.data.frame(acs_raw_df)) {
-    stop("acs_raw_df must be a data frame")
+    cli::cli_abort("acs_raw_df must be a data frame")
   }
 
   required_cols <- c("variable", "estimate", "year")
   missing_cols <- setdiff(required_cols, colnames(acs_raw_df))
   if (length(missing_cols) > 0) {
-    stop(
-      "acs_raw_df must have columns: ",
-      paste(required_cols, collapse = ", "),
-      ". Missing: ",
-      paste(missing_cols, collapse = ", ")
-    )
+    cli::cli_abort(c(
+      "acs_raw_df is missing required columns:",
+      stats::setNames(missing_cols, rep("x", length(missing_cols))),
+      "i" = paste0("Required columns: ", paste(required_cols, collapse = ", "))
+    ))
+  }
+
+  if (nrow(acs_raw_df) == 0) {
+    cli::cli_abort("acs_raw_df must contain at least one row.")
+  }
+
+  if (anyNA(acs_raw_df$variable) || anyNA(acs_raw_df$year)) {
+    cli::cli_abort("ACS variable and year fields cannot contain missing values.")
   }
 
   # Build variable-to-group lookup from canonical ACS table
@@ -363,26 +370,142 @@ map_acs_b01001_to_age_sex <- function(acs_raw_df) {
     stringsAsFactors = FALSE
   )
 
+  years <- unique(acs_raw_df$year)
+  total_pop <- acs_raw_df |>
+    dplyr::filter(variable == "B01001_001") |>
+    dplyr::mutate(
+      total_population = suppressWarnings(as.numeric(as.character(estimate)))
+    ) |>
+    dplyr::select(year, total_population)
+
+  total_counts <- total_pop |>
+    dplyr::count(year, name = "total_rows")
+  missing_total_years <- setdiff(years, total_counts$year)
+  duplicate_total_years <- total_counts |>
+    dplyr::filter(total_rows != 1)
+
+  if (length(missing_total_years) > 0) {
+    cli::cli_abort(c(
+      "ACS data is missing B01001_001 total population for year(s):",
+      stats::setNames(
+        as.character(missing_total_years),
+        rep("x", length(missing_total_years))
+      )
+    ))
+  }
+
+  if (nrow(duplicate_total_years) > 0) {
+    duplicate_total_descriptions <- paste0(
+      "year=", duplicate_total_years$year,
+      ", rows=", duplicate_total_years$total_rows
+    )
+    cli::cli_abort(c(
+      "ACS data must contain exactly one B01001_001 total per year:",
+      stats::setNames(
+        duplicate_total_descriptions,
+        rep("x", length(duplicate_total_descriptions))
+      )
+    ))
+  }
+
+  invalid_totals <- !is.finite(total_pop$total_population) | total_pop$total_population <= 0
+
+  if (any(invalid_totals)) {
+    invalid_total_descriptions <- paste0(
+      "year=", total_pop$year[invalid_totals],
+      ", total=", total_pop$total_population[invalid_totals]
+    )
+    cli::cli_abort(c(
+      "ACS total population must be finite and positive:",
+      stats::setNames(
+        invalid_total_descriptions,
+        rep("x", length(invalid_total_descriptions))
+      )
+    ))
+  }
+
+  duplicate_variables <- acs_raw_df |>
+    dplyr::filter(variable %in% var_lookup$variable) |>
+    dplyr::count(year, variable, name = "variable_rows") |>
+    dplyr::filter(variable_rows > 1)
+
+  if (nrow(duplicate_variables) > 0) {
+    duplicate_descriptions <- paste0(
+      "year=", duplicate_variables$year,
+      ", variable=", duplicate_variables$variable
+    )
+    cli::cli_abort(c(
+      "ACS data contains duplicate age/sex variables:",
+      stats::setNames(duplicate_descriptions, rep("x", length(duplicate_descriptions)))
+    ))
+  }
+
   # Transform: filter to mapped variables, join with mapping, select columns
   result <- acs_raw_df |>
     dplyr::filter(variable %in% var_lookup$variable) |>
     dplyr::left_join(var_lookup, by = "variable") |>
     dplyr::select(age, gender, population = estimate, year) |>
-    dplyr::mutate(population = as.numeric(population)) |>
+    dplyr::mutate(
+      population = suppressWarnings(as.numeric(as.character(population)))
+    ) |>
     dplyr::arrange(year, gender, age)
 
-  # Validate: should have exactly 46 rows per year (23 age groups × 2 genders)
+  # Validate exact age/sex coverage for each requested year.
   rows_per_year <- result |>
-    dplyr::group_by(year) |>
-    dplyr::count() |>
-    dplyr::pull(n)
+    dplyr::count(year, name = "age_sex_rows")
+  coverage <- data.frame(year = years, stringsAsFactors = FALSE) |>
+    dplyr::left_join(rows_per_year, by = "year") |>
+    dplyr::mutate(age_sex_rows = dplyr::coalesce(age_sex_rows, 0L))
+  invalid_coverage <- coverage$age_sex_rows != 46
 
-  if (!all(rows_per_year == 46)) {
-    warning(
-      "Expected 46 rows per year (23 age groups × 2 genders). ",
-      "Got: ", paste(unique(rows_per_year), collapse = ", "),
-      ". Check if all B01001 variables present."
+  if (any(invalid_coverage)) {
+    coverage_descriptions <- paste0(
+      "year=", coverage$year[invalid_coverage],
+      ", rows=", coverage$age_sex_rows[invalid_coverage]
     )
+    cli::cli_abort(c(
+      "Expected exactly 46 age/sex rows per year (23 age groups by 2 genders):",
+      stats::setNames(coverage_descriptions, rep("x", length(coverage_descriptions)))
+    ))
+  }
+
+  invalid_estimates <- !is.finite(result$population) | result$population < 0
+
+  if (any(invalid_estimates)) {
+    invalid_estimate_descriptions <- paste0(
+      "year=", result$year[invalid_estimates],
+      ", age=", result$age[invalid_estimates],
+      ", gender=", result$gender[invalid_estimates],
+      ", population=", result$population[invalid_estimates]
+    )
+    cli::cli_abort(c(
+      "ACS age/sex population estimates must be finite and non-negative:",
+      stats::setNames(
+        invalid_estimate_descriptions,
+        rep("x", length(invalid_estimate_descriptions))
+      )
+    ))
+  }
+
+  age_sex_totals <- result |>
+    dplyr::group_by(year) |>
+    dplyr::summarize(age_sex_total = sum(population), .groups = "drop") |>
+    dplyr::left_join(total_pop, by = "year")
+  # Allow half-person rounding error for the 46 cells plus the published total.
+  rounding_tolerance <- 47 / 2
+  inconsistent_totals <- abs(age_sex_totals$age_sex_total - age_sex_totals$total_population) >
+    pmax(rounding_tolerance, abs(age_sex_totals$total_population) * 1e-8)
+
+  if (any(inconsistent_totals)) {
+    total_descriptions <- paste0(
+      "year=", age_sex_totals$year[inconsistent_totals],
+      ", age/sex total=", age_sex_totals$age_sex_total[inconsistent_totals],
+      ", B01001_001=", age_sex_totals$total_population[inconsistent_totals]
+    )
+    cli::cli_abort(c(
+      "ACS age/sex estimates do not reconcile to B01001_001:",
+      stats::setNames(total_descriptions, rep("x", length(total_descriptions)))
+    ))
   }
 
   return(result)

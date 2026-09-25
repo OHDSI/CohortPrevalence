@@ -17,10 +17,9 @@ source("R/StandardizationReference.R")
 source("data-raw/00_generate_references.R")
 ```
 
-This creates three files in `data/`:
+This creates two files in `data/`:
 - `usa_census_2020.rda` (~80 KB)
 - `japan_census_2020.rda` (~90 KB)
-- `who_world_standard.rda` (~5 KB)
 
 ### Method 2: Generated Inline (Alternative)
 
@@ -43,7 +42,6 @@ usa_census_2020 <- structure(
 # Save
 usethis::use_data(usa_census_2020, overwrite = TRUE)
 usethis::use_data(japan_census_2020, overwrite = TRUE)
-usethis::use_data(who_world_standard, overwrite = TRUE)
 ```
 
 ## File Structure
@@ -53,10 +51,8 @@ data-raw/
 ├── 00_generate_references.R          # Master orchestration script
 ├── usa_census/
 │   └── process_usa_census_2020.R     # USA Census 2020 processing
-├── japan_census/
-│   └── process_japan_census_2020.R   # Japan Census 2020 processing
-└── who_standard/
-    └── process_who_2008.R            # WHO World Standard processing
+└── japan_census/
+  └── process_japan_census_2020.R    # Japan Census 2020 processing
 ```
 
 ## Reference Data Specifications
@@ -74,13 +70,6 @@ data-raw/
 - **Genders:** Male, Female
 - **Total:** ~125.1 million (representative)
 - **Processed by:** process_japan_census_2020.R
-
-### WHO World Standard 2008
-- **Source:** World Health Organization
-- **Ages:** 7 age bands (0-4, 5-14, 15-24, ..., 85+)
-- **Genders:** Combined (no gender stratification)
-- **Total:** 100,000 (proportion weights)
-- **Processed by:** process_who_2008.R
 
 ## Class Requirements
 
@@ -105,12 +94,10 @@ Verify the generated .rda files:
 library(CohortPrevalence)
 data("usa_census_2020")
 data("japan_census_2020")
-data("who_world_standard")
 
 # Check structure
 usa_census_2020$viewReference()
 japan_census_2020$getAgeValues()
-who_world_standard$getTotalPopulation()
 
 # Use in standardization
 standardizePrevalence(

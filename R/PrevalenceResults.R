@@ -689,6 +689,27 @@ standardize_prevalence <- function(
     ))
   }
 
+  supported_gender_ids <- c("8507", "8532")
+  prevalence_gender_ids <- as.character(prevalenceData$gender)
+  unsupported_gender_ids <- setdiff(
+    unique(prevalence_gender_ids),
+    supported_gender_ids
+  )
+
+  if (length(unsupported_gender_ids) > 0) {
+    unsupported_gender_labels <- unsupported_gender_ids
+    unsupported_gender_labels[is.na(unsupported_gender_labels)] <- "<NA>"
+
+    cli::cli_abort(c(
+      "prevalenceData contains unsupported gender concept IDs:",
+      stats::setNames(
+        unsupported_gender_labels,
+        rep("x", length(unsupported_gender_labels))
+      ),
+      "i" = "Supported OHDSI gender concept IDs are 8507 (Male) and 8532 (Female)."
+    ))
+  }
+
   # ── Step 1: Validate & apply right truncation to reference ──
   if (!is.null(ageRightTruncation)) {
     # Fail fast if truncation is invalid
@@ -707,10 +728,8 @@ standardize_prevalence <- function(
     dplyr::select(
       analysisId, spanLabel, age, gender, numerator, denominator
     ) |>
-    dplyr::filter(
-      gender %in% c(8532, 8507)
-    ) |>
     dplyr::mutate(
+      gender = as.character(gender),
       gender = dplyr::case_when(
         gender == 8532 ~ "Female",
         gender == 8507 ~ "Male",
@@ -1069,8 +1088,9 @@ standardize_prevalence <- function(
 #' @details
 #' The StandardizationReference class provides a structured way to manage
 #' reference populations used for age-sex standardization. It validates
-#' data structure and provides methods for accessing and manipulating
-#' reference data.
+#' unique age/gender cells, supported non-overlapping age bands, and finite,
+#' non-negative population counts with a finite positive total. It provides
+#' methods for accessing and manipulating reference data.
 #'
 #' @examples
 #' \dontrun{
@@ -1111,6 +1131,8 @@ StandardizationReference <- R6::R6Class(
     #' @param source Character. Data source description
     #' @param reference Character. URL or reference to access the source data
     #' @param data Data frame with columns: age, gender, population
+    #'   Age labels must be single ages, inclusive ranges, open-ended bands, or
+    #'   Under N bands; age/gender pairs must be unique.
     #'
     #' @return A new StandardizationReference object
     initialize = function(name, country, year, source, data, reference = NULL) {
@@ -1129,16 +1151,69 @@ StandardizationReference <- R6::R6Class(
         ))
       }
 
+      if (nrow(data) == 0) {
+        cli::cli_abort("Reference data must contain at least one population cell.")
+      }
+
       # Check for missing values in required columns
       if (any(is.na(data$age)) || any(is.na(data$gender)) || any(is.na(data$population))) {
         cli::cli_abort("Data cannot contain NA values in age, gender, or population columns")
       }
 
-      .parse_age_labels(unique(as.character(data$age)))
+      if (!is.numeric(data$population)) {
+        cli::cli_abort("Population column must be numeric.")
+      }
 
-      # Check population is numeric and positive
-      if (!is.numeric(data$population) || any(data$population < 0)) {
-        cli::cli_abort("Population column must be numeric and non-negative")
+      data$age <- trimws(as.character(data$age))
+      data$gender <- trimws(as.character(data$gender))
+
+      if (any(data$age == "") || any(data$gender == "")) {
+        cli::cli_abort("Age and gender values must be non-empty.")
+      }
+
+      .parse_age_labels(unique(data$age))
+
+      duplicate_keys <- data |>
+        dplyr::count(age, gender, name = "cell_count") |>
+        dplyr::filter(cell_count > 1)
+
+      if (nrow(duplicate_keys) > 0) {
+        duplicate_descriptions <- paste0(
+          "age=", duplicate_keys$age,
+          ", gender=", duplicate_keys$gender
+        )
+        cli::cli_abort(c(
+          "Reference data contains duplicate age/gender cells:",
+          stats::setNames(
+            duplicate_descriptions,
+            rep("x", length(duplicate_descriptions))
+          )
+        ))
+      }
+
+      invalid_population <- !is.finite(data$population) | data$population < 0
+
+      if (any(invalid_population)) {
+        invalid_descriptions <- paste0(
+          "age=", data$age[invalid_population],
+          ", gender=", data$gender[invalid_population],
+          ", population=", data$population[invalid_population]
+        )
+        cli::cli_abort(c(
+          "Population values must be finite and non-negative:",
+          stats::setNames(
+            invalid_descriptions,
+            rep("x", length(invalid_descriptions))
+          )
+        ))
+      }
+
+      total_population <- sum(data$population)
+
+      if (!is.finite(total_population) || total_population <= 0) {
+        cli::cli_abort(
+          "Reference population must have a finite, positive total."
+        )
       }
 
       # Store metadata in private fields
@@ -1151,8 +1226,6 @@ StandardizationReference <- R6::R6Class(
       # Store reference counts; standardization calculates weights per analysis.
       private$.data <- data |>
         dplyr::mutate(
-          age = trimws(as.character(age)),
-          gender = as.character(gender),
           population = as.numeric(population)
         ) |>
         dplyr::arrange(gender, age)
@@ -1254,9 +1327,12 @@ StandardizationReference <- R6::R6Class(
     #' @description Apply age truncation and aggregate population counts
     #'
     #' @param rightTruncation Numeric age threshold for truncation
+    #'   Must be a finite, non-negative integer supported by this reference.
     #'
     #' @return Data frame with truncated age groups and aggregated population counts
     getAdjustedReference = function(rightTruncation) {
+      self$validateRightTruncation(rightTruncation)
+
       result <- private$.data
       parsed_ages <- .parse_age_labels(unique(result$age))
 
@@ -1291,15 +1367,36 @@ StandardizationReference <- R6::R6Class(
     #' @param rightTruncation Numeric. Age threshold to validate.
     #' @return Numeric. The validated truncation point (or stop with error)
     validateRightTruncation = function(rightTruncation) {
-      if (!is.numeric(rightTruncation) || length(rightTruncation) != 1) {
-        cli::cli_abort("rightTruncation must be a single numeric value")
+      if (!is.numeric(rightTruncation) ||
+          length(rightTruncation) != 1 ||
+          !is.finite(rightTruncation) ||
+          rightTruncation < 0 ||
+          rightTruncation != floor(rightTruncation)) {
+        cli::cli_abort(
+          "rightTruncation must be a single finite, non-negative integer age."
+        )
       }
 
       parsed_ages <- .parse_age_labels(unique(private$.data$age))
       is_grouped <- any(parsed_ages$age_type != "single")
 
       if (!is_grouped) {
-        # Single-year reference: any integer is valid
+        valid_range <- range(parsed_ages$min_age)
+
+        if (rightTruncation < valid_range[[1]] ||
+            rightTruncation > valid_range[[2]]) {
+          cli::cli_abort(c(
+            paste0(
+              "Age ", rightTruncation,
+              " is outside the single-year reference population range."
+            ),
+            "i" = paste0(
+              "Supported ages range from ", valid_range[[1]],
+              " to ", valid_range[[2]], "."
+            )
+          ))
+        }
+
         return(rightTruncation)
       }
 
