@@ -164,14 +164,24 @@ PrevalenceResults <- R6::R6Class(
 
     #' @description Apply direct method standardization
     #' @param referencePopulation StandardizationReference object
-    #' @param ageMin Numeric minimum age for filtering
-    #' @param ageMax Numeric maximum age for filtering
+    #' @param ageMin Deprecated. Numeric minimum age for filtering. Demographic
+    #'   eligibility should be applied when defining the analysis.
+    #' @param ageMax Deprecated. Numeric maximum age for filtering. Demographic
+    #'   eligibility should be applied when defining the analysis.
     #' @param ageRightTruncation Numeric age threshold for collapsing
     #' @return New PrevalenceResults object with standardized prevalence
     standardizePrevalence = function(referencePopulation,
                                      ageMin = NULL,
                                      ageMax = NULL,
                                      ageRightTruncation = NULL) {
+
+      if (!is.null(ageMin) || !is.null(ageMax)) {
+        cli::cli_warn(c(
+          "`ageMin` and `ageMax` are deprecated for standardization.",
+          "i" = "Set demographic eligibility on the analysis; these bounds are retained temporarily for compatibility."
+        ))
+      }
+
       if (is.null(private$.prevalence) || nrow(private$.prevalence) == 0) {
         stop("No prevalence data to standardize")
       }
@@ -578,8 +588,9 @@ loadPrevalenceResults <- function(bundlePath) {
 #'
 #' @description
 #' Applies direct method age-sex standardization to crude prevalence data
-#' using a reference population. Supports demographic bounds matching and
-#' age truncation for real-world database patterns (e.g., Optum age masking).
+#' using a reference population. Analysis-specific demographic eligibility is
+#' represented by the age/gender strata in `prevalenceData`. Age truncation is
+#' supported for real-world database patterns (e.g., Optum age masking).
 #'
 #' @param prevalenceData Data frame with stratified prevalence data.
 #'   Required columns: age, gender, numerator, denominator
@@ -587,11 +598,13 @@ loadPrevalenceResults <- function(bundlePath) {
 #' @param referencePopulation StandardizationReference object defining
 #'   the standard population for weighting
 #'
-#' @param ageMin Numeric. Minimum age for filtering reference population.
-#'   If NULL (default), no lower bound applied.
+#' @param ageMin Deprecated. Numeric minimum age for filtering. If supplied,
+#'   it is temporarily applied for compatibility; define eligibility on the
+#'   analysis instead.
 #'
-#' @param ageMax Numeric. Maximum age for filtering reference population.
-#'   If NULL (default), no upper bound applied.
+#' @param ageMax Deprecated. Numeric maximum age for filtering. If supplied,
+#'   it is temporarily applied for compatibility; define eligibility on the
+#'   analysis instead.
 #'
 #' @param ageRightTruncation Numeric. Optional age threshold for collapsing
 #'   ages >= threshold into single "threshold+" group. Useful for handling
@@ -603,11 +616,12 @@ loadPrevalenceResults <- function(bundlePath) {
 #'
 #' **Step 1**: Validate & apply right truncation to reference population
 #'   - If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
-#'   - Apply truncation + demographic bounds to reference
+#'   - Apply truncation to reference; legacy age bounds are deprecated
 #'
 #' **Step 2**: Filter & prepare crude prevalence
 #'   - Convert gender concept IDs (8532→Female, 8507→Male)
-#'   - Convert age to numeric, apply ageMin/ageMax filters
+#'   - Derive analysis-specific support from observed age/gender strata
+#'   - Apply deprecated ageMin/ageMax arguments only when supplied
 #'   - Apply right truncation: ages >= threshold → "threshold+"
 #'
 #' **Step 3**: Map crude ages → reference group labels
@@ -673,18 +687,13 @@ standardize_prevalence <- function(
   if (!is.null(ageRightTruncation)) {
     # Fail fast if truncation is invalid
     referencePopulation$validateRightTruncation(ageRightTruncation)
-    # Get reference with truncation + bounds applied
+    # Get reference with age truncation applied.
     ref_base <- referencePopulation$getAdjustedReference(
-      ageMin = ageMin,
-      ageMax = ageMax,
       rightTruncation = ageRightTruncation
     )
   } else {
-    # Get reference with just bounds applied
-    ref_base <- referencePopulation$getFilteredReference(
-      ageMin = ageMin,
-      ageMax = ageMax
-    )
+    # Use the full reference; matched strata and weights are selected per analysis below.
+    ref_base <- referencePopulation$getData()
   }
 
   # ── Step 2: Filter & prepare crude prevalence ──
@@ -702,11 +711,22 @@ standardize_prevalence <- function(
         TRUE ~ as.character(gender)
       ),
       age = as.numeric(age)
-    ) |>
-    dplyr::filter(
-      is.null(ageMin) || age >= ageMin,
-      is.null(ageMax) || age <= ageMax
     )
+
+  # Apply legacy age bounds only when supplied; otherwise retain all
+  # analysis-eligible strata already present in prevalenceData.
+  age_is_in_bounds <- rep(TRUE, nrow(prev_clean))
+
+  if (!is.null(ageMin)) {
+    age_is_in_bounds <- age_is_in_bounds & prev_clean$age >= ageMin
+  }
+
+  if (!is.null(ageMax)) {
+    age_is_in_bounds <- age_is_in_bounds & prev_clean$age <= ageMax
+  }
+
+  prev_clean <- prev_clean |>
+    dplyr::filter(age_is_in_bounds)
 
   # Apply right truncation outside the dplyr pipeline.
   if (is.null(ageRightTruncation)) {
@@ -731,10 +751,26 @@ standardize_prevalence <- function(
       denominator = sum(denominator),
       .groups = "keep"
     ) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(
-      stat = (numerator / denominator) * 100000
+    dplyr::ungroup()
+
+  invalid_denominators <- prev_grouped |>
+    dplyr::filter(!is.finite(denominator) | denominator <= 0)
+
+  if (nrow(invalid_denominators) > 0) {
+    invalid_description <- paste0(
+      "analysisId=", invalid_denominators$analysisId,
+      ", spanLabel=", invalid_denominators$spanLabel,
+      ", age=", invalid_denominators$age,
+      ", gender=", invalid_denominators$gender
     )
+    cli::cli_abort(paste0(
+      "Cannot standardize strata with non-finite or non-positive denominators: ",
+      paste(invalid_description, collapse = "; ")
+    ))
+  }
+
+  prev_grouped <- prev_grouped |>
+    dplyr::mutate(stat = (numerator / denominator) * 100000)
 
   # ── Step 5: Build a consistent reference distribution per analysis ──
   if (nrow(prev_grouped) == 0) {
@@ -1046,26 +1082,38 @@ StandardizationReference <- R6::R6Class(
       )
     },
 
-    #' @description Filter reference to demographic bounds and re-normalize weights
+    #' @description Filter the reference to demographic bounds and re-normalize weights.
+    #' This helper is deprecated and will be removed in a future release; use
+    #' `getData()` and apply filtering explicitly.
     #'
     #' @param ageMin Minimum age (inclusive)
     #' @param ageMax Maximum age (inclusive)
     #'
     #' @return Data frame filtered and re-normalized to bounds
     getFilteredReference = function(ageMin = NULL, ageMax = NULL) {
+
+      cli::cli_warn(c(
+        "`getFilteredReference()` is deprecated and will be removed in a future release.",
+        "i" = "Use `getData()` and apply filtering explicitly."
+      ))
+
       result <- private$.data
 
       # Convert ages to numeric for comparison
       if (!is.null(ageMin) || !is.null(ageMax)) {
         ages_numeric <- suppressWarnings(as.numeric(gsub("\\+", "", result$age)))
+        age_is_in_bounds <- rep(TRUE, length(ages_numeric))
 
         if (!is.null(ageMin)) {
-          result <- result[ages_numeric >= ageMin | is.na(ages_numeric), ]
+          age_is_in_bounds <- age_is_in_bounds & ages_numeric >= ageMin
         }
 
         if (!is.null(ageMax)) {
-          result <- result[ages_numeric <= ageMax | is.na(ages_numeric), ]
+          age_is_in_bounds <- age_is_in_bounds & ages_numeric <= ageMax
         }
+
+        age_is_in_bounds <- age_is_in_bounds | is.na(ages_numeric)
+        result <- dplyr::filter(result, age_is_in_bounds)
       }
 
       # Re-normalize weights to filtered subset
@@ -1077,51 +1125,34 @@ StandardizationReference <- R6::R6Class(
       result
     },
 
-    #' @description Apply both bounds filtering and age truncation
+    #' @description Apply age truncation and recalculate reference weights
     #'
-    #' @param ageMin Minimum age (inclusive)
-    #' @param ageMax Maximum age (inclusive)
-    #' @param rightTruncation Age threshold for truncation (optional)
+    #' @param rightTruncation Numeric age threshold for truncation
     #'
-    #' @return Data frame with both transformations applied
-    getAdjustedReference = function(ageMin = NULL, ageMax = NULL, rightTruncation = NULL) {
+    #' @return Data frame with truncated age groups and normalized weights
+    getAdjustedReference = function(rightTruncation) {
       result <- private$.data
 
-      # First apply age truncation if specified
-      if (!is.null(rightTruncation)) {
-        result <- result |>
-          dplyr::mutate(
-            age_numeric = suppressWarnings(as.numeric(gsub("\\+", "", age)))
-          ) |>
-          dplyr::mutate(
-            age = dplyr::case_when(
-              is.na(age_numeric) ~ age,
-              age_numeric >= rightTruncation ~ paste0(rightTruncation, "+"),
-              TRUE ~ age
-            )
-          ) |>
-          dplyr::select(-age_numeric) |>
-          dplyr::group_by(age, gender) |>
-          dplyr::summarise(
-            population = sum(population),
-            .groups = "drop"
+      # Collapse reference ages at or above the truncation threshold.
+      result <- result |>
+        dplyr::mutate(
+          age_numeric = suppressWarnings(as.numeric(gsub("\\+", "", age)))
+        ) |>
+        dplyr::mutate(
+          age = dplyr::case_when(
+            is.na(age_numeric) ~ age,
+            age_numeric >= rightTruncation ~ paste0(rightTruncation, "+"),
+            TRUE ~ age
           )
-      }
+        ) |>
+        dplyr::select(-age_numeric) |>
+        dplyr::group_by(age, gender) |>
+        dplyr::summarise(
+          population = sum(population),
+          .groups = "drop"
+        )
 
-      # Then apply demographic bounds
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-        ages_numeric <- suppressWarnings(as.numeric(gsub("\\+", "", result$age)))
-
-        if (!is.null(ageMin)) {
-          result <- result[ages_numeric >= ageMin | is.na(ages_numeric), ]
-        }
-
-        if (!is.null(ageMax)) {
-          result <- result[ages_numeric <= ageMax | is.na(ages_numeric), ]
-        }
-      }
-
-      # Re-normalize weights
+      # Recalculate weights after any truncation and population aggregation.
       result <- result |>
         dplyr::mutate(
           weight = population / sum(population)

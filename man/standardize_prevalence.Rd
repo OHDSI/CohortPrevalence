@@ -19,11 +19,13 @@ Required columns: age, gender, numerator, denominator}
 \item{referencePopulation}{StandardizationReference object defining
 the standard population for weighting}
 
-\item{ageMin}{Numeric. Minimum age for filtering reference population.
-If NULL (default), no lower bound applied.}
+\item{ageMin}{Deprecated. Numeric minimum age for filtering. If supplied,
+it is temporarily applied for compatibility; define eligibility on the
+analysis instead.}
 
-\item{ageMax}{Numeric. Maximum age for filtering reference population.
-If NULL (default), no upper bound applied.}
+\item{ageMax}{Deprecated. Numeric maximum age for filtering. If supplied,
+it is temporarily applied for compatibility; define eligibility on the
+analysis instead.}
 
 \item{ageRightTruncation}{Numeric. Optional age threshold for collapsing
 ages >= threshold into single "threshold+" group. Useful for handling
@@ -46,8 +48,9 @@ Columns:
 }
 \description{
 Applies direct method age-sex standardization to crude prevalence data
-using a reference population. Supports demographic bounds matching and
-age truncation for real-world database patterns (e.g., Optum age masking).
+using a reference population. Analysis-specific demographic eligibility is
+represented by the age/gender strata in \code{prevalenceData}. Age truncation is
+supported for real-world database patterns (e.g., Optum age masking).
 }
 \details{
 Algorithm (direct method standardization):
@@ -55,13 +58,14 @@ Algorithm (direct method standardization):
 \strong{Step 1}: Validate & apply right truncation to reference population
 \itemize{
 \item If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
-\item Apply truncation + demographic bounds to reference
+\item Apply truncation to reference; legacy age bounds are deprecated
 }
 
 \strong{Step 2}: Filter & prepare crude prevalence
 \itemize{
 \item Convert gender concept IDs (8532→Female, 8507→Male)
-\item Convert age to numeric, apply ageMin/ageMax filters
+\item Derive analysis-specific support from observed age/gender strata
+\item Apply deprecated ageMin/ageMax arguments only when supplied
 \item Apply right truncation: ages >= threshold → "threshold+"
 }
 
@@ -78,15 +82,16 @@ Algorithm (direct method standardization):
 \item Calculate crude rate per 100,000
 }
 
-\strong{Step 5}: Re-filter reference to matched crude age-gender combos only, renormalize weights
+\strong{Step 5}: Build matched reference weights separately for each analysis
 \itemize{
-\item Filter ref_base to only age-gender pairs present in prevalence data
-\item Renormalize weights to sum to 1.0 within matched subset
+\item Match reference age-gender pairs to each analysis's observed strata
+\item Renormalize weights to sum to 1.0 within each analysis
+\item Require each analysis-span to contain the same strata; fail on gaps
 }
 
 \strong{Step 6}: Join, standardize, and aggregate
 \itemize{
-\item inner_join crude rates to reference weights by (age, gender)
+\item Join crude rates to analysis-specific reference weights by analysisId, age, and gender
 \item Calculate stdValue = rate × weight for each stratum
 \item Aggregate: stdStat = sum(stdValue) per analysisId + spanLabel
 \item Output includes totalNum, totalDenom, crudeStat, and stdStat

@@ -190,7 +190,9 @@ List with name, country, year, source, reference
 \if{html}{\out{<a id="method-StandardizationReference-getFilteredReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getFilteredReference}{}}}
 \subsection{Method \code{getFilteredReference()}}{
-Filter reference to demographic bounds and re-normalize weights
+Filter the reference to demographic bounds and re-normalize weights.
+This helper is deprecated and will be removed in a future release; use
+\code{getData()} and apply filtering explicitly.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getFilteredReference(ageMin = NULL, ageMax = NULL)}\if{html}{\out{</div>}}
 }
@@ -212,28 +214,20 @@ Data frame filtered and re-normalized to bounds
 \if{html}{\out{<a id="method-StandardizationReference-getAdjustedReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAdjustedReference}{}}}
 \subsection{Method \code{getAdjustedReference()}}{
-Apply both bounds filtering and age truncation
+Apply age truncation and recalculate reference weights
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(
-  ageMin = NULL,
-  ageMax = NULL,
-  rightTruncation = NULL
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(rightTruncation)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ageMin}}{Minimum age (inclusive)}
-
-\item{\code{ageMax}}{Maximum age (inclusive)}
-
-\item{\code{rightTruncation}}{Age threshold for truncation (optional)}
+\item{\code{rightTruncation}}{Numeric age threshold for truncation}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Data frame with both transformations applied
+Data frame with truncated age groups and normalized weights
 }
 }
 \if{html}{\out{<hr>}}

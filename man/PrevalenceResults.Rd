@@ -142,9 +142,11 @@ Apply direct method standardization
 \describe{
 \item{\code{referencePopulation}}{StandardizationReference object}
 
-\item{\code{ageMin}}{Numeric minimum age for filtering}
+\item{\code{ageMin}}{Deprecated. Numeric minimum age for filtering. Demographic
+eligibility should be applied when defining the analysis.}
 
-\item{\code{ageMax}}{Numeric maximum age for filtering}
+\item{\code{ageMax}}{Deprecated. Numeric maximum age for filtering. Demographic
+eligibility should be applied when defining the analysis.}
 
 \item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
 }

@@ -130,3 +130,58 @@ test_that("standardization errors when matched reference population totals zero"
     "finite, positive total.*1"
   )
 })
+
+test_that("standardization rejects explicitly represented zero-denominator strata", {
+  prevalence <- make_standardization_test_prevalence()
+  prevalence$denominator[[1]] <- 0
+
+  expect_error(
+    CohortPrevalence:::standardize_prevalence(
+      prevalenceData = prevalence,
+      referencePopulation = make_standardization_test_reference()
+    ),
+    "non-finite or non-positive denominators.*age=005"
+  )
+})
+
+test_that("age bounds are deprecated on the public standardization method", {
+  results <- PrevalenceResults$new(
+    prevalence = make_standardization_test_prevalence()
+  )
+
+  expect_warning(
+    results$standardizePrevalence(
+      referencePopulation = make_standardization_test_reference(),
+      ageMin = 18,
+      ageMax = 30
+    ),
+    "ageMin.*ageMax.*deprecated"
+  )
+
+  expect_identical(results$standardizationApplied$ageMin, 18)
+  expect_identical(results$standardizationApplied$ageMax, 30)
+  expect_equal(nrow(results$stdPrev), 4L)
+})
+
+test_that("filtered reference helper warns while remaining available", {
+  reference <- make_standardization_test_reference()
+
+  expect_warning(
+    filtered_reference <- reference$getFilteredReference(ageMin = 18, ageMax = 30),
+    "getFilteredReference.*deprecated"
+  )
+
+  expect_setequal(filtered_reference$age, c("018", "030"))
+})
+
+test_that("adjusted reference applies only right truncation", {
+  reference <- make_standardization_test_reference()
+  truncated_reference <- reference$getAdjustedReference(rightTruncation = 30)
+
+  expect_setequal(truncated_reference$age, c("005", "018", "30+"))
+  expect_equal(sum(truncated_reference$weight), 1)
+  expect_equal(
+    truncated_reference$population[truncated_reference$age == "30+"],
+    c(700, 700)
+  )
+})
