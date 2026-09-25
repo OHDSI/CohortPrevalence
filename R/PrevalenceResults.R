@@ -158,7 +158,7 @@ PrevalenceResults <- R6::R6Class(
         invisible(self)
       }, error = function(e) {
         cli::cli_alert_danger("Export failed: {e$message}")
-        stop(e)
+        cli::cli_abort(conditionMessage(e), .parent = e)
       })
     },
 
@@ -183,7 +183,7 @@ PrevalenceResults <- R6::R6Class(
       }
 
       if (is.null(private$.prevalence) || nrow(private$.prevalence) == 0) {
-        stop("No prevalence data to standardize")
+        cli::cli_abort("No prevalence data to standardize")
       }
 
       cli::cat_line()
@@ -229,7 +229,10 @@ PrevalenceResults <- R6::R6Class(
           required_cols <- c("analysisId", "spanLabel")
           missing <- setdiff(required_cols, colnames(private$.prevalence))
           if (length(missing) > 0) {
-            stop("Prevalence missing required columns: ", paste(missing, collapse = ", "))
+            cli::cli_abort(c(
+              "Prevalence is missing required columns:",
+              stats::setNames(missing, rep("x", length(missing)))
+            ))
           }
         }
       }
@@ -240,7 +243,10 @@ PrevalenceResults <- R6::R6Class(
           required_cols <- c("analysisId", "spanLabel", "totalNum", "totalDenom", "crudeStat", "stdStat")
           missing <- setdiff(required_cols, colnames(private$.stdPrev))
           if (length(missing) > 0) {
-            stop("Standardized prevalence missing columns: ", paste(missing, collapse = ", "))
+            cli::cli_abort(c(
+              "Standardized prevalence is missing required columns:",
+              stats::setNames(missing, rep("x", length(missing)))
+            ))
           }
         }
       }
@@ -464,7 +470,7 @@ loadPrevalenceResults <- function(bundlePath) {
     # Load manifest
     manifestFile <- file.path(bundlePath, "manifest.json")
     if (!file.exists(manifestFile)) {
-      stop("manifest.json not found in bundle")
+      cli::cli_abort("manifest.json not found in bundle")
     }
 
     manifest <- jsonlite::read_json(manifestFile)
@@ -575,7 +581,7 @@ loadPrevalenceResults <- function(bundlePath) {
     return(results)
   }, error = function(e) {
     cli::cli_alert_danger("Failed to load bundle: {e$message}")
-    stop(e)
+    cli::cli_abort(conditionMessage(e), .parent = e)
   })
 }
 
@@ -666,21 +672,21 @@ standardize_prevalence <- function(
 
   # Validate inputs
   if (!inherits(referencePopulation, "StandardizationReference")) {
-    stop("referencePopulation must be a StandardizationReference object")
+    cli::cli_abort("referencePopulation must be a StandardizationReference object")
   }
 
   if (!is.data.frame(prevalenceData)) {
-    stop("prevalenceData must be a data frame")
+    cli::cli_abort("prevalenceData must be a data frame")
   }
 
   # Validate required columns (standard CohortPrevalence output)
   required_cols <- c("analysisId", "spanLabel", "age", "gender", "numerator", "denominator")
   missing_cols <- setdiff(required_cols, colnames(prevalenceData))
   if (length(missing_cols) > 0) {
-    stop(
-      "prevalenceData must be output from CohortPrevalence functions. Missing columns: ",
-      paste(missing_cols, collapse = ", ")
-    )
+    cli::cli_abort(c(
+      "prevalenceData is missing required columns:",
+      stats::setNames(missing_cols, rep("x", length(missing_cols)))
+    ))
   }
 
   # ── Step 1: Validate & apply right truncation to reference ──
@@ -763,9 +769,9 @@ standardize_prevalence <- function(
       ", age=", invalid_denominators$age,
       ", gender=", invalid_denominators$gender
     )
-    cli::cli_abort(paste0(
-      "Cannot standardize strata with non-finite or non-positive denominators: ",
-      paste(invalid_description, collapse = "; ")
+    cli::cli_abort(c(
+      "Cannot standardize strata with non-finite or non-positive denominators:",
+      stats::setNames(invalid_description, rep("x", length(invalid_description)))
     ))
   }
 
@@ -812,10 +818,10 @@ standardize_prevalence <- function(
       ", age=", missing_span_strata$age,
       ", gender=", missing_span_strata$gender
     )
-    cli::cli_abort(paste0(
-      "Cannot standardize because an analysis-span is missing strata required ",
-      "for a consistent reference distribution: ",
-      paste(missing_description, collapse = "; ")
+    cli::cli_abort(c(
+      "Cannot standardize because analysis-spans are missing required strata:",
+      stats::setNames(missing_description, rep("x", length(missing_description))),
+      "i" = "Each span must contain the same strata for its analysis."
     ))
   }
 
@@ -830,9 +836,9 @@ standardize_prevalence <- function(
       ", age=", unmatched_strata$age,
       ", gender=", unmatched_strata$gender
     )
-    cli::cli_abort(paste0(
-      "Prevalence strata have no matching reference population: ",
-      paste(unmatched_description, collapse = "; ")
+    cli::cli_abort(c(
+      "Prevalence strata have no matching reference population:",
+      stats::setNames(unmatched_description, rep("x", length(unmatched_description)))
     ))
   }
 
@@ -845,10 +851,13 @@ standardize_prevalence <- function(
     dplyr::filter(!is.finite(referencePopulation) | referencePopulation <= 0)
 
   if (nrow(invalid_reference_totals) > 0) {
-    cli::cli_abort(paste0(
-      "Matched reference population must have a finite, positive total for ",
-      "each analysisId. Invalid analysisId(s): ",
-      paste(invalid_reference_totals$analysisId, collapse = ", ")
+    invalid_analysis_ids <- paste0(
+      "analysisId=",
+      invalid_reference_totals$analysisId
+    )
+    cli::cli_abort(c(
+      "Matched reference population must have a finite, positive total for each analysis:",
+      stats::setNames(invalid_analysis_ids, rep("x", length(invalid_analysis_ids)))
     ))
   }
 
@@ -926,6 +935,112 @@ standardize_prevalence <- function(
 }
 
 
+#' Parse reference age labels into numeric intervals
+#'
+#' @noRd
+.parse_age_labels <- function(labels) {
+  labels <- trimws(as.character(labels))
+
+  if (length(labels) == 0 || anyNA(labels) || any(labels == "")) {
+    cli::cli_abort("Reference age labels must be non-empty.")
+  }
+
+  is_single <- grepl("^[0-9]+$", labels)
+  is_range <- grepl("^[0-9]+[[:space:]]*-[[:space:]]*[0-9]+$", labels)
+  is_open <- grepl("^[0-9]+[[:space:]]*\\+$", labels)
+  is_under <- grepl("^under[[:space:]]+[0-9]+$", labels, ignore.case = TRUE)
+  is_supported <- is_single | is_range | is_open | is_under
+
+  if (any(!is_supported)) {
+    invalid_labels <- labels[!is_supported]
+    cli::cli_abort(c(
+      "Unsupported or malformed reference age label(s):",
+      stats::setNames(invalid_labels, rep("x", length(invalid_labels)))
+    ))
+  }
+
+  min_age <- max_age <- rep(NA_real_, length(labels))
+  age_type <- rep(NA_character_, length(labels))
+
+  for (i in seq_along(labels)) {
+    label <- labels[[i]]
+
+    if (is_single[[i]]) {
+      min_age[[i]] <- as.numeric(label)
+      max_age[[i]] <- min_age[[i]]
+      age_type[[i]] <- "single"
+    } else if (is_range[[i]]) {
+      bounds <- as.numeric(strsplit(
+        gsub("[[:space:]]", "", label),
+        "-",
+        fixed = TRUE
+      )[[1]])
+      min_age[[i]] <- bounds[[1]]
+      max_age[[i]] <- bounds[[2]]
+      age_type[[i]] <- "range"
+    } else if (is_open[[i]]) {
+      min_age[[i]] <- as.numeric(gsub("[+]", "", label))
+      max_age[[i]] <- Inf
+      age_type[[i]] <- "open"
+    } else {
+      threshold <- as.numeric(sub(
+        "^under[[:space:]]+",
+        "",
+        label,
+        ignore.case = TRUE
+      ))
+      min_age[[i]] <- 0
+      max_age[[i]] <- threshold - 1
+      age_type[[i]] <- "under"
+    }
+  }
+
+  invalid_intervals <- min_age < 0 |
+    max_age < min_age |
+    !is.finite(min_age) |
+    (!is.finite(max_age) & age_type != "open")
+
+  if (any(invalid_intervals)) {
+    invalid_labels <- labels[invalid_intervals]
+    cli::cli_abort(c(
+      "Invalid reference age interval(s):",
+      stats::setNames(invalid_labels, rep("x", length(invalid_labels)))
+    ))
+  }
+
+  parsed <- data.frame(
+    label = labels,
+    min_age = min_age,
+    max_age = max_age,
+    age_type = age_type,
+    stringsAsFactors = FALSE
+  )
+
+  ordered <- parsed[order(parsed$min_age, parsed$max_age), , drop = FALSE]
+
+  if (nrow(ordered) > 1) {
+    for (i in 2:nrow(ordered)) {
+      overlapping <- which(
+        ordered$max_age[seq_len(i - 1)] >= ordered$min_age[[i]]
+      )
+
+      if (length(overlapping) > 0) {
+        previous_label <- ordered$label[[overlapping[[1]]]]
+        cli::cli_abort(paste0(
+          "Overlapping reference age bands: '",
+          previous_label,
+          "' and '",
+          ordered$label[[i]],
+          "'."
+        ))
+      }
+    }
+  }
+
+  return(parsed)
+}
+
+
 #' StandardizationReference R6 Class
 #'
 #' @description
@@ -983,28 +1098,29 @@ StandardizationReference <- R6::R6Class(
     initialize = function(name, country, year, source, data, reference = NULL) {
       # Validate inputs
       if (!is.data.frame(data)) {
-        stop("'data' must be a data frame")
+        cli::cli_abort("'data' must be a data frame")
       }
 
       required_cols <- c("age", "gender", "population")
       missing_cols <- setdiff(required_cols, colnames(data))
       if (length(missing_cols) > 0) {
-        stop(
-          "Data frame must have columns: ",
-          paste(required_cols, collapse = ", "),
-          ". Missing: ",
-          paste(missing_cols, collapse = ", ")
-        )
+        cli::cli_abort(c(
+          "Reference data is missing required columns:",
+          stats::setNames(missing_cols, rep("x", length(missing_cols))),
+          "i" = paste0("Required columns: ", paste(required_cols, collapse = ", "))
+        ))
       }
 
       # Check for missing values in required columns
       if (any(is.na(data$age)) || any(is.na(data$gender)) || any(is.na(data$population))) {
-        stop("Data cannot contain NA values in age, gender, or population columns")
+        cli::cli_abort("Data cannot contain NA values in age, gender, or population columns")
       }
+
+      .parse_age_labels(unique(as.character(data$age)))
 
       # Check population is numeric and positive
       if (!is.numeric(data$population) || any(data$population < 0)) {
-        stop("Population column must be numeric and non-negative")
+        cli::cli_abort("Population column must be numeric and non-negative")
       }
 
       # Store metadata in private fields
@@ -1017,7 +1133,7 @@ StandardizationReference <- R6::R6Class(
       # Store reference counts; standardization calculates weights per analysis.
       private$.data <- data |>
         dplyr::mutate(
-          age = as.character(age),
+          age = trimws(as.character(age)),
           gender = as.character(gender),
           population = as.numeric(population)
         ) |>
@@ -1124,20 +1240,20 @@ StandardizationReference <- R6::R6Class(
     #' @return Data frame with truncated age groups and aggregated population counts
     getAdjustedReference = function(rightTruncation) {
       result <- private$.data
+      parsed_ages <- .parse_age_labels(unique(result$age))
 
       # Collapse reference ages at or above the truncation threshold.
       result <- result |>
-        dplyr::mutate(
-          age_numeric = suppressWarnings(as.numeric(gsub("\\+", "", age)))
-        ) |>
-        dplyr::mutate(
-          age = dplyr::case_when(
-            is.na(age_numeric) ~ age,
-            age_numeric >= rightTruncation ~ paste0(rightTruncation, "+"),
-            TRUE ~ age
-          )
-        ) |>
-        dplyr::select(-age_numeric) |>
+        dplyr::left_join(
+          parsed_ages |> dplyr::select(label, min_age),
+          by = c("age" = "label")
+        )
+
+      truncate_age <- !is.na(result$min_age) & result$min_age >= rightTruncation
+      result$age[truncate_age] <- paste0(rightTruncation, "+")
+
+      result <- result |>
+        dplyr::select(-min_age) |>
         dplyr::group_by(age, gender) |>
         dplyr::summarise(
           population = sum(population),
@@ -1158,75 +1274,48 @@ StandardizationReference <- R6::R6Class(
     #' @return Numeric. The validated truncation point (or stop with error)
     validateRightTruncation = function(rightTruncation) {
       if (!is.numeric(rightTruncation) || length(rightTruncation) != 1) {
-        stop("rightTruncation must be a single numeric value")
+        cli::cli_abort("rightTruncation must be a single numeric value")
       }
 
-      ref_ages <- unique(private$.data$age)
-
-      has_range  <- any(grepl("-", ref_ages))
-      has_plus   <- any(grepl("\\+", ref_ages))
-      has_text   <- any(grepl("[A-Za-z]", ref_ages))
-      is_grouped <- has_range || has_plus || has_text
+      parsed_ages <- .parse_age_labels(unique(private$.data$age))
+      is_grouped <- any(parsed_ages$age_type != "single")
 
       if (!is_grouped) {
         # Single-year reference: any integer is valid
         return(rightTruncation)
       }
 
-      # For grouped references, truncation must be at group start
-      .parse_label <- function(label) {
-        if (grepl("\\+", label)) {
-          as.numeric(gsub("\\+", "", label))
-        } else if (grepl("-", label)) {
-          parts <- as.numeric(strsplit(label, "-")[[1]])
-          parts[1]
-        } else if (grepl("(?i)under", label)) {
-          0
-        } else {
-          as.numeric(label)
-        }
-      }
-
-      group_starts <- sapply(ref_ages, .parse_label)
+      # For grouped references, truncation must be at a group start.
+      group_starts <- parsed_ages$min_age
 
       if (!(rightTruncation %in% group_starts)) {
-        # Find which group contains this age and provide helpful error
-        .parse_full <- function(label) {
-          if (grepl("\\+", label)) {
-            list(min = as.numeric(gsub("\\+", "", label)), max = Inf, label = label)
-          } else if (grepl("-", label)) {
-            parts <- as.numeric(strsplit(label, "-")[[1]])
-            list(min = parts[1], max = parts[2], label = label)
-          } else if (grepl("(?i)under", label)) {
-            num <- as.numeric(gsub("(?i)under\\s*", "", label))
-            list(min = 0, max = num - 1, label = label)
-          } else {
-            num <- as.numeric(label)
-            list(min = num, max = num, label = label)
-          }
-        }
+        # Find which band contains this age and provide a helpful error.
+        conflicting <- which(
+          rightTruncation >= parsed_ages$min_age &
+            rightTruncation <= parsed_ages$max_age
+        )
 
-        groups <- lapply(ref_ages, .parse_full)
-        conflicting <- NULL
-        for (g in groups) {
-          if (rightTruncation >= g$min && rightTruncation <= g$max) {
-            conflicting <- g
-            break
-          }
-        }
-
-        if (!is.null(conflicting)) {
-          stop(
-            "Cannot truncate at age ", rightTruncation, ". ",
-            "It falls within group '", conflicting$label, "' (",
-            conflicting$min, "-", conflicting$max, "). ",
-            "Valid truncation points: ", paste(sort(group_starts), collapse = ", ")
-          )
+        if (length(conflicting) > 0) {
+          conflicting <- parsed_ages[conflicting[[1]], , drop = FALSE]
+          cli::cli_abort(c(
+            paste0("Cannot truncate at age ", rightTruncation, "."),
+            "x" = paste0(
+              "It falls within group '", conflicting$label, "' (",
+              conflicting$min_age, "-", conflicting$max_age, ")."
+            ),
+            "i" = paste0(
+              "Valid truncation points: ",
+              paste(sort(group_starts), collapse = ", ")
+            )
+          ))
         } else {
-          stop(
-            "Age ", rightTruncation, " is outside reference population range. ",
-            "Valid truncation points: ", paste(sort(group_starts), collapse = ", ")
-          )
+          cli::cli_abort(c(
+            paste0("Age ", rightTruncation, " is outside the reference population range."),
+            "i" = paste0(
+              "Valid truncation points: ",
+              paste(sort(group_starts), collapse = ", ")
+            )
+          ))
         }
       }
 
@@ -1241,33 +1330,16 @@ StandardizationReference <- R6::R6Class(
     #'
     #' @return Numeric vector of valid truncation points
     getValidTruncationPoints = function() {
-      ref_ages <- unique(private$.data$age)
-
-      has_range  <- any(grepl("-", ref_ages))
-      has_plus   <- any(grepl("\\+", ref_ages))
-      has_text   <- any(grepl("[A-Za-z]", ref_ages))
-      is_grouped <- has_range || has_plus || has_text
+      parsed_ages <- .parse_age_labels(unique(private$.data$age))
+      is_grouped <- any(parsed_ages$age_type != "single")
 
       if (!is_grouped) {
         # Single-year: all unique numeric ages are valid
-        return(sort(as.numeric(ref_ages)))
+        return(sort(parsed_ages$min_age))
       }
 
       # Grouped: only group starts are valid
-      .parse_label <- function(label) {
-        if (grepl("\\+", label)) {
-          as.numeric(gsub("\\+", "", label))
-        } else if (grepl("-", label)) {
-          parts <- as.numeric(strsplit(label, "-")[[1]])
-          parts[1]
-        } else if (grepl("(?i)under", label)) {
-          0
-        } else {
-          as.numeric(label)
-        }
-      }
-
-      sort(unique(sapply(ref_ages, .parse_label)))
+      sort(unique(parsed_ages$min_age))
     },
 
     #' @description Map single-year ages to reference age group labels
@@ -1287,12 +1359,8 @@ StandardizationReference <- R6::R6Class(
       # Convert to character if not already
       age_values <- as.character(age_values)
 
-      ref_ages <- unique(private$.data$age)
-
-      has_range  <- any(grepl("-", ref_ages))
-      has_plus   <- any(grepl("\\+", ref_ages))
-      has_text   <- any(grepl("[A-Za-z]", ref_ages))
-      is_grouped <- has_range || has_plus || has_text
+      parsed_ages <- .parse_age_labels(unique(private$.data$age))
+      is_grouped <- any(parsed_ages$age_type != "single")
 
       # Process each age value
       result <- sapply(age_values, function(age_str) {
@@ -1303,40 +1371,24 @@ StandardizationReference <- R6::R6Class(
 
         # Convert to numeric for mapping
         age_num <- suppressWarnings(as.numeric(age_str))
-        if (is.na(age_num)) return(NA_character_)
+
+        if (is.na(age_num)) {
+          return(NA_character_)
+        }
 
         if (!is_grouped) {
           # Single-year reference: zero-pad to "000", "001", etc.
           return(sprintf("%03d", age_num))
         }
 
-        # Grouped reference: lookup which group this age falls into
-        .parse_label <- function(label) {
-          if (grepl("\\+", label)) {
-            list(min = as.numeric(gsub("\\+", "", label)), max = Inf)
-          } else if (grepl("-", label)) {
-            parts <- as.numeric(strsplit(label, "-")[[1]])
-            list(min = parts[1], max = parts[2])
-          } else if (grepl("(?i)under", label)) {
-            num <- as.numeric(gsub("(?i)under\\s*", "", label))
-            list(min = 0, max = num - 1)
-          } else {
-            num <- as.numeric(label)
-            list(min = num, max = num)
-          }
-        }
-
-        parsed <- lapply(ref_ages, .parse_label)
-        lookup <- data.frame(
-          age_label = ref_ages,
-          min_age = sapply(parsed, `[[`, "min"),
-          max_age = sapply(parsed, `[[`, "max"),
-          stringsAsFactors = FALSE
+        # Grouped reference: find the parsed interval containing this age.
+        idx <- which(
+          age_num >= parsed_ages$min_age & age_num <= parsed_ages$max_age
         )
-
-        idx <- which(age_num >= lookup$min_age & age_num <= lookup$max_age)
-        if (length(idx) == 0) return(NA_character_)
-        return(lookup$age_label[idx[1]])
+        if (length(idx) == 0) {
+          return(NA_character_)
+        }
+        return(parsed_ages$label[idx[1]])
       }, USE.NAMES = FALSE)
 
       unname(result)

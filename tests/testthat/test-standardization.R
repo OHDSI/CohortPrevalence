@@ -103,6 +103,64 @@ test_that("ACS age-sex mapping returns counts without precomputed weights", {
   expect_false("weight" %in% names(mapped_data))
 })
 
+test_that("age labels parse into inclusive numeric intervals", {
+  parsed <- CohortPrevalence:::.parse_age_labels(
+    c("018", "5-9", "85+", "Under 5")
+  )
+
+  expect_equal(parsed$min_age, c(18, 5, 85, 0))
+  expect_equal(parsed$max_age, c(18, 9, Inf, 4))
+  expect_equal(parsed$age_type, c("single", "range", "open", "under"))
+})
+
+test_that("reference construction rejects malformed and overlapping age bands", {
+  make_reference <- function(ages) {
+    CohortPrevalence:::StandardizationReference$new(
+      name = "Invalid reference",
+      country = "Test",
+      year = 2020L,
+      source = "Unit test",
+      data = data.frame(
+        age = ages,
+        gender = rep("Female", length(ages)),
+        population = rep(100, length(ages)),
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+
+  expect_error(make_reference(c("0-4", "five")), "malformed")
+  expect_error(make_reference(c("5-9", "8-12")), "Overlapping")
+  expect_error(make_reference("9-5"), "Invalid reference age interval")
+})
+
+test_that("mapping and truncation use the same parsed age bands", {
+  reference <- CohortPrevalence:::StandardizationReference$new(
+    name = "Grouped reference",
+    country = "Test",
+    year = 2020L,
+    source = "Unit test",
+    data = data.frame(
+      age = c("Under 5", "5-9", "10+"),
+      gender = "Female",
+      population = c(50, 50, 100),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  expect_equal(
+    reference$mapAgesToReference(c(2, 7, 10)),
+    c("Under 5", "5-9", "10+")
+  )
+  expect_equal(reference$getValidTruncationPoints(), c(0, 5, 10))
+  expect_equal(reference$validateRightTruncation(5), 5)
+  expect_error(reference$validateRightTruncation(7), "falls within group '5-9'")
+
+  truncated <- reference$getAdjustedReference(rightTruncation = 5)
+  expect_setequal(truncated$age, c("Under 5", "5+"))
+  expect_equal(truncated$population[truncated$age == "5+"], 150)
+})
+
 test_that("standardization errors when a span is missing an analysis stratum", {
   prevalence <- make_standardization_test_prevalence()
   prevalence <- prevalence[
