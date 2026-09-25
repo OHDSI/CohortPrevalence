@@ -619,12 +619,13 @@ loadPrevalenceResults <- function(bundlePath) {
 #'   - Group by analysisId, spanLabel, age, gender; sum numerator and denominator
 #'   - Calculate crude rate per 100,000
 #'
-#' **Step 5**: Re-filter reference to matched crude age-gender combos only, renormalize weights
-#'   - Filter ref_base to only age-gender pairs present in prevalence data
-#'   - Renormalize weights to sum to 1.0 within matched subset
+#' **Step 5**: Build matched reference weights separately for each analysis
+#'   - Match reference age-gender pairs to each analysis's observed strata
+#'   - Renormalize weights to sum to 1.0 within each analysis
+#'   - Require each analysis-span to contain the same strata; fail on gaps
 #'
 #' **Step 6**: Join, standardize, and aggregate
-#'   - inner_join crude rates to reference weights by (age, gender)
+#'   - Join crude rates to analysis-specific reference weights by analysisId, age, and gender
 #'   - Calculate stdValue = rate × weight for each stratum
 #'   - Aggregate: stdStat = sum(stdValue) per analysisId + spanLabel
 #'   - Output includes totalNum, totalDenom, crudeStat, and stdStat
@@ -705,15 +706,18 @@ standardize_prevalence <- function(
     dplyr::filter(
       is.null(ageMin) || age >= ageMin,
       is.null(ageMax) || age <= ageMax
-    ) |>
-    dplyr::mutate(
-      # Apply right truncation: ages >= threshold become "threshold+"
-      age = ifelse(
-        !is.na(ageRightTruncation) & age >= ageRightTruncation,
-        paste0(ageRightTruncation, "+"),
-        as.character(age)
-      )
     )
+
+  # Apply right truncation outside the dplyr pipeline.
+  if (is.null(ageRightTruncation)) {
+    prev_clean$age <- as.character(prev_clean$age)
+  } else {
+    prev_clean$age <- dplyr::if_else(
+      prev_clean$age >= ageRightTruncation,
+      paste0(ageRightTruncation, "+"),
+      as.character(prev_clean$age)
+    )
+  }
 
   # ── Step 3: Map crude ages → reference group labels ──
   # Handles: "N+" pass-through, numeric → single-year zero-pad, numeric → grouped lookup
@@ -732,24 +736,96 @@ standardize_prevalence <- function(
       stat = (numerator / denominator) * 100000
     )
 
-  # ── Step 5: Re-filter reference to matched crude age-gender combos, renormalize ──
-  matched_ages   <- unique(prev_grouped$age)
-  matched_gender <- unique(prev_grouped$gender)
-  ref_adjusted <- ref_base |>
-    dplyr::filter(
-      age %in% matched_ages,
-      gender %in% matched_gender
-    ) |>
-    dplyr::mutate(
-      weight = population / sum(population)
+  # ── Step 5: Build a consistent reference distribution per analysis ──
+  if (nrow(prev_grouped) == 0) {
+    cli::cli_abort("No supported age/gender prevalence strata remain after filtering")
+  }
+
+  if (anyNA(prev_grouped$age) || anyNA(prev_grouped$gender)) {
+    cli::cli_abort(
+      "Prevalence contains age/gender strata that could not be mapped to the reference population"
+    )
+  }
+
+  analysis_strata <- prev_grouped |>
+    dplyr::distinct(analysisId, age, gender)
+  analysis_spans <- prev_grouped |>
+    dplyr::distinct(analysisId, spanLabel)
+
+  expected_span_strata <- purrr::map_dfr(seq_len(nrow(analysis_spans)), function(i) {
+    analysis_id <- analysis_spans$analysisId[[i]]
+    analysis_strata |>
+      dplyr::filter(analysisId == analysis_id) |>
+      dplyr::mutate(spanLabel = analysis_spans$spanLabel[[i]]) |>
+      dplyr::select(analysisId, spanLabel, age, gender)
+  })
+
+  observed_span_strata <- prev_grouped |>
+    dplyr::distinct(analysisId, spanLabel, age, gender)
+    
+  missing_span_strata <- expected_span_strata |>
+    dplyr::anti_join(
+      observed_span_strata,
+      by = c("analysisId", "spanLabel", "age", "gender")
     )
 
+  if (nrow(missing_span_strata) > 0) {
+    missing_description <- paste0(
+      "analysisId=", missing_span_strata$analysisId,
+      ", spanLabel=", missing_span_strata$spanLabel,
+      ", age=", missing_span_strata$age,
+      ", gender=", missing_span_strata$gender
+    )
+    cli::cli_abort(paste0(
+      "Cannot standardize because an analysis-span is missing strata required ",
+      "for a consistent reference distribution: ",
+      paste(missing_description, collapse = "; ")
+    ))
+  }
+
+  reference_strata <- ref_base |>
+    dplyr::select(age, gender, population)
+  unmatched_strata <- analysis_strata |>
+    dplyr::anti_join(reference_strata, by = c("age", "gender"))
+
+  if (nrow(unmatched_strata) > 0) {
+    unmatched_description <- paste0(
+      "analysisId=", unmatched_strata$analysisId,
+      ", age=", unmatched_strata$age,
+      ", gender=", unmatched_strata$gender
+    )
+    cli::cli_abort(paste0(
+      "Prevalence strata have no matching reference population: ",
+      paste(unmatched_description, collapse = "; ")
+    ))
+  }
+
+  ref_adjusted <- analysis_strata |>
+    dplyr::inner_join(reference_strata, by = c("age", "gender"))
+
+  invalid_reference_totals <- ref_adjusted |>
+    dplyr::group_by(analysisId) |>
+    dplyr::summarize(referencePopulation = sum(population), .groups = "drop") |>
+    dplyr::filter(!is.finite(referencePopulation) | referencePopulation <= 0)
+
+  if (nrow(invalid_reference_totals) > 0) {
+    cli::cli_abort(paste0(
+      "Matched reference population must have a finite, positive total for ",
+      "each analysisId. Invalid analysisId(s): ",
+      paste(invalid_reference_totals$analysisId, collapse = ", ")
+    ))
+  }
+
+  ref_adjusted <- ref_adjusted |>
+    dplyr::group_by(analysisId) |>
+    dplyr::mutate(weight = population / sum(population)) |>
+    dplyr::ungroup()
+
   # ── Step 6: Join & standardize ──
-  # inner_join ensures only matched groups contribute to standardized rate
   standardized_data <- prev_grouped |>
     dplyr::inner_join(
-      ref_adjusted |> dplyr::select(age, gender, weight),
-      by = c("age", "gender")
+      ref_adjusted |> dplyr::select(analysisId, age, gender, weight),
+      by = c("analysisId", "age", "gender")
     ) |>
     dplyr::mutate(
       stdValue = stat * weight
