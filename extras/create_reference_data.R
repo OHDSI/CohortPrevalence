@@ -40,26 +40,16 @@ japan_census_2020 <- data.frame(
   )
 )
 
-# Create WHO World Standard 2008 data
-who_world_standard <- data.frame(
-  age = c("0-4", "5-14", "15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85+"),
-  gender = "Combined",
-  population = c(8860, 8690, 8860, 8920, 8940, 8820, 8270, 7470, 5920, 1860)
-)
-
 # Save to package data
 usethis::use_data(usa_census_2020, overwrite = TRUE)
 usethis::use_data(japan_census_2020, overwrite = TRUE)
-usethis::use_data(who_world_standard, overwrite = TRUE)
 
-cat("✓ All three reference data sets created and saved:\n")
+cat("✓ Both reference data sets created and saved:\n")
 cat("  - usa_census_2020 (15 age groups per gender)\n")
 cat("  - japan_census_2020 (10 age groups per gender)\n")
-cat("  - who_world_standard (10 age groups, combined gender)\n")
 cat("\nFiles saved to data/ folder\n\n")
 
 cat("Verification:\n")
 cat("USA Census 2020 dimensions:", nrow(usa_census_2020), "rows x", ncol(usa_census_2020), "cols\n")
 cat("Japan Census 2020 dimensions:", nrow(japan_census_2020), "rows x", ncol(japan_census_2020), "cols\n")
-cat("WHO Standard dimensions:", nrow(who_world_standard), "rows x", ncol(who_world_standard), "cols\n")
 

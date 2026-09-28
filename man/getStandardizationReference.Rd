@@ -8,7 +8,7 @@ getStandardizationReference(name)
 }
 \arguments{
 \item{name}{Character. Name of reference to retrieve.
-Valid options: "usa_census_2020", "japan_census_2020", "who_world_standard"}
+Valid options: "usa_census_2020", "japan_census_2020"}
 }
 \value{
 StandardizationReference object
@@ -20,7 +20,6 @@ Get Built-in Standardization Reference
 \dontrun{
   usa_ref <- getStandardizationReference("usa_census_2020")
   japan_ref <- getStandardizationReference("japan_census_2020")
-  who_ref <- getStandardizationReference("who_world_standard")
 }
 
 }

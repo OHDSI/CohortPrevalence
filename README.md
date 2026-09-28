@@ -81,7 +81,7 @@ results$explore()  # Launches Shiny dashboard with tabs: Prevalence | Incidence 
 results$show_query(analysisId = 1)
 
 # Standardize prevalence
-reference <- getStandardizationReference("WHO World Standard 2008")
+reference <- getStandardizationReference("usa_census_2020")
 results$standardizePrevalence(reference)
 
 # Export results with manifest
@@ -226,11 +226,8 @@ remotes::install_github("ohdsi/CohortPrevalence")
 
 ## Reference Populations for Standardization
 
-The package includes pre-built reference populations for age standardization:
+The package includes pre-built age-sex reference populations:
 
-- **WHO World Standard 2008**: Official WHO population standard with 21 age groups (0-4, 5-9, ..., 100+)
-  - Source: https://seer.cancer.gov/stdpopulations/world.who.html
-  
 - **USA Census 2020**: Decennial Census by single-year age and gender
   - Source: US Census Bureau (Census API via tidycensus)
   - See [data-raw/usa_census/README.md](data-raw/usa_census/README.md) for Census API setup

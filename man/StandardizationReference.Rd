@@ -5,12 +5,14 @@
 \title{StandardizationReference R6 Class}
 \description{
 Encapsulates a reference population for direct method standardization.
-Stores population weights by age and gender with metadata.
+Stores population counts by age and gender with metadata. Weights are
+calculated by the standardization procedure for each analysis.
 }
 \details{
 The StandardizationReference class provides a structured way to manage
 reference populations used for age-sex standardization. It validates
-data structure, auto-calculates weights as proportions, and provides
+unique age/gender cells, supported non-overlapping age bands, and finite,
+non-negative population counts with a finite positive total. It provides
 methods for accessing and manipulating reference data.
 }
 \examples{
@@ -101,7 +103,9 @@ Create a new StandardizationReference
 
 \item{\code{source}}{Character. Data source description}
 
-\item{\code{data}}{Data frame with columns: age, gender, population}
+\item{\code{data}}{Data frame with columns: age, gender, population
+Age labels must be single ages, inclusive ranges, open-ended bands, or
+Under N bands; age/gender pairs must be unique.}
 
 \item{\code{reference}}{Character. URL or reference to access the source data}
 }
@@ -131,7 +135,7 @@ Get the full reference data frame
 }
 
 \subsection{Returns}{
-Data frame with columns: age, gender, population, weight
+Data frame with columns: age, gender, and population
 }
 }
 \if{html}{\out{<hr>}}
@@ -190,7 +194,9 @@ List with name, country, year, source, reference
 \if{html}{\out{<a id="method-StandardizationReference-getFilteredReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getFilteredReference}{}}}
 \subsection{Method \code{getFilteredReference()}}{
-Filter reference to demographic bounds and re-normalize weights
+Filter the reference to demographic bounds.
+This helper is deprecated and will be removed in a future release; use
+\code{getData()} and apply filtering explicitly.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getFilteredReference(ageMin = NULL, ageMax = NULL)}\if{html}{\out{</div>}}
 }
@@ -205,35 +211,28 @@ Filter reference to demographic bounds and re-normalize weights
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Data frame filtered and re-normalized to bounds
+Filtered data frame with age, gender, and population columns
 }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getAdjustedReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAdjustedReference}{}}}
 \subsection{Method \code{getAdjustedReference()}}{
-Apply both bounds filtering and age truncation
+Apply age truncation and aggregate population counts
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(
-  ageMin = NULL,
-  ageMax = NULL,
-  rightTruncation = NULL
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(rightTruncation)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{ageMin}}{Minimum age (inclusive)}
-
-\item{\code{ageMax}}{Maximum age (inclusive)}
-
-\item{\code{rightTruncation}}{Age threshold for truncation (optional)}
+\item{\code{rightTruncation}}{Numeric age threshold for truncation
+Must be a finite, non-negative integer supported by this reference.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Data frame with both transformations applied
+Data frame with truncated age groups and aggregated population counts
 }
 }
 \if{html}{\out{<hr>}}
@@ -284,24 +283,20 @@ Numeric vector of valid truncation points
 \subsection{Method \code{mapAgesToReference()}}{
 Map single-year ages to reference age group labels
 
-Converts a character/numeric vector of ages (some possibly \"N+\" labels from
-right truncation) to the reference's age label format so prevalence data can
-be joined to reference weights by (age, gender).
-
-Works generically for any reference type:
-\itemize{
-\item Already-truncated \"N+\" values pass through unchanged
-\item Single-year references (Decennial Census): zero-pad numeric values
-\item Grouped references (ACS, WHO): lookup which group each numeric age falls into
-}
+Converts ages to the exact labels used by the reference population. Numeric
+ages are matched to parsed reference intervals, including single-year labels
+with or without zero padding. Plus-suffixed values are accepted only when
+they match a native open-ended label or the requested right truncation.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values, rightTruncation = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{age_values}}{Character/numeric vector. May contain \"N+\" suffix values or numeric strings.}
+
+\item{\code{rightTruncation}}{Optional numeric threshold used to create a supported \"N+\" label.}
 }
 \if{html}{\out{</div>}}
 }

@@ -78,16 +78,8 @@ japan_census_2020 <- data.frame(
   )
 )
 
-# WHO World Standard 2008
-who_world_standard <- data.frame(
-  age = c("0-4", "5-14", "15-24", "25-34", "35-44", "45-54", "55-64", "65-74", "75-84", "85+"),
-  gender = "Combined",
-  population = c(8860, 8690, 8860, 8920, 8940, 8820, 8270, 7470, 5920, 1860)
-)
-
 # Save all
 usethis::use_data(usa_census_2020, overwrite = TRUE)
 usethis::use_data(japan_census_2020, overwrite = TRUE)
-usethis::use_data(who_world_standard, overwrite = TRUE)
 
 cat("✓ Reference data saved to data/\n")
