@@ -136,6 +136,78 @@ test_that("createCohortPrevalenceAnalysis accepts multiple strata", {
   expect_equal(analysis$strata, c("age", "gender", "race"))
 })
 
+test_that("assembleSql exposes race and ethnicity columns and respects requested strata", {
+  # Minimal stand-in for ExecutionSettings (defined in the companion
+  # ClinicalCharacteristics package, not a dependency here). assembleSql()
+  # only needs getDbms() and tempEmulationSchema to render the year-interval
+  # insert statement.
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  prevalentCohort <- createTargetCohort(1, "Test Cohort")
+  periodOfInterest <- createYearlyRange(2020:2021)
+  prevalenceType <- createPrevalenceType("point_prevalence", lookBackDays = 365)
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = prevalentCohort,
+    periodOfInterest = periodOfInterest,
+    prevalenceType = prevalenceType,
+    strata = c("age", "gender", "race", "ethnicity")
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  # obsPopYear always exposes race/ethnicity from the person table,
+  # regardless of which strata were requested for this analysis.
+  expect_match(sql, "race_concept_id AS race", fixed = TRUE)
+  expect_match(sql, "ethnicity_concept_id AS ethnicity", fixed = TRUE)
+
+  # the requested strata must drive both the pd1 denominator SELECT/GROUP BY...
+  expect_match(
+    sql,
+    "GROUP BY subject_id, span_label, calendar_start_date, calendar_end_date,age, gender, race, ethnicity",
+    fixed = TRUE
+  )
+
+  # ...and the final #prevalence aggregation SELECT/GROUP BY
+  expect_match(sql, "SELECT\n  span_label,age, gender, race, ethnicity", fixed = TRUE)
+  expect_match(sql, "GROUP BY span_label,age, gender, race, ethnicity;", fixed = TRUE)
+})
+
+test_that("assembleSql omits ungrouped strata from the aggregation GROUP BY", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+    strata = "ethnicity"
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  # race/ethnicity columns are always selected upstream in obsPopYear...
+  expect_match(sql, "race_concept_id AS race", fixed = TRUE)
+  expect_match(sql, "ethnicity_concept_id AS ethnicity", fixed = TRUE)
+
+  # ...but only the requested stratum reaches the final aggregation
+  expect_match(sql, "GROUP BY span_label,ethnicity;", fixed = TRUE)
+  expect_no_match(sql, "GROUP BY span_label,ethnicity, race")
+})
+
 # Test createRassenIncidenceAnalysis
 test_that("createRassenIncidenceAnalysis creates valid object with required parameters", {
   targetCohort <- createTargetCohort(1, "Target Cohort")
