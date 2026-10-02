@@ -157,11 +157,6 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         sqlComponents <- c(sqlComponents, denomSql, prevSql)
       }
 
-      if ("demographics" %in% private$.outputTypes) {
-        demographicsSql <- buildDemographicsAggSQL(self$strata)
-        sqlComponents <- c(sqlComponents, demographicsSql)
-      }
-      
       if ("incidence" %in% private$.outputTypes) {
         incDenomSql <- readr::read_file(
           fs::path_package(package = "CohortPrevalence", "sql/incDenom.sql")
@@ -171,6 +166,14 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         incSql <- buildIncidenceAggSQL(strata)
         
         sqlComponents <- c(sqlComponents, incDenomSql, incSql)
+      }
+
+      if ("demographics" %in% private$.outputTypes) {
+        demographicsSql <- buildDemographicsAggSQL(
+          self$strata,
+          private$.outputTypes
+        )
+        sqlComponents <- c(sqlComponents, demographicsSql)
       }
       
       if ("drugs" %in% private$.outputTypes) {

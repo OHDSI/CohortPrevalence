@@ -136,7 +136,7 @@ test_that("createCohortPrevalenceAnalysis accepts multiple strata", {
   expect_equal(analysis$strata, c("age", "gender", "race"))
 })
 
-test_that("demographics output requires prevalence and at least one demographic stratum", {
+test_that("demographics output requires a measure and at least one demographic stratum", {
   commonArgs <- list(
     analysisId = 1,
     prevalentCohort = createTargetCohort(1, "Test Cohort"),
@@ -146,7 +146,7 @@ test_that("demographics output requires prevalence and at least one demographic 
 
   expect_error(
     do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = "demographics", strata = "age"))),
-    "requires 'prevalence'"
+    "requires 'prevalence' and/or 'incidence'"
   )
   expect_error(
     do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = c("prevalence", "demographics")))),
@@ -159,7 +159,13 @@ test_that("demographics output requires prevalence and at least one demographic 
   )
   expect_equal(analysis$outputTypes, c("prevalence", "demographics"))
 
-  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence'")
+  incidenceDemographics <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(commonArgs, list(outputTypes = c("incidence", "demographics"), strata = "gender"))
+  )
+  expect_equal(incidenceDemographics$outputTypes, c("incidence", "demographics"))
+
+  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence' and/or 'incidence'")
   expect_error(analysis$strata <- NULL, "requires at least one demographic stratum")
 })
 
@@ -347,6 +353,35 @@ test_that("assembleSql builds only selected demographic summaries after #allEven
   demographicsPosition <- regexpr("CREATE TEMP TABLE #demographics AS", sql, fixed = TRUE)[[1]]
   expect_lt(allEventsPosition, prevalencePosition)
   expect_lt(prevalencePosition, demographicsPosition)
+
+  incidenceDemographicsAnalysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(baseArgs, list(outputTypes = c("incidence", "demographics")))
+  )
+  incidenceSql <- incidenceDemographicsAnalysis$assembleSql(executionSettings)
+
+  expect_match(incidenceSql, "'incidence' AS measure_type", fixed = TRUE)
+  expect_match(incidenceSql, "FROM #denomInc", fixed = TRUE)
+  expect_match(incidenceSql, "WHERE inc_event = 1", fixed = TRUE)
+  expect_no_match(incidenceSql, "#allEvents")
+  denomIncPosition <- regexpr("CREATE TEMP TABLE #denomInc AS", incidenceSql, fixed = TRUE)[[1]]
+  incidencePosition <- regexpr("CREATE TABLE #incidence AS", incidenceSql, fixed = TRUE)[[1]]
+  incidenceDemographicsPosition <- regexpr(
+    "CREATE TEMP TABLE #demographics AS",
+    incidenceSql,
+    fixed = TRUE
+  )[[1]]
+  expect_lt(denomIncPosition, incidencePosition)
+  expect_lt(incidencePosition, incidenceDemographicsPosition)
+
+  combinedAnalysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(baseArgs, list(outputTypes = c("prevalence", "incidence", "demographics")))
+  )
+  combinedSql <- combinedAnalysis$assembleSql(executionSettings)
+  expect_match(combinedSql, "'prevalence' AS measure_type", fixed = TRUE)
+  expect_match(combinedSql, "'incidence' AS measure_type", fixed = TRUE)
+  expect_match(combinedSql, "UNION ALL", fixed = TRUE)
 })
 
 test_that("demographics SQL works with each PD era template and selected dimensions", {

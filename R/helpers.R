@@ -7,8 +7,11 @@ validatePrevalenceOutputOptions <- function(outputTypes, strata) {
 
   if ("demographics" %in% outputTypes) {
 
-    if (!("prevalence" %in% outputTypes)) {
-      stop("The 'demographics' output type requires 'prevalence'.", call. = FALSE)
+    if (!any(c("prevalence", "incidence") %in% outputTypes)) {
+      stop(
+        "The 'demographics' output type requires 'prevalence' and/or 'incidence'.",
+        call. = FALSE
+      )
     }
 
     if (is.null(strata) || length(strata) == 0) {
@@ -261,22 +264,61 @@ buildPrevalenceAggSQL <- function(strata) {
 }
 
 # Build demographics summary SQL for only the requested strata.
-buildDemographicsAggSQL <- function(strata) {
+buildDemographicsAggSQL <- function(strata, outputTypes) {
   checkmate::assert_subset(
     strata,
     choices = c("age", "gender", "race", "ethnicity"),
     empty.ok = FALSE
   )
+  checkmate::assert_character(outputTypes, min.len = 1, any.missing = FALSE)
+  measureTypes <- outputTypes[outputTypes %in% c("prevalence", "incidence")]
+  checkmate::assert_character(measureTypes, min.len = 1, any.missing = FALSE)
+
+  measureRows <- character()
+
+  if ("prevalence" %in% measureTypes) {
+
+    measureRows <- c(
+      measureRows,
+      "SELECT 'prevalence' AS measure_type, subject_id, span_label{strata}\n",
+      "FROM #allEvents\n",
+      "WHERE case_event = 1"
+    ) |>
+      paste(collapse = "")
+
+  }
+
+  if ("incidence" %in% measureTypes) {
+
+    incidenceRows <- paste0(
+      "SELECT 'incidence' AS measure_type, subject_id, span_label{strata}\n",
+      "FROM #denomInc\n",
+      "WHERE inc_event = 1"
+    )
+
+    if (length(measureRows) == 0) {
+
+      measureRows <- incidenceRows
+
+    } else {
+
+      measureRows <- paste(measureRows, incidenceRows, sep = "\nUNION ALL\n")
+
+    }
+
+  }
+
+  strataColumns <- paste0(", ", strata, collapse = "")
 
   demographicCounts <- vapply(
     strata,
     function(stratum) {
       glue::glue(
-        "SELECT span_label, '{stratum}' AS demographic,\n",
+        "SELECT measure_type, span_label, '{stratum}' AS demographic,\n",
         "  CAST({stratum} AS VARCHAR(255)) AS demographic_value,\n",
         "  COUNT(DISTINCT subject_id) AS case_count\n",
         "FROM case_rows\n",
-        "GROUP BY span_label, {stratum}"
+        "GROUP BY measure_type, span_label, {stratum}"
       )
     },
     character(1)
@@ -287,6 +329,7 @@ buildDemographicsAggSQL <- function(strata) {
     fs::path_package(package = "CohortPrevalence", "sql/demographics.sql")
   )
 
+  caseRows <- glue::glue(measureRows, strata = strataColumns)
   glue::glue(demographicsTemplate)
 }
 

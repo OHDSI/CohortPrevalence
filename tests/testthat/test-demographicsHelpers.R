@@ -1,5 +1,6 @@
 test_that("cleanDemographicsResults returns tidy statistics with labels and metadata", {
   demographicsData <- tibble::tibble(
+    measureType = rep("prevalence", 10),
     spanLabel = rep("2020", 10),
     demographic = c(
       rep("age", 5),
@@ -29,10 +30,11 @@ test_that("cleanDemographicsResults returns tidy statistics with labels and meta
   expect_named(
     results,
     c(
-      "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+      "analysisId", "cohortId", "cohortName", "statType", "measureType", "spanLabel",
       "demographic", "demographicId", "demographicLabel", "stat", "value"
     )
   )
+  expect_equal(unique(results$measureType), "prevalence")
   expect_equal(unique(results$analysisId), 42L)
   expect_equal(unique(results$cohortId), 7L)
   expect_equal(unique(results$cohortName), "Example cohort")
@@ -75,6 +77,7 @@ test_that("cleanDemographicsResults returns tidy statistics with labels and meta
 
 test_that("cleanDemographicsResults summarizes continuous age without configured groups", {
   demographicsData <- tibble::tibble(
+    measureType = rep("prevalence", 3),
     spanLabel = rep("2020", 3),
     demographic = rep("age", 3),
     demographicValue = c("18", "20", NA_character_),
@@ -110,6 +113,7 @@ test_that("cleanDemographicsResults summarizes continuous age without configured
 
 test_that("cleanDemographicsResults retains raw concept IDs and known labels", {
   demographicsData <- tibble::tibble(
+    measureType = rep("prevalence", 4),
     spanLabel = rep("2020", 4),
     demographic = c("race", "race", "race", "ethnicity"),
     demographicValue = c("8516", "8522", "8657", "38003564"),
@@ -135,4 +139,57 @@ test_that("cleanDemographicsResults retains raw concept IDs and known labels", {
   ))
   expect_equal(ethnicityLabel$demographicId, "38003564")
   expect_equal(ethnicityLabel$demographicLabel, "Not Hispanic or Latino")
+})
+
+test_that("cleanDemographicsResults requires an explicit measureType", {
+  demographicsData <- tibble::tibble(
+    spanLabel = "2020",
+    demographic = "gender",
+    demographicValue = "8507",
+    caseCount = 1L,
+    totalCases = 1L,
+    proportion = 1
+  )
+
+  expect_error(
+    cleanDemographicsResults(
+      demographicsData = demographicsData,
+      analysisId = 1L,
+      cohortId = 2L,
+      cohortName = "Example cohort"
+    ),
+    "measureType"
+  )
+})
+
+test_that("age summaries and proportions remain separate by measure", {
+  demographicsData <- tibble::tibble(
+    measureType = rep(c("prevalence", "incidence"), each = 3),
+    spanLabel = rep("2020", 6),
+    demographic = rep("age", 6),
+    demographicValue = rep(c("10", "20", NA_character_), 2),
+    caseCount = c(2L, 1L, 1L, 1L, 3L, 2L),
+    totalCases = c(rep(4L, 3), rep(6L, 3)),
+    proportion = caseCount / totalCases
+  )
+
+  results <- cleanDemographicsResults(
+    demographicsData = demographicsData,
+    analysisId = 1L,
+    cohortId = 2L,
+    cohortName = "Example cohort"
+  )
+
+  allAges <- results[
+    results$demographic == "age" & results$demographicId == "All ages",
+  ]
+  prevalenceRows <- allAges[allAges$measureType == "prevalence", ]
+  incidenceRows <- allAges[allAges$measureType == "incidence", ]
+
+  expect_equal(as.numeric(prevalenceRows$value[prevalenceRows$stat == "caseCount"]), 3)
+  expect_equal(as.numeric(incidenceRows$value[incidenceRows$stat == "caseCount"]), 4)
+  expect_equal(as.numeric(prevalenceRows$value[prevalenceRows$stat == "proportion"]), 0.75)
+  expect_equal(as.numeric(incidenceRows$value[incidenceRows$stat == "proportion"]), 4 / 6)
+  expect_equal(as.numeric(prevalenceRows$value[prevalenceRows$stat == "ageMean"]), 40 / 3)
+  expect_equal(as.numeric(incidenceRows$value[incidenceRows$stat == "ageMean"]), 17.5)
 })
