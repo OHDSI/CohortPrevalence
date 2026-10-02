@@ -537,23 +537,37 @@ test_that("standardization rejects explicitly represented zero-denominator strat
   )
 })
 
-test_that("age bounds are deprecated on the public standardization method", {
+test_that("standardization methods no longer accept age bounds", {
   results <- PrevalenceResults$new(
-    prevalence = make_standardization_test_prevalence()
+    crudePrev = make_standardization_test_prevalence(),
+    crudeInc = make_standardization_test_prevalence()
   )
+  reference <- make_standardization_test_reference()
 
-  expect_warning(
-    results$standardizePrevalence(
-      referencePopulation = make_standardization_test_reference(),
-      ageMin = 18,
-      ageMax = 30
+  expect_error(
+    results$standardizePrevalence(reference, ageMin = 18),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizePrevalence(reference, ageMax = 30),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizeIncidence(reference, ageMin = 18),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizeIncidence(reference, ageMax = 30),
+    "unused argument"
+  )
+  expect_error(
+    CohortPrevalence:::standardize_measure(
+      measureData = make_standardization_test_prevalence(),
+      referencePopulation = reference,
+      ageMin = 18
     ),
-    "ageMin.*ageMax.*deprecated"
+    "unused argument"
   )
-
-  expect_identical(results$standardizationApplied$prevalence$ageMin, 18)
-  expect_identical(results$standardizationApplied$prevalence$ageMax, 30)
-  expect_equal(nrow(results$stdPrev), 4L)
 })
 
 test_that("standardizeIncidence shares measure standardization and stores results independently", {
@@ -684,16 +698,10 @@ test_that("generatePrevalence no longer accepts captureSql", {
   )
 })
 
-test_that("filtered reference helper warns while remaining available", {
+test_that("standardization references no longer expose the deprecated filter helper", {
   reference <- make_standardization_test_reference()
 
-  expect_warning(
-    filtered_reference <- reference$getFilteredReference(ageMin = 18, ageMax = 30),
-    "getFilteredReference.*deprecated"
-  )
-
-  expect_setequal(filtered_reference$age, c("018", "030"))
-  expect_false("weight" %in% names(filtered_reference))
+  expect_null(reference$getFilteredReference)
 })
 
 test_that("adjusted reference applies only right truncation", {

@@ -73,12 +73,12 @@ test_that("CohortPrevalenceExperiment validates demographics prerequisites", {
   )
 })
 
-test_that("CohortPrevalenceExperiment warns when minimumObservationLength is passed to setCommonParameters", {
+test_that("setCommonParameters no longer accepts minimumObservationLength", {
   exp <- CohortPrevalenceExperiment$new("removed common parameter")
 
-  expect_warning(
+  expect_error(
     exp$setCommonParameters(outputTypes = "prevalence", minimumObservationLength = 365L),
-    "removed"
+    "unused argument"
   )
 })
 

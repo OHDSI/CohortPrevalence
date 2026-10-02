@@ -38,8 +38,6 @@ methods for accessing and manipulating reference data.
   # Get total population
   my_ref$getTotalPopulation()
 
-  # Filter to age range
-  filtered <- my_ref$getFilteredReference(ageMin = 18, ageMax = 65)
 }
 
 }
@@ -68,7 +66,6 @@ methods for accessing and manipulating reference data.
 \item \href{#method-StandardizationReference-getAgeValues}{\code{StandardizationReference$getAgeValues()}}
 \item \href{#method-StandardizationReference-getGenderValues}{\code{StandardizationReference$getGenderValues()}}
 \item \href{#method-StandardizationReference-getMetadata}{\code{StandardizationReference$getMetadata()}}
-\item \href{#method-StandardizationReference-getFilteredReference}{\code{StandardizationReference$getFilteredReference()}}
 \item \href{#method-StandardizationReference-getAdjustedReference}{\code{StandardizationReference$getAdjustedReference()}}
 \item \href{#method-StandardizationReference-validateRightTruncation}{\code{StandardizationReference$validateRightTruncation()}}
 \item \href{#method-StandardizationReference-getValidTruncationPoints}{\code{StandardizationReference$getValidTruncationPoints()}}
@@ -188,30 +185,6 @@ Get metadata as list
 
 \subsection{Returns}{
 List with name, country, year, source, reference
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-StandardizationReference-getFilteredReference"></a>}}
-\if{latex}{\out{\hypertarget{method-StandardizationReference-getFilteredReference}{}}}
-\subsection{Method \code{getFilteredReference()}}{
-Filter the reference to demographic bounds.
-This helper is deprecated and will be removed in a future release; use
-\code{getData()} and apply filtering explicitly.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getFilteredReference(ageMin = NULL, ageMax = NULL)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ageMin}}{Minimum age (inclusive)}
-
-\item{\code{ageMax}}{Maximum age (inclusive)}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Filtered data frame with age, gender, and population columns
 }
 }
 \if{html}{\out{<hr>}}

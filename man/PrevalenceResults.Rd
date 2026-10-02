@@ -161,8 +161,6 @@ Apply direct method standardization
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$standardizePrevalence(
   referencePopulation,
-  ageMin = NULL,
-  ageMax = NULL,
   ageRightTruncation = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -171,12 +169,6 @@ Apply direct method standardization
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{referencePopulation}}{StandardizationReference object}
-
-\item{\code{ageMin}}{Deprecated. Numeric minimum age for filtering. Demographic
-eligibility should be applied when defining the analysis.}
-
-\item{\code{ageMax}}{Deprecated. Numeric maximum age for filtering. Demographic
-eligibility should be applied when defining the analysis.}
 
 \item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
 }
@@ -194,8 +186,6 @@ Apply direct method standardization to crude incidence
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$standardizeIncidence(
   referencePopulation,
-  ageMin = NULL,
-  ageMax = NULL,
   ageRightTruncation = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -204,10 +194,6 @@ Apply direct method standardization to crude incidence
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{referencePopulation}}{StandardizationReference object}
-
-\item{\code{ageMin}}{Deprecated. Numeric minimum age for filtering.}
-
-\item{\code{ageMax}}{Deprecated. Numeric maximum age for filtering.}
 
 \item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
 }

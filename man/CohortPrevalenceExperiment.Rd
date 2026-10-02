@@ -205,7 +205,6 @@ Set common parameters for all analyses
   strata = NULL,
   outputTypes = NULL,
   useOnlyFirstObservationPeriod = FALSE,
-  minimumObservationLength = NULL,
   ageGroups = NULL
 )}\if{html}{\out{</div>}}
 }
@@ -218,9 +217,6 @@ Set common parameters for all analyses
 \item{\code{outputTypes}}{Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and/or incidence plus at least one demographic stratum}
 
 \item{\code{useOnlyFirstObservationPeriod}}{Logical. If TRUE, only first observation period per person is used}
-
-\item{\code{minimumObservationLength}}{Removed. Lead-in days are now set per prevalence type via
-\code{createPrevalenceType(leadInDays = )}.}
 
 \item{\code{ageGroups}}{Optional named list of inclusive age ranges, e.g. list("18-22" = c(18, 22), "23+" = c(23, Inf)). Requires "age" in strata; ages outside ranges are retained as "Other/Unmapped". Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum; if omitted, age counts are combined as "All ages".}
 }

@@ -175,13 +175,10 @@ CohortPrevalenceExperiment <- R6::R6Class(
     #' @param outputTypes Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and/or incidence plus at least one demographic stratum
     #' @param ageGroups Optional named list of inclusive age ranges, e.g. list("18-22" = c(18, 22), "23+" = c(23, Inf)). Requires "age" in strata; ages outside ranges are retained as "Other/Unmapped". Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum; if omitted, age counts are combined as "All ages".
     #' @param useOnlyFirstObservationPeriod Logical. If TRUE, only first observation period per person is used
-    #' @param minimumObservationLength Removed. Lead-in days are now set per prevalence type via
-    #'   `createPrevalenceType(leadInDays = )`.
     #' @return Invisibly returns self for method chaining
     setCommonParameters = function(strata = NULL,
                                    outputTypes = NULL,
                                    useOnlyFirstObservationPeriod = FALSE,
-                                   minimumObservationLength = NULL,
                                    ageGroups = NULL) {
       if (!is.null(strata)) {
         checkmate::assert_character(strata, any.missing = FALSE)
@@ -195,12 +192,6 @@ CohortPrevalenceExperiment <- R6::R6Class(
         stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
       }
 
-      if (!is.null(minimumObservationLength)) {
-        cli::cli_warn(c(
-          "{.arg minimumObservationLength} has been removed from {.fn setCommonParameters} and is ignored.",
-          "i" = "Set lead-in days per prevalence type with {.code createPrevalenceType(leadInDays = )}."
-        ))
-      }
       checkmate::assert_logical(useOnlyFirstObservationPeriod, len = 1)
 
       private$.strata <- strata

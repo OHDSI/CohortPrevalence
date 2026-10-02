@@ -249,23 +249,10 @@ PrevalenceResults <- R6::R6Class(
 
     #' @description Apply direct method standardization
     #' @param referencePopulation StandardizationReference object
-    #' @param ageMin Deprecated. Numeric minimum age for filtering. Demographic
-    #'   eligibility should be applied when defining the analysis.
-    #' @param ageMax Deprecated. Numeric maximum age for filtering. Demographic
-    #'   eligibility should be applied when defining the analysis.
     #' @param ageRightTruncation Numeric age threshold for collapsing
     #' @return Invisibly returns self
     standardizePrevalence = function(referencePopulation,
-                                     ageMin = NULL,
-                                     ageMax = NULL,
                                      ageRightTruncation = NULL) {
-
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-        cli::cli_warn(c(
-          "`ageMin` and `ageMax` are deprecated for standardization.",
-          "i" = "Set demographic eligibility on the analysis; these bounds are retained temporarily for compatibility."
-        ))
-      }
 
       if (is.null(private$.crudePrev) || nrow(private$.crudePrev) == 0) {
         cli::cli_abort("No prevalence data to standardize")
@@ -279,8 +266,6 @@ PrevalenceResults <- R6::R6Class(
         measureData = private$.crudePrev,
         referencePopulation = referencePopulation,
         measure = "prevalence",
-        ageMin = ageMin,
-        ageMax = ageMax,
         ageRightTruncation = ageRightTruncation
       )
 
@@ -293,8 +278,6 @@ PrevalenceResults <- R6::R6Class(
       private$.standardizationApplied$prevalence <- list(
         reference = referencePopulation$name,
         reference_year = referencePopulation$year,
-        ageMin = ageMin,
-        ageMax = ageMax,
         rightTruncation = ageRightTruncation,
         appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
       )
@@ -304,23 +287,10 @@ PrevalenceResults <- R6::R6Class(
 
     #' @description Apply direct method standardization to crude incidence
     #' @param referencePopulation StandardizationReference object
-    #' @param ageMin Deprecated. Numeric minimum age for filtering.
-    #' @param ageMax Deprecated. Numeric maximum age for filtering.
     #' @param ageRightTruncation Numeric age threshold for collapsing
     #' @return Invisibly returns self
     standardizeIncidence = function(referencePopulation,
-                                    ageMin = NULL,
-                                    ageMax = NULL,
                                     ageRightTruncation = NULL) {
-
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-
-        cli::cli_warn(c(
-          "`ageMin` and `ageMax` are deprecated for standardization.",
-          "i" = "Set demographic eligibility on the analysis; these bounds are retained temporarily for compatibility."
-        ))
-
-      }
 
       if (is.null(private$.crudeInc) || nrow(private$.crudeInc) == 0) {
         cli::cli_abort("No incidence data to standardize")
@@ -333,8 +303,6 @@ PrevalenceResults <- R6::R6Class(
         measureData = private$.crudeInc,
         referencePopulation = referencePopulation,
         measure = "incidence",
-        ageMin = ageMin,
-        ageMax = ageMax,
         ageRightTruncation = ageRightTruncation
       )
 
@@ -343,8 +311,6 @@ PrevalenceResults <- R6::R6Class(
       private$.standardizationApplied$incidence <- list(
         reference = referencePopulation$name,
         reference_year = referencePopulation$year,
-        ageMin = ageMin,
-        ageMax = ageMax,
         rightTruncation = ageRightTruncation,
         appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
       )
@@ -871,14 +837,6 @@ loadPrevalenceResults <- function(bundlePath) {
 #' @param referencePopulation StandardizationReference object defining
 #'   the standard population for weighting
 #'
-#' @param ageMin Deprecated. Numeric minimum age for filtering. If supplied,
-#'   it is temporarily applied for compatibility; define eligibility on the
-#'   analysis instead.
-#'
-#' @param ageMax Deprecated. Numeric maximum age for filtering. If supplied,
-#'   it is temporarily applied for compatibility; define eligibility on the
-#'   analysis instead.
-#'
 #' @param ageRightTruncation Numeric. Optional age threshold for collapsing
 #'   ages >= threshold into single "threshold+" group. Useful for handling
 #'   database age masking (e.g., Optum: 70+ all collapsed to "70+").
@@ -889,12 +847,11 @@ loadPrevalenceResults <- function(bundlePath) {
 #'
 #' **Step 1**: Validate & apply right truncation to reference population
 #'   - If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
-#'   - Apply truncation to reference; legacy age bounds are deprecated
+#'   - Apply truncation to reference
 #'
-#' **Step 2**: Filter & prepare the requested crude measure
+#' **Step 2**: Prepare the requested crude measure
 #'   - Convert gender concept IDs (8532→Female, 8507→Male)
 #'   - Require extracted age and gender columns and derive analysis-specific support
-#'   - Apply deprecated ageMin/ageMax arguments only when supplied
 #'   - Apply right truncation: ages >= threshold → "threshold+"
 #'
 #' **Step 3**: Map crude ages → reference group labels
@@ -934,8 +891,6 @@ standardize_measure <- function(
     measureData,
     referencePopulation,
     measure = c("prevalence", "incidence"),
-    ageMin = NULL,
-    ageMax = NULL,
     ageRightTruncation = NULL,
     rateMultiplier = 100000) {
 
@@ -1030,21 +985,6 @@ standardize_measure <- function(
       ),
       age = as.numeric(age)
     )
-
-  # Apply legacy age bounds only when supplied; otherwise retain all
-  # analysis-eligible strata already present in measureData.
-  age_is_in_bounds <- rep(TRUE, nrow(prev_clean))
-
-  if (!is.null(ageMin)) {
-    age_is_in_bounds <- age_is_in_bounds & prev_clean$age >= ageMin
-  }
-
-  if (!is.null(ageMax)) {
-    age_is_in_bounds <- age_is_in_bounds & prev_clean$age <= ageMax
-  }
-
-  prev_clean <- prev_clean |>
-    dplyr::filter(age_is_in_bounds)
 
   # Apply right truncation outside the dplyr pipeline.
   if (is.null(ageRightTruncation)) {
@@ -1413,8 +1353,6 @@ standardize_measure <- function(
 #'   # Get total population
 #'   my_ref$getTotalPopulation()
 #'
-#'   # Filter to age range
-#'   filtered <- my_ref$getFilteredReference(ageMin = 18, ageMax = 65)
 #' }
 #'
 #' @export
@@ -1583,43 +1521,6 @@ StandardizationReference <- R6::R6Class(
         source = private$.source,
         reference = private$.reference
       )
-    },
-
-    #' @description Filter the reference to demographic bounds.
-    #' This helper is deprecated and will be removed in a future release; use
-    #' `getData()` and apply filtering explicitly.
-    #'
-    #' @param ageMin Minimum age (inclusive)
-    #' @param ageMax Maximum age (inclusive)
-    #'
-    #' @return Filtered data frame with age, gender, and population columns
-    getFilteredReference = function(ageMin = NULL, ageMax = NULL) {
-
-      cli::cli_warn(c(
-        "`getFilteredReference()` is deprecated and will be removed in a future release.",
-        "i" = "Use `getData()` and apply filtering explicitly."
-      ))
-
-      result <- private$.data
-
-      # Convert ages to numeric for comparison
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-        ages_numeric <- suppressWarnings(as.numeric(gsub("\\+", "", result$age)))
-        age_is_in_bounds <- rep(TRUE, length(ages_numeric))
-
-        if (!is.null(ageMin)) {
-          age_is_in_bounds <- age_is_in_bounds & ages_numeric >= ageMin
-        }
-
-        if (!is.null(ageMax)) {
-          age_is_in_bounds <- age_is_in_bounds & ages_numeric <= ageMax
-        }
-
-        age_is_in_bounds <- age_is_in_bounds | is.na(ages_numeric)
-        result <- dplyr::filter(result, age_is_in_bounds)
-      }
-
-      result
     },
 
     #' @description Apply age truncation and aggregate population counts

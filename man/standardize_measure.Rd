@@ -8,8 +8,6 @@ standardize_measure(
   measureData,
   referencePopulation,
   measure = c("prevalence", "incidence"),
-  ageMin = NULL,
-  ageMax = NULL,
   ageRightTruncation = NULL,
   rateMultiplier = 1e+05
 )
@@ -23,14 +21,6 @@ the standard population for weighting}
 
 \item{measure}{Either "prevalence" or "incidence", used in validation and
 error messages.}
-
-\item{ageMin}{Deprecated. Numeric minimum age for filtering. If supplied,
-it is temporarily applied for compatibility; define eligibility on the
-analysis instead.}
-
-\item{ageMax}{Deprecated. Numeric maximum age for filtering. If supplied,
-it is temporarily applied for compatibility; define eligibility on the
-analysis instead.}
 
 \item{ageRightTruncation}{Numeric. Optional age threshold for collapsing
 ages >= threshold into single "threshold+" group. Useful for handling
@@ -65,14 +55,13 @@ Algorithm (direct method standardization):
 \strong{Step 1}: Validate & apply right truncation to reference population
 \itemize{
 \item If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
-\item Apply truncation to reference; legacy age bounds are deprecated
+\item Apply truncation to reference
 }
 
-\strong{Step 2}: Filter & prepare the requested crude measure
+\strong{Step 2}: Prepare the requested crude measure
 \itemize{
 \item Convert gender concept IDs (8532→Female, 8507→Male)
 \item Require extracted age and gender columns and derive analysis-specific support
-\item Apply deprecated ageMin/ageMax arguments only when supplied
 \item Apply right truncation: ages >= threshold → "threshold+"
 }
 
