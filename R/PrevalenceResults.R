@@ -15,6 +15,7 @@
 #' - `stdPrev`: Data frame with standardized prevalence results (read/write)
 #' - `incidence`: Data frame with incidence results (read/write)
 #' - `drugUsage`: Data frame with drug usage results (read/write)
+#' - `demographics`: Data frame with case demographic summaries (read/write)
 #' - `metaInfo`: Data frame with analysis metadata (read/write)
 #' - `standardizationApplied`: List containing standardization parameters (read-only)
 #'
@@ -40,15 +41,18 @@ PrevalenceResults <- R6::R6Class(
     #' @param drugUsage Data frame with drug usage results
     #' @param metaInfo Data frame with analysis metadata
     #' @param executionId Optional character string for execution tracking (internal use)
+    #' @param demographics Data frame with case demographic summaries
     initialize = function(prevalence = NULL,
                          incidence = NULL,
                          drugUsage = NULL,
                          metaInfo = NULL,
-                         executionId = NULL) {
+                         executionId = NULL,
+                         demographics = NULL) {
       private$.prevalence <- prevalence
       private$.stdPrev <- NULL
       private$.incidence <- incidence
       private$.drugUsage <- drugUsage
+      private$.demographics <- demographics
       private$.metaInfo <- metaInfo
       private$.executionId <- executionId %||% format(Sys.time(), "%Y%m%d_%H%M%S")
       private$.exportDate <- NULL
@@ -104,6 +108,16 @@ PrevalenceResults <- R6::R6Class(
           readr::write_csv(private$.drugUsage, file = drugFile)
           exportedFiles$drugUsage <- list(path = "drug_usage.csv", rows = nrow(private$.drugUsage))
           cli::cli_alert_success("Exported drug usage ({nrow(private$.drugUsage)} rows)")
+        }
+
+        # Export demographics
+        if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
+
+          demographicsFile <- file.path(bundlePath, "demographics.csv")
+          readr::write_csv(private$.demographics, file = demographicsFile)
+          exportedFiles$demographics <- list(path = "demographics.csv", rows = nrow(private$.demographics))
+          cli::cli_alert_success("Exported demographics ({nrow(private$.demographics)} rows)")
+
         }
 
         # Export standardized prevalence if available
@@ -251,6 +265,26 @@ PrevalenceResults <- R6::R6Class(
         }
       }
 
+      if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
+
+        required_cols <- c(
+          "analysisId", "spanLabel", "demographic", "demographicValue",
+          "demographicLabel", "caseCount", "totalCases", "proportion",
+          "ageMean", "ageSd", "ageMin", "ageMedian", "ageMax"
+        )
+        missing <- setdiff(required_cols, colnames(private$.demographics))
+
+        if (length(missing) > 0) {
+
+          cli::cli_abort(c(
+            "Demographics is missing required columns:",
+            stats::setNames(missing, rep("x", length(missing)))
+          ))
+
+        }
+
+      }
+
       # Check metaInfo if present - should match either prevalence or stdPrev
       if (!is.null(private$.metaInfo)) {
         meta_ids <- unique(private$.metaInfo$analysisId)
@@ -259,6 +293,8 @@ PrevalenceResults <- R6::R6Class(
           private$.stdPrev
         } else if (!is.null(private$.prevalence) && nrow(private$.prevalence) > 0) {
           private$.prevalence
+        } else if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
+          private$.demographics
         } else {
           NULL
         }
@@ -298,6 +334,12 @@ PrevalenceResults <- R6::R6Class(
 
       if (!is.null(private$.drugUsage)) {
         cat("Drug Usage: ", nrow(private$.drugUsage), " rows\n", sep = "")
+      }
+
+      if (!is.null(private$.demographics)) {
+
+        cat("Demographics: ", nrow(private$.demographics), " rows\n", sep = "")
+
       }
 
       if (!is.null(private$.metaInfo)) {
@@ -390,6 +432,17 @@ PrevalenceResults <- R6::R6Class(
       }
     },
 
+    #' @field demographics Data frame with case demographic summaries
+    demographics = function(value) {
+      if (missing(value)) {
+        return(private$.demographics)
+      } else {
+
+        private$.demographics <- value
+
+      }
+    },
+
     #' @field metaInfo Data frame with analysis metadata
     metaInfo = function(value) {
       if (missing(value)) {
@@ -423,6 +476,7 @@ PrevalenceResults <- R6::R6Class(
     .stdPrev = NULL,
     .incidence = NULL,
     .drugUsage = NULL,
+    .demographics = NULL,
     .metaInfo = NULL,
     .standardizationApplied = NULL,
     .executionId = NULL,
@@ -481,6 +535,7 @@ loadPrevalenceResults <- function(bundlePath) {
     stdPrev <- NULL
     incidence <- NULL
     drugUsage <- NULL
+    demographics <- NULL
     metaInfo <- NULL
 
     if ("prevalence" %in% names(manifest$files)) {
@@ -513,6 +568,28 @@ loadPrevalenceResults <- function(bundlePath) {
         show_col_types = FALSE
       )
       cli::cli_alert_success("Loaded drug usage ({nrow(drugUsage)} rows)")
+    }
+
+    if ("demographics" %in% names(manifest$files)) {
+
+      demographics <- readr::read_csv(
+        file.path(bundlePath, manifest$files$demographics$path),
+        col_types = readr::cols(
+          .default = readr::col_guess(),
+          spanLabel = readr::col_character(),
+          demographic = readr::col_character(),
+          demographicValue = readr::col_character(),
+          demographicLabel = readr::col_character(),
+          ageMean = readr::col_double(),
+          ageSd = readr::col_double(),
+          ageMin = readr::col_double(),
+          ageMedian = readr::col_double(),
+          ageMax = readr::col_double()
+        ),
+        show_col_types = FALSE
+      )
+      cli::cli_alert_success("Loaded demographics ({nrow(demographics)} rows)")
+
     }
 
     if ("metaInfo" %in% names(manifest$files)) {
@@ -555,7 +632,8 @@ loadPrevalenceResults <- function(bundlePath) {
       incidence = incidence,
       drugUsage = drugUsage,
       metaInfo = metaInfo,
-      executionId = manifest$execution_id
+      executionId = manifest$execution_id,
+      demographics = demographics
     )
 
     # Restore standardized prevalence if present

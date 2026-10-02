@@ -23,6 +23,49 @@ validatePrevalenceOutputOptions <- function(outputTypes, strata) {
   invisible(TRUE)
 }
 
+validateCommonPrevalenceOutputTypes <- function(prevalenceAnalysisList) {
+  checkmate::assert_list(prevalenceAnalysisList, min.len = 1)
+
+  for (analysis in prevalenceAnalysisList) {
+    checkmate::assert_class(analysis, "CohortPrevalenceAnalysis")
+  }
+
+  referenceOutputTypes <- prevalenceAnalysisList[[1]]$outputTypes
+  outputTypesMatch <- vapply(
+    prevalenceAnalysisList,
+    function(analysis) setequal(analysis$outputTypes, referenceOutputTypes),
+    logical(1)
+  )
+
+  if (!all(outputTypesMatch)) {
+
+    stop(
+      "All analyses passed to generatePrevalence() must request the same outputTypes.",
+      call. = FALSE
+    )
+
+  }
+
+  referenceOutputTypes
+}
+
+bindDemographicsResults <- function(demographicsResultsList) {
+  checkmate::assert_list(demographicsResultsList)
+  availableResults <- Filter(Negate(is.null), demographicsResultsList)
+
+  if (length(availableResults) == 0) {
+
+    return(NULL)
+
+  }
+
+  for (result in availableResults) {
+    checkmate::assert_data_frame(result)
+  }
+
+  dplyr::bind_rows(availableResults)
+}
+
 
 validateAgeGroups <- function(ageGroups) {
   if (is.null(ageGroups)) {

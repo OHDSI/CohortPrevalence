@@ -68,7 +68,8 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #'
 #' @details
 #' This function consolidates analysis execution and result collection into a single workflow.
-#' Results include prevalence, incidence, and drug usage data as configured in the analysis objects.
+#' Results include prevalence, incidence, drug usage, and demographics data as configured in the analysis objects.
+#' When multiple analyses are supplied, they must request the same `outputTypes`.
 #' SQL queries are captured with SHA256 checksums for reproducibility verification.
 #'
 #' When running multiple analyses from a `CohortPrevalenceExperiment`, use the experiment's
@@ -89,6 +90,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' - prevalence data frame: Main prevalence estimates
 #' - incidence data frame: Incidence rates if requested
 #' - drugUsage data frame: Drug usage patterns if requested
+#' - demographics data frame: Case demographic counts, proportions, labels, and age summaries if requested
 #' - metaInfo data frame: Analysis metadata and configuration
 #'
 #' ## Query Audit Trail (Level 1)
@@ -110,6 +112,8 @@ generatePrevalence <- function(prevalenceAnalysisList,
   checkmate::assert_list(prevalenceAnalysisList, min.len = 1)
   checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
   checkmate::assert_logical(captureSql, len = 1)
+
+  outputTypes <- validateCommonPrevalenceOutputTypes(prevalenceAnalysisList)
 
   # Establish connection if needed
   tryCatch({
@@ -139,13 +143,16 @@ generatePrevalence <- function(prevalenceAnalysisList,
     col = "cyan"
   )
 
-  # Determine which output types are requested (use first analysis as reference)
-  outputTypes <- prevalenceAnalysisList[[1]]$outputTypes
-
   # Initialize result storage
   prevResultsList <- if ("prevalence" %in% outputTypes) list() else NULL
   incResultsList <- if ("incidence" %in% outputTypes) list() else NULL
   drugResultsList <- if ("drugs" %in% outputTypes) list() else NULL
+  demographicsResultsList <- NULL
+
+  if ("demographics" %in% outputTypes) {
+    demographicsResultsList <- list()
+  }
+
   metaInfoList <- list()
   executedQueries <- list()
   executionErrors <- list()
@@ -220,6 +227,12 @@ generatePrevalence <- function(prevalenceAnalysisList,
         cli::cli_alert_success("Drug usage: {nrow(analysisResults$drugUsage)} rows")
       }
 
+      if ("demographics" %in% outputTypes && !is.null(analysisResults$demographics)) {
+        demographicsResultsList[[i]] <- analysisResults$demographics
+        cli::cli_alert_success("Demographics: {nrow(analysisResults$demographics)} rows")
+
+      }
+
       # Capture metaInfo
       if (!is.null(analysisResults$metaInfo)) {
         metaInfoList[[i]] <- analysisResults$metaInfo
@@ -252,6 +265,16 @@ generatePrevalence <- function(prevalenceAnalysisList,
     cli::cli_alert_success("Combined drug usage: {nrow(combinedResults$drugUsage)} total rows")
   }
 
+  if ("demographics" %in% outputTypes && !is.null(demographicsResultsList)) {
+    combinedResults$demographics <- bindDemographicsResults(demographicsResultsList)
+
+    if (!is.null(combinedResults$demographics)) {
+      cli::cli_alert_success("Combined demographics: {nrow(combinedResults$demographics)} total rows")
+
+    }
+
+  }
+
   if (length(metaInfoList) > 0) {
     metaInfoData <- do.call('rbind', metaInfoList) |>
       dplyr::distinct()
@@ -267,6 +290,7 @@ generatePrevalence <- function(prevalenceAnalysisList,
     prevalence = combinedResults$prevalence,
     incidence = combinedResults$incidence,
     drugUsage = combinedResults$drugUsage,
+    demographics = combinedResults$demographics,
     metaInfo = combinedResults$metaInfo
   )
 

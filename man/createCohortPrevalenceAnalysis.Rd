@@ -45,7 +45,7 @@ by this object via \code{createPrevalenceType(leadInDays = )}.}
 
 \item{drugConceptSets}{Optional list of Capr ConceptSetItems. Required if \code{"drugs"} is in \code{outputTypes}, otherwise ignored.}
 
-\item{ageGroups}{Optional named list of inclusive age ranges, e.g. \code{list("18-22" = c(18, 22), "23+" = c(23, Inf))}. Requires \code{"age"} in \code{strata}. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as \code{"Other/Unmapped"}. If \code{NULL}, age remains single-year.}
+\item{ageGroups}{Optional named list of inclusive age ranges, e.g. \code{list("18-22" = c(18, 22), "23+" = c(23, Inf))}. Requires \code{"age"} in \code{strata}. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as \code{"Other/Unmapped"}. Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum. If \code{NULL}, age counts are combined into \code{"All ages"}; otherwise counts are grouped by the supplied age ranges.}
 }
 \value{
 A \code{CohortPrevalenceAnalysis} R6 object.

@@ -16,6 +16,7 @@ tracking provenance, standardization parameters, and execution metadata.
 \item \code{stdPrev}: Data frame with standardized prevalence results (read/write)
 \item \code{incidence}: Data frame with incidence results (read/write)
 \item \code{drugUsage}: Data frame with drug usage results (read/write)
+\item \code{demographics}: Data frame with case demographic summaries (read/write)
 \item \code{metaInfo}: Data frame with analysis metadata (read/write)
 \item \code{standardizationApplied}: List containing standardization parameters (read-only)
 }
@@ -47,6 +48,8 @@ tracking provenance, standardization parameters, and execution metadata.
 \item{\code{incidence}}{Data frame with incidence results}
 
 \item{\code{drugUsage}}{Data frame with drug usage results}
+
+\item{\code{demographics}}{Data frame with case demographic summaries}
 
 \item{\code{metaInfo}}{Data frame with analysis metadata}
 
@@ -81,7 +84,8 @@ Create new PrevalenceResults object
   incidence = NULL,
   drugUsage = NULL,
   metaInfo = NULL,
-  executionId = NULL
+  executionId = NULL,
+  demographics = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -97,6 +101,8 @@ Create new PrevalenceResults object
 \item{\code{metaInfo}}{Data frame with analysis metadata}
 
 \item{\code{executionId}}{Optional character string for execution tracking (internal use)}
+
+\item{\code{demographics}}{Data frame with case demographic summaries}
 }
 \if{html}{\out{</div>}}
 }

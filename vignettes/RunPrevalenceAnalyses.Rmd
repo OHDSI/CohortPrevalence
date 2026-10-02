@@ -187,8 +187,15 @@ demographicConstraints <- createDemographicConstraints(
   genderIds = c(8507, 8532)
 )
 
-# Set strata options - NULL means no stratification
-strata <- NULL
+# Request demographic summaries by each selected stratum. These are separate
+# distributions (not cross-tabulations such as gender-by-race).
+strata <- c("gender", "race", "ethnicity", "age")
+ageGroups <- list(
+  "0-17" = c(0, 17),
+  "18-44" = c(18, 44),
+  "45-64" = c(45, 64),
+  "65+" = c(65, Inf)
+)
 
 # Set other specifications
 useOnlyFirstObservationPeriod <- FALSE
@@ -204,7 +211,8 @@ prevalenceAnalysisClass <- createCohortPrevalenceAnalysis(
   strata = strata,
   demographicConstraints = demographicConstraints,
   populationCohort = populationCohort,
-  outputTypes = "prevalence"
+  outputTypes = c("prevalence", "demographics"),
+  ageGroups = ageGroups
 )
 
 # Review the assembled settings
@@ -227,7 +235,26 @@ results <- generatePrevalence(
 # Inspect what came back
 results
 results$prevalence
+results$demographics
 ```
+
+The demographics table is in long form: each row represents one value within
+one demographic dimension and span. `caseCount` is the number of cases with
+that value, `totalCases` is the number of cases in the span, and `proportion`
+is `caseCount / totalCases`. For example, gender, race, ethnicity, and age are
+summarized independently; selecting multiple strata does not create
+intersectional groups such as gender-by-race. `demographicValue` retains the
+raw value for gender, race, and ethnicity, while `demographicLabel` provides
+known labels (for example, `8507` is labeled "Male"). Unknown values are
+retained as their raw values, and missing values are labeled "Missing". Age
+values are represented by their configured group labels in both columns.
+
+Age rows are grouped into the inclusive ranges configured in `ageGroups`.
+Ages outside the configured ranges remain in the "Other/Unmapped" group, and
+missing ages remain represented separately. Each age row also carries the
+continuous age summary for its span in `ageMean`, `ageSd`, `ageMin`,
+`ageMedian`, and `ageMax`; these statistics are computed from the underlying
+single-year age counts, regardless of the selected age bands.
 
 
 ## Step 4: Export
