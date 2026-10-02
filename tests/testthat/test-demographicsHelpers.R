@@ -33,6 +33,11 @@ test_that("cleanDemographicsResults adds known labels and analysis metadata", {
   expect_equal(ageResults$caseCount, c(5, 4, 1, 1))
   expect_equal(ageResults$totalCases, rep(11, 4))
   expect_equal(ageResults$proportion, c(5, 4, 1, 1) / 11)
+  expect_equal(ageResults$ageMean, rep(21.1, 4))
+  expect_equal(ageResults$ageMin, rep(17, 4))
+  expect_equal(ageResults$ageMedian, rep(22, 4))
+  expect_equal(ageResults$ageMax, rep(23, 4))
+  expect_equal(ageResults$ageSd, rep(stats::sd(c(18, 18, 22, 22, 22, 23, 23, 23, 23, 17)), 4))
 
   genderResults <- results[results$demographic == "gender", ]
   expect_equal(genderResults$demographicValue, c("8507", "999", NA_character_))
@@ -51,14 +56,14 @@ test_that("cleanDemographicsResults adds known labels and analysis metadata", {
   expect_equal(unique(results$statType), "Demographics")
 })
 
-test_that("cleanDemographicsResults leaves single-year ages intact without age groups", {
+test_that("cleanDemographicsResults summarizes continuous age when age groups are omitted", {
   demographicsData <- tibble::tibble(
-    spanLabel = "2020",
-    demographic = "age",
-    demographicValue = "18",
-    caseCount = 2L,
-    totalCases = 4L,
-    proportion = 0.5
+    spanLabel = rep("2020", 3),
+    demographic = rep("age", 3),
+    demographicValue = c("18", "20", NA_character_),
+    caseCount = c(2L, 1L, 1L),
+    totalCases = rep(4L, 3),
+    proportion = c(0.5, 0.25, 0.25)
   )
 
   results <- cleanDemographicsResults(
@@ -69,10 +74,15 @@ test_that("cleanDemographicsResults leaves single-year ages intact without age g
     databaseId = "Example database"
   )
 
-  expect_equal(results$demographicValue, "18")
-  expect_equal(results$demographicLabel, "18")
-  expect_equal(results$caseCount, 2L)
-  expect_equal(results$proportion, 0.5)
+  expect_equal(results$demographicValue, c("All ages", "Missing"))
+  expect_equal(results$demographicLabel, c("All ages", "Missing"))
+  expect_equal(results$caseCount, c(3, 1))
+  expect_equal(results$proportion, c(0.75, 0.25))
+  expect_equal(results$ageMean, c(18 + 2 / 3, 18 + 2 / 3))
+  expect_equal(results$ageMin, c(18, 18))
+  expect_equal(results$ageMedian, c(18, 18))
+  expect_equal(results$ageMax, c(20, 20))
+  expect_equal(results$ageSd, rep(stats::sd(c(18, 18, 20)), 2))
 })
 
 test_that("cleanDemographicsResults preserves raw values and labels known race and ethnicity IDs", {

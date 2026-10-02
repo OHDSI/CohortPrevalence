@@ -173,7 +173,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
     #' @description Set common parameters for all analyses
     #' @param strata Character vector of strata variables (e.g., c("age", "gender"))
     #' @param outputTypes Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and at least one demographic stratum
-    #' @param ageGroups Optional named list of inclusive age ranges, e.g. list("18-22" = c(18, 22), "23+" = c(23, Inf)). Requires "age" in strata; ages outside ranges are retained as "Other/Unmapped".
+    #' @param ageGroups Optional named list of inclusive age ranges, e.g. list("18-22" = c(18, 22), "23+" = c(23, Inf)). Requires "age" in strata; ages outside ranges are retained as "Other/Unmapped". Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum; if omitted, age counts are combined as "All ages".
     #' @param useOnlyFirstObservationPeriod Logical. If TRUE, only first observation period per person is used
     #' @param minimumObservationLength Removed. Lead-in days are now set per prevalence type via
     #'   `createPrevalenceType(leadInDays = )`.
