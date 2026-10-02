@@ -102,47 +102,6 @@ createCohortPrevalenceAnalysis <- function(analysisId,
   return(analysisDef)
 }
 
-#' Create a `IncidenceAnalysis` object for Rassen Incidence
-#'
-#' Constructs an `IncidenceAnalysis` object with the specified settings.
-#'
-#' @param analysisId Unique integer analysisId to identify the analysis (required).
-#' @param targetCohort A `TargetCohort` object specifying the cohort of interest (required).
-#' @param periodOfInterest A `PeriodOfInterest` object (required).
-#' @param minimumObservationLength: Integer specifying minimum observation length (optional).
-#' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
-#' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
-#' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
-#' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
-#'
-#' @return A `IncidenceAnalysis` R6 object.
-#' @export
-#'
-createRassenIncidenceAnalysis <- function(analysisId,
-                                          targetCohort,
-                                          periodOfInterest,
-                                          minimumObservationLength = 0L,
-                                          useOnlyFirstObservationPeriod = FALSE,
-                                          multiplier = 100000L,
-                                          strata = NULL,
-                                          demographicConstraints = createDemographicConstraints(),
-                                          populationCohort = NULL){
-
-  analysisDef <- IncidenceAnalysis$new(
-    analysisId = analysisId,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest,
-    minimumObservationLength = minimumObservationLength,
-    useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
-    multiplier = multiplier,
-    strata = strata,
-    demographicConstraints = demographicConstraints,
-    populationCohort = populationCohort
-  )
-  return(analysisDef)
-}
-
 
 
 #' Create a target cohort `TargetCohort` object
