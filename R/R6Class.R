@@ -304,6 +304,23 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           )
         resultList$prevalence <- prevResults
       }
+
+      if ("demographics" %in% private$.outputTypes) {
+        demographicsData <- DatabaseConnector::renderTranslateQuerySql(
+          connection = connection,
+          sql = "SELECT * FROM #demographics;",
+          tempEmulationSchema = executionSettings$tempEmulationSchema,
+          snakeCaseToCamelCase = TRUE
+        )
+        resultList$demographics <- cleanDemographicsResults(
+          demographicsData = demographicsData,
+          ageGroups = self$ageGroups,
+          analysisId = self$analysisId,
+          cohortId = self$prevalentCohort$id(),
+          cohortName = self$prevalentCohort$name(),
+          databaseId = executionSettings$cdmSourceName
+        )
+      }
       
       # Collect incidence results  
       if ("incidence" %in% private$.outputTypes) {
