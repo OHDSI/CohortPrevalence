@@ -7,9 +7,10 @@
 createSpan(startDates, endDates)
 }
 \arguments{
-\item{startYears}{A numeric vector of start years of interest.}
+\item{startDates}{A numeric vector of start years or Date values.}
 
-\item{endYears}{A numeric vector of end years of interest.}
+\item{endDates}{A numeric vector of inclusive end years or Date values.
+End dates are stored as exclusive boundaries internally.}
 }
 \value{
 A \code{PeriodOfInterest} R6 object.

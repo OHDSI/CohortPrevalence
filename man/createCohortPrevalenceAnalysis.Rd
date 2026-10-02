@@ -40,7 +40,7 @@ by this object via \code{createPrevalenceType(leadInDays = )}.}
 
 \item{populationCohort}{A \code{PopulationCohort} object specifying the population of interest on which to compute prevalence.}
 
-\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"}, \code{"drugs"}, and/or \code{"demographics"} for simultaneous generation using shared base tables. \code{"demographics"} requires \code{"prevalence"} and at least one demographic stratum.
+\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"}, \code{"drugs"}, and/or \code{"demographics"} for simultaneous generation using shared base tables. \code{"demographics"} requires \code{"prevalence"} and/or \code{"incidence"}, plus at least one demographic stratum.
 \strong{Warning}: The \code{"drugs"} output type is experimental and should be used with caution. Results may be subject to future changes.}
 
 \item{drugConceptSets}{Optional list of Capr ConceptSetItems. Required if \code{"drugs"} is in \code{outputTypes}, otherwise ignored.}
