@@ -50,7 +50,11 @@
 #'   createSpan(start = "2021-01-01", end = "2021-12-31")
 #' ))
 #'
-#' exp$setCommonParameters(strata = c("age", "gender"), outputTypes = "prevalence")
+#' exp$setCommonParameters(
+#'   strata = c("age", "gender"),
+#'   outputTypes = c("prevalence", "demographics"),
+#'   ageGroups = list("18-22" = c(18, 22), "23+" = c(23, Inf))
+#' )
 #'
 #' # View specification
 #' exp$viewDesign()
@@ -168,7 +172,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
     #' @description Set common parameters for all analyses
     #' @param strata Character vector of strata variables (e.g., c("age", "gender"))
-    #' @param outputTypes Character vector of output types (e.g., "prevalence")
+    #' @param outputTypes Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and at least one demographic stratum
+    #' @param ageGroups Optional named list of inclusive age ranges, e.g. list("18-22" = c(18, 22), "23+" = c(23, Inf)). Requires "age" in strata; ages outside ranges are retained as "Other/Unmapped".
     #' @param useOnlyFirstObservationPeriod Logical. If TRUE, only first observation period per person is used
     #' @param minimumObservationLength Removed. Lead-in days are now set per prevalence type via
     #'   `createPrevalenceType(leadInDays = )`.
@@ -176,13 +181,20 @@ CohortPrevalenceExperiment <- R6::R6Class(
     setCommonParameters = function(strata = NULL,
                                    outputTypes = NULL,
                                    useOnlyFirstObservationPeriod = FALSE,
-                                   minimumObservationLength = NULL) {
+                                   minimumObservationLength = NULL,
+                                   ageGroups = NULL) {
       if (!is.null(strata)) {
         checkmate::assert_character(strata, any.missing = FALSE)
       }
       if (!is.null(outputTypes)) {
-        checkmate::assert_character(outputTypes, any.missing = FALSE)
+        validatePrevalenceOutputOptions(outputTypes, strata)
       }
+      validateAgeGroups(ageGroups)
+
+      if (!is.null(ageGroups) && !("age" %in% strata)) {
+        stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
+      }
+
       if (!is.null(minimumObservationLength)) {
         cli::cli_warn(c(
           "{.arg minimumObservationLength} has been removed from {.fn setCommonParameters} and is ignored.",
@@ -193,6 +205,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
       private$.strata <- strata
       private$.outputTypes <- outputTypes
+      private$.ageGroups <- ageGroups
       private$.useOnlyFirstObservationPeriod <- useOnlyFirstObservationPeriod
       invisible(self)
     },
@@ -212,6 +225,18 @@ CohortPrevalenceExperiment <- R6::R6Class(
       if (is.null(private$.periodsOfInterest)) {
         stop("Periods of interest not set. Call addPeriodsOfInterest() first.")
       }
+
+      outputTypes <- private$.outputTypes
+      if (is.null(outputTypes)) {
+        outputTypes <- "prevalence"
+      }
+      validatePrevalenceOutputOptions(outputTypes, private$.strata)
+      validateAgeGroups(private$.ageGroups)
+
+      if (!is.null(private$.ageGroups) && !("age" %in% private$.strata)) {
+        stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
+      }
+
 
       invisible(TRUE)
     },
@@ -340,7 +365,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
             ageMax = row$ageMax,
             genderIds = row$genderIds[[1]]
           ),
-          outputTypes = row$outputTypes[[1]]
+          outputTypes = row$outputTypes[[1]],
+          ageGroups = row$ageGroups[[1]]
         )
       }
 
@@ -363,6 +389,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
     .periodsOfInterest = NULL,
     .strata = NULL,
     .outputTypes = NULL,
+    .ageGroups = NULL,
     .useOnlyFirstObservationPeriod = FALSE,
 
     # Expand periods of interest into flat specification rows
@@ -411,6 +438,11 @@ CohortPrevalenceExperiment <- R6::R6Class(
 
     # Create expanded specification tibble
     .createExpandedSpec = function() {
+      outputTypes <- private$.outputTypes
+      if (is.null(outputTypes)) {
+        outputTypes <- "prevalence"
+      }
+
       # Convert resilience types list to tibble
       prevalence_spec <- tibble::tibble(
         prevalenceType = sapply(private$.prevalenceTypes, function(x) x$prevalenceType),
@@ -439,7 +471,8 @@ CohortPrevalenceExperiment <- R6::R6Class(
         dplyr::mutate(
           analysisId = dplyr::row_number(),
           strata = list(private$.strata),
-          outputTypes = list(private$.outputTypes),
+          outputTypes = list(outputTypes),
+          ageGroups = list(private$.ageGroups),
           useOnlyFirstObservationPeriod = private$.useOnlyFirstObservationPeriod
         ) |>
         dplyr::select(
@@ -449,7 +482,7 @@ CohortPrevalenceExperiment <- R6::R6Class(
           ageMin, ageMax, genderIds,
           poiType, poiLabel, poiStart, poiEnd,
           useOnlyFirstObservationPeriod,
-          strata, outputTypes
+          strata, outputTypes, ageGroups
         )
 
       spec

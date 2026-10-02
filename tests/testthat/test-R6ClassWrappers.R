@@ -136,6 +136,67 @@ test_that("createCohortPrevalenceAnalysis accepts multiple strata", {
   expect_equal(analysis$strata, c("age", "gender", "race"))
 })
 
+test_that("demographics output requires prevalence and at least one demographic stratum", {
+  commonArgs <- list(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365)
+  )
+
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = "demographics", strata = "age"))),
+    "requires 'prevalence'"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = c("prevalence", "demographics")))),
+    "requires at least one demographic stratum"
+  )
+
+  analysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(commonArgs, list(outputTypes = c("prevalence", "demographics"), strata = "gender"))
+  )
+  expect_equal(analysis$outputTypes, c("prevalence", "demographics"))
+
+  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence'")
+  expect_error(analysis$strata <- NULL, "requires at least one demographic stratum")
+})
+
+test_that("ageGroups accepts ordered non-overlapping inclusive ranges", {
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+      strata = "age",
+    outputTypes = c("prevalence", "demographics"),
+    ageGroups = list("18-22" = c(18, 22), "23+" = c(23, Inf))
+  )
+
+  expect_equal(analysis$ageGroups, list("18-22" = c(18, 22), "23+" = c(23, Inf)))
+
+  commonArgs <- list(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365)
+  )
+
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(ageGroups = list("overlap1" = c(18, 25), "overlap2" = c(25, 40))))),
+    "must not overlap"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(ageGroups = list("later" = c(30, 40), "earlier" = c(18, 29))))),
+    "ordered by increasing lower bound"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(strata = "gender", ageGroups = list("18+" = c(18, Inf))))),
+    "only be supplied"
+  )
+})
+
 test_that("assembleSql exposes race and ethnicity columns and respects requested strata", {
   # Minimal stand-in for ExecutionSettings (defined in the companion
   # ClinicalCharacteristics package, not a dependency here). assembleSql()

@@ -57,9 +57,10 @@ createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", 
 #' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `PopulationCohort` object specifying the population of interest on which to compute prevalence.
-#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"` and/or `"drugs"` for simultaneous generation using shared base tables.
+#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"`, `"drugs"`, and/or `"demographics"` for simultaneous generation using shared base tables. `"demographics"` requires `"prevalence"` and at least one demographic stratum.
 #'   **Warning**: The `"drugs"` output type is experimental and should be used with caution. Results may be subject to future changes.
 #' @param drugConceptSets Optional list of Capr ConceptSetItems. Required if `"drugs"` is in `outputTypes`, otherwise ignored.
+#' @param ageGroups Optional named list of inclusive age ranges, e.g. `list("18-22" = c(18, 22), "23+" = c(23, Inf))`. Requires `"age"` in `strata`. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as `"Other/Unmapped"`. If `NULL`, age remains single-year.
 #'
 #' @return A `CohortPrevalenceAnalysis` R6 object.
 #' @export
@@ -75,7 +76,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            demographicConstraints = createDemographicConstraints(),
                                            populationCohort = NULL,
                                            outputTypes = "prevalence",
-                                           drugConceptSets = NULL){
+                                           drugConceptSets = NULL,
+                                           ageGroups = NULL){
   if (is.null(analysisTag)) {
     analysisTag <- glue::glue("Analysis {analysisId} | {prevalentCohort$name()}")
   } else {
@@ -94,7 +96,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
     demographicConstraints = demographicConstraints,
     populationCohort = populationCohort,
     outputTypes = outputTypes,
-    drugConceptSets = drugConceptSets
+    drugConceptSets = drugConceptSets,
+    ageGroups = ageGroups
   )
   return(analysisDef)
 }
