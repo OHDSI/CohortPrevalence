@@ -62,7 +62,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #'
 #' @param prevalenceAnalysisList A `CohortPrevalenceAnalysis` R6 object or list of such objects
 #' @param executionSettings An `executionSettings` R6 object with connection and schema details
-#' @param captureSql Logical. If TRUE (default), capture rendered SQL queries for audit trail
+#' @param captureSql Deprecated. If supplied, warns and temporarily honors the logical SQL-capture setting. SQL capture is disabled by default.
 #'
 #' @return A `PrevalenceResults` R6 object containing all results with full provenance tracking
 #'
@@ -70,7 +70,8 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' This function consolidates analysis execution and result collection into a single workflow.
 #' Results include prevalence, incidence, drug usage, and demographics data as configured in the analysis objects.
 #' When multiple analyses are supplied, they must request the same `outputTypes`.
-#' SQL queries are captured with SHA256 checksums for reproducibility verification.
+#' SQL query capture is disabled by default. The deprecated `captureSql` argument can
+#' temporarily enable it for reproducibility auditing.
 #'
 #' When running multiple analyses from a `CohortPrevalenceExperiment`, use the experiment's
 #' `define()` method to obtain the analysis list, then pass it to this function:
@@ -94,14 +95,29 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' - metaInfo data frame: Analysis metadata and configuration
 #'
 #' ## Query Audit Trail (Level 1)
-#' Each executed query is captured and stored with SHA256 checksum in the PrevalenceResults
-#' object. Access via `results$show_query(analysisId)` for inspection.
+#' When SQL capture is enabled through the deprecated `captureSql` argument, executed
+#' queries are stored with SHA256 checksums in the PrevalenceResults object. Access
+#' captured SQL via `results$show_query(analysisId)`.
 #'
 #' @export
 #'
 generatePrevalence <- function(prevalenceAnalysisList,
                                executionSettings,
-                               captureSql = TRUE) {
+                               captureSql = NULL) {
+
+  if (!missing(captureSql)) {
+
+    cli::cli_warn(
+      "`captureSql` is deprecated and will be removed in a future release."
+    )
+
+  }
+
+  if (is.null(captureSql)) {
+
+    captureSql <- FALSE
+
+  }
 
   # Normalize input - handle single analysis or list
   if (!is.list(prevalenceAnalysisList)) {

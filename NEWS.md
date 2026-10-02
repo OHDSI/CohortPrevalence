@@ -9,6 +9,7 @@ CohortPrevalence v1.3.0
 ## Standardization
 
 - Add shared direct-method standardization for crude prevalence and incidence results, with separate crude and standardized result slots.
+- Allow result bundles to omit crude CSVs after standardization with `export(includeCrude = FALSE)`; deprecate SQL capture and disable it by default in `generatePrevalence()`.
 - Fix #31: calculate matched reference weights per analysis and reuse them across spans; fail on missing strata rather than silently dropping or renormalizing them.
 - Reference objects store population counts, not global weights; validate and map age bands against their actual labels. Deprecate `ageMin`/`ageMax` standardization arguments.
 - Remove the sex-combined WHO reference and reject unsupported gender IDs. Validate ACS age-sex coverage, estimates, and totals.

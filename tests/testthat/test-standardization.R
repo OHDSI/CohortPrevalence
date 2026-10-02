@@ -619,6 +619,71 @@ test_that("crude and standardized measure slots round-trip through result bundle
   expect_equal(names(loaded$standardizationApplied), c("prevalence", "incidence"))
 })
 
+test_that("standardized-only export omits crude files and preserves in-memory results", {
+  outputFolder <- tempfile("standardized-only-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  crude_data <- make_standardization_test_prevalence()
+  crude_data$spanLabel <- as.integer(as.character(crude_data$spanLabel))
+  standardized_data <- CohortPrevalence:::standardize_measure(
+    measureData = crude_data,
+    referencePopulation = make_standardization_test_reference()
+  )
+  results <- PrevalenceResults$new(
+    crudePrev = crude_data,
+    stdPrev = standardized_data,
+    crudeInc = crude_data,
+    stdInc = CohortPrevalence:::standardize_measure(
+      measureData = crude_data,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "incidence"
+    )
+  )
+
+  results$export(outputFolder, bundleName = "standardized-only", includeCrude = FALSE)
+
+  bundlePath <- file.path(outputFolder, "standardized-only")
+  expect_false(file.exists(file.path(bundlePath, "prevalence.csv")))
+  expect_false(file.exists(file.path(bundlePath, "incidence.csv")))
+  expect_true(file.exists(file.path(bundlePath, "standardized_prevalence.csv")))
+  expect_true(file.exists(file.path(bundlePath, "standardized_incidence.csv")))
+  expect_equal(results$crudePrev, crude_data)
+  expect_equal(results$crudeInc, crude_data)
+
+  loaded <- loadPrevalenceResults(bundlePath)
+  expect_null(loaded$crudePrev)
+  expect_null(loaded$crudeInc)
+  expect_equal(nrow(loaded$stdPrev), nrow(standardized_data))
+  expect_equal(nrow(loaded$stdInc), nrow(standardized_data))
+})
+
+test_that("standardized-only export rejects crude results without standardized counterparts", {
+  outputFolder <- tempfile("unstandardized-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  results <- PrevalenceResults$new(
+    crudePrev = make_standardization_test_prevalence()
+  )
+
+  expect_error(
+    results$export(outputFolder, bundleName = "invalid", includeCrude = FALSE),
+    "standardized results for: prevalence"
+  )
+  expect_false(dir.exists(file.path(outputFolder, "invalid")))
+})
+
+test_that("captureSql warns when supplied and defaults to disabled", {
+  expect_warning(
+    expect_error(generatePrevalence(NULL, NULL, captureSql = FALSE)),
+    "captureSql.*deprecated"
+  )
+  expect_null(
+    formals(CohortPrevalence::generatePrevalence)[["captureSql"]]
+  )
+})
+
 test_that("filtered reference helper warns while remaining available", {
   reference <- make_standardization_test_reference()
 

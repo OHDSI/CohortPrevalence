@@ -99,13 +99,41 @@ PrevalenceResults <- R6::R6Class(
     #' @description Export results to directory bundle with manifest
     #' @param outputFolder Character path where bundle directory will be created
     #' @param bundleName Optional name for the bundle directory. Default: auto-generated timestamp
+    #' @param includeCrude Logical. Include crude prevalence/incidence CSVs. Set to `FALSE` after standardizing to omit them; errors if a non-empty crude result has no standardized counterpart.
     #' @return Invisibly returns self for chaining
-    export = function(outputFolder, bundleName = NULL) {
+    export = function(outputFolder, bundleName = NULL, includeCrude = TRUE) {
       if (is.null(outputFolder)) {
         outputFolder <- here::here()
       }
 
       checkmate::assert_directory_exists(outputFolder)
+      checkmate::assert_logical(includeCrude, len = 1, any.missing = FALSE)
+
+      if (!includeCrude) {
+
+        unstandardizedMeasures <- character()
+
+        if (!is.null(private$.crudePrev) &&
+            nrow(private$.crudePrev) > 0 &&
+            (is.null(private$.stdPrev) || nrow(private$.stdPrev) == 0)) {
+          unstandardizedMeasures <- c(unstandardizedMeasures, "prevalence")
+        }
+
+        if (!is.null(private$.crudeInc) &&
+            nrow(private$.crudeInc) > 0 &&
+            (is.null(private$.stdInc) || nrow(private$.stdInc) == 0)) {
+          unstandardizedMeasures <- c(unstandardizedMeasures, "incidence")
+        }
+
+        if (length(unstandardizedMeasures) > 0) {
+          cli::cli_abort(paste0(
+            "Cannot omit crude results without standardized results for: ",
+            paste(unstandardizedMeasures, collapse = ", "),
+            "."
+          ))
+        }
+
+      }
 
       # Create bundle directory name
       if (is.null(bundleName)) {
@@ -123,7 +151,7 @@ PrevalenceResults <- R6::R6Class(
 
       tryCatch({
         # Export prevalence
-        if (!is.null(private$.crudePrev) && nrow(private$.crudePrev) > 0) {
+        if (includeCrude && !is.null(private$.crudePrev) && nrow(private$.crudePrev) > 0) {
           prevFile <- file.path(bundlePath, "prevalence.csv")
           readr::write_csv(private$.crudePrev, file = prevFile)
           exportedFiles$prevalence <- list(path = "prevalence.csv", rows = nrow(private$.crudePrev))
@@ -131,7 +159,7 @@ PrevalenceResults <- R6::R6Class(
         }
 
         # Export incidence
-        if (!is.null(private$.crudeInc) && nrow(private$.crudeInc) > 0) {
+        if (includeCrude && !is.null(private$.crudeInc) && nrow(private$.crudeInc) > 0) {
           incFile <- file.path(bundlePath, "incidence.csv")
           readr::write_csv(private$.crudeInc, file = incFile)
           exportedFiles$incidence <- list(path = "incidence.csv", rows = nrow(private$.crudeInc))
