@@ -31,8 +31,8 @@ observation_periods AS (
     {strata}
   FROM #obsPopYear
 ),
-/* Clip each observation window to the POI and observation dates; censor at the
-   day before the incident so the event date itself contributes no risk time. */
+/* Clip each observation window to half-open POI and observation boundaries;
+  use the incident date as the exclusive cutoff so its day adds no risk time. */
 risk_intervals AS (
   SELECT
     observation_periods.subject_id,
@@ -48,9 +48,9 @@ risk_intervals AS (
         ),
         LEAST(
           observation_periods.calendar_end_date,
-          observation_periods.observation_period_end_date,
+          DATEADD(day, 1, observation_periods.observation_period_end_date),
           COALESCE(
-            DATEADD(day, -1, event_status.incident_date),
+            event_status.incident_date,
             observation_periods.calendar_end_date
           )
         )

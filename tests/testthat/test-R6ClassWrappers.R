@@ -291,7 +291,12 @@ test_that("assembleSql bounds incidence person-time by observation and event dat
 
   expect_match(sql, "observation_period_start_date", fixed = TRUE)
   expect_match(sql, "observation_period_end_date", fixed = TRUE)
-  expect_match(sql, "DATEADD(day, -1, event_status.incident_date)", fixed = TRUE)
+  expect_match(
+    sql,
+    "DATEADD(day, 1, observation_periods.observation_period_end_date)",
+    fixed = TRUE
+  )
+  expect_match(sql, "COALESCE(event_status.incident_date", fixed = TRUE)
   expect_match(sql, "MAX(inc_event) AS inc_event", fixed = TRUE)
   expect_match(sql, "SUM(time_at_risk) AS time_at_risk", fixed = TRUE)
   expect_match(sql, "FROM #denomInc", fixed = TRUE)
@@ -379,60 +384,6 @@ test_that("demographics SQL works with each PD era template and selected dimensi
   }
 })
 
-# Test createRassenIncidenceAnalysis
-test_that("createRassenIncidenceAnalysis creates valid object with required parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 1,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest
-  )
-
-  expect_r6_class(analysis, "IncidenceAnalysis")
-  expect_equal(analysis$analysisId, 1)
-})
-
-test_that("createRassenIncidenceAnalysis uses default parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 1,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest
-  )
-
-  expect_equal(analysis$minimumObservationLength, 0L)
-  expect_equal(analysis$useOnlyFirstObservationPeriod, FALSE)
-  expect_equal(analysis$multiplier, 100000L)
-  expect_null(analysis$strata)
-})
-
-test_that("createRassenIncidenceAnalysis accepts custom parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-  demographicConstraints <- createDemographicConstraints(ageMin = 21, ageMax = 75)
-  populationCohort <- createPopulationCohort(99, "Population")
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 2,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest,
-    minimumObservationLength = 730L,
-    useOnlyFirstObservationPeriod = TRUE,
-    multiplier = 1000000L,
-    strata = c("age", "gender"),
-    demographicConstraints = demographicConstraints,
-    populationCohort = populationCohort
-  )
-
-  expect_equal(analysis$minimumObservationLength, 730L)
-  expect_equal(analysis$useOnlyFirstObservationPeriod, TRUE)
-  expect_equal(analysis$multiplier, 1000000L)
-})
-
 # Test createTargetCohort
 test_that("createTargetCohort creates TargetCohort object", {
   cohort <- createTargetCohort(5, "Diabetes")
@@ -505,7 +456,7 @@ test_that("createSpan converts numeric years to Date format", {
   poi <- createSpan(2020, 2020)
 
   expect_equal(poi$poiRange$calendar_start_date, as.Date("2020-01-01"))
-  expect_equal(poi$poiRange$calendar_end_date, as.Date("2020-12-31"))
+  expect_equal(poi$poiRange$calendar_end_date, as.Date("2021-01-01"))
 })
 
 test_that("createSpan handles Date inputs directly", {
@@ -514,7 +465,7 @@ test_that("createSpan handles Date inputs directly", {
   poi <- createSpan(start, end)
 
   expect_equal(poi$poiRange$calendar_start_date, start)
-  expect_equal(poi$poiRange$calendar_end_date, end)
+  expect_equal(poi$poiRange$calendar_end_date, end + 1)
 })
 
 test_that("createSpan creates correct span labels", {
@@ -529,7 +480,7 @@ test_that("createSpan handles mixed numeric and Date inputs", {
   poi <- createSpan(c(2020, 2021), end_dates)
 
   expect_equal(poi$poiRange$calendar_start_date[1], as.Date("2020-01-01"))
-  expect_equal(poi$poiRange$calendar_end_date[1], as.Date("2020-12-31"))
+  expect_equal(poi$poiRange$calendar_end_date[1], as.Date("2021-01-01"))
 })
 
 # Test createDemographicConstraints

@@ -162,22 +162,31 @@ createYearlyRange <- function(range) {
 #'
 #' Constructs an `PeriodOfInterest` object for span prevalence analyses.
 #'
-#' @param startYears A numeric vector of start years of interest.
-#' @param endYears A numeric vector of end years of interest.
+#' @param startDates A numeric vector of start years or Date values.
+#' @param endDates A numeric vector of inclusive end years or Date values.
+#'   End dates are stored as exclusive boundaries internally.
 #' @return A `PeriodOfInterest` R6 object.
 #' @export
 #'
 createSpan <- function(startDates, endDates) {
   spanLabel <- paste(startDates, "-", endDates)
 
-  if(is.numeric(startDates)){
-    startDates <- paste0(startDates,"-01-01") |>
+  if (is.numeric(startDates)) {
+
+    startDates <- paste0(startDates, "-01-01") |>
       as.Date()
+
   }
 
-  if(is.numeric(endDates)){
-    endDates <- paste0(endDates,"-12-31") |>
+  if (is.numeric(endDates)) {
+
+    endDates <- paste0(endDates + 1, "-01-01") |>
       as.Date()
+
+  } else if (inherits(endDates, "Date")) {
+
+    endDates <- endDates + 1
+
   }
 
   range <- data.frame(calendar_start_date = startDates,
