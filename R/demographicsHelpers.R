@@ -43,13 +43,156 @@ summarizeWeightedAge <- function(ages, caseCounts) {
   )
 }
 
+formatDemographicsResults <- function(demographics) {
+  resultColumns <- c(
+    "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+    "demographic", "demographicId", "demographicLabel", "stat", "value"
+  )
+  demographics <- as.data.frame(demographics)
+  checkmate::assert_names(
+    names(demographics),
+    must.include = c(
+      "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+      "demographic", "demographicValue", "demographicLabel", "caseCount",
+      "totalCases", "proportion"
+    )
+  )
+
+  demographics$demographicId <- as.character(demographics$demographicValue)
+  missingIds <- is.na(demographics$demographicId)
+  demographics$demographicId[missingIds] <- "Missing"
+
+  metadataColumns <- c(
+    "analysisId", "cohortId", "cohortName", "statType", "spanLabel", "demographic"
+  )
+
+  makeStatRows <- function(data, statName, statValue, id = data$demographicId) {
+    rows <- data[metadataColumns]
+    rows$demographicId <- id
+    rows$demographicLabel <- data$demographicLabel
+    rows$stat <- statName
+    rows$value <- as.character(statValue)
+    rows[resultColumns]
+  }
+
+  statRows <- list()
+  for (statName in c("caseCount", "totalCases", "proportion")) {
+
+    if (statName %in% names(demographics)) {
+
+      statRows[[length(statRows) + 1L]] <- makeStatRows(
+        demographics,
+        statName,
+        demographics[[statName]]
+      )
+
+    }
+
+  }
+
+  ageRows <- demographics[demographics$demographic == "age", , drop = FALSE]
+  ageStatColumns <- c(
+    ageMean = "ageMean",
+    ageStd = "ageSd",
+    ageMin = "ageMin",
+    ageMedian = "ageMedian",
+    ageMax = "ageMax"
+  )
+
+  if (nrow(ageRows) > 0) {
+
+    ageRows <- ageRows[
+      !duplicated(ageRows[c("analysisId", "cohortId", "cohortName", "spanLabel")]),
+      ,
+      drop = FALSE
+    ]
+    for (statName in names(ageStatColumns)) {
+      sourceColumn <- ageStatColumns[[statName]]
+
+      if (sourceColumn %in% names(ageRows)) {
+
+        statRows[[length(statRows) + 1L]] <- makeStatRows(
+          ageRows,
+          statName,
+          ageRows[[sourceColumn]],
+          id = rep("All ages", nrow(ageRows))
+        )
+        statRows[[length(statRows)]]$demographicLabel <- rep("All ages", nrow(ageRows))
+        statRows[[length(statRows)]] <- statRows[[length(statRows)]][resultColumns]
+
+      }
+
+    }
+
+  }
+
+  if (length(statRows) == 0) {
+
+    return(data.frame(
+      analysisId = demographics$analysisId[0],
+      cohortId = demographics$cohortId[0],
+      cohortName = demographics$cohortName[0],
+      statType = demographics$statType[0],
+      spanLabel = demographics$spanLabel[0],
+      demographic = demographics$demographic[0],
+      demographicId = character(),
+      demographicLabel = character(),
+      stat = character(),
+      value = character(),
+      stringsAsFactors = FALSE
+    ))
+
+  }
+
+  results <- dplyr::bind_rows(statRows)
+  results <- results[resultColumns]
+  results <- results[order(
+    results$spanLabel,
+    results$demographic,
+    results$demographicId,
+    results$stat
+  ), , drop = FALSE]
+  rownames(results) <- NULL
+  results
+}
+
+normalizeDemographicsResults <- function(demographics) {
+  if (is.null(demographics)) {
+
+    return(NULL)
+
+  }
+
+  checkmate::assert_data_frame(demographics)
+  resultColumns <- c(
+    "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+    "demographic", "demographicId", "demographicLabel", "stat", "value"
+  )
+
+  if (all(resultColumns %in% names(demographics))) {
+
+    demographics <- as.data.frame(demographics)[resultColumns]
+    demographics$value <- as.character(demographics$value)
+    return(demographics)
+
+  }
+
+  demographics <- as.data.frame(demographics)
+  if ("value" %in% names(demographics)) {
+
+    demographics$value <- as.character(demographics$value)
+
+  }
+
+  demographics
+}
+
 # Clean and annotate the demographics summary returned by SQL.
 cleanDemographicsResults <- function(demographicsData,
                                      ageGroups = NULL,
                                      analysisId,
                                      cohortId,
-                                     cohortName,
-                                     databaseId) {
+                                     cohortName) {
   checkmate::assert_data_frame(demographicsData)
   checkmate::assert_names(
     names(demographicsData),
@@ -176,11 +319,10 @@ cleanDemographicsResults <- function(demographicsData,
       analysisId = analysisId,
       cohortId = cohortId,
       cohortName = cohortName,
-      databaseId = databaseId,
       statType = "Demographics",
       .before = 1
     ) |>
     dplyr::arrange(.data$spanLabel, .data$demographic, .data$demographicValue)
 
-  results
+  formatDemographicsResults(results)
 }

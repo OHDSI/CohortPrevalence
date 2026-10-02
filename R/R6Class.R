@@ -317,8 +317,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           ageGroups = self$ageGroups,
           analysisId = self$analysisId,
           cohortId = self$prevalentCohort$id(),
-          cohortName = self$prevalentCohort$name(),
-          databaseId = executionSettings$cdmSourceName
+          cohortName = self$prevalentCohort$name()
         )
       }
       

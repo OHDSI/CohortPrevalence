@@ -238,23 +238,39 @@ results$prevalence
 results$demographics
 ```
 
-The demographics table is in long form: each row represents one value within
-one demographic dimension and span. `caseCount` is the number of cases with
-that value, `totalCases` is the number of cases in the span, and `proportion`
-is `caseCount / totalCases`. For example, gender, race, ethnicity, and age are
-summarized independently; selecting multiple strata does not create
-intersectional groups such as gender-by-race. `demographicValue` retains the
-raw value for gender, race, and ethnicity, while `demographicLabel` provides
-known labels (for example, `8507` is labeled "Male"). Unknown values are
-retained as their raw values, and missing values are labeled "Missing". Age
-values are represented by their configured group labels in both columns.
+The demographics table uses a tidy `stat` / `value` layout. Each row contains
+one statistic for a demographic value and span, with columns
+`analysisId`, `cohortId`, `cohortName`, `statType`, `spanLabel`, `demographic`,
+`demographicId`, `demographicLabel`, `stat`, and `value`. For example, filter `stat` to
+`"caseCount"` to see counts, or to `"proportion"` to see the share of cases.
+The `value` column is character so it can contain both numeric statistics and
+readable labels; convert it to numeric when analyzing a numeric `stat`.
+
+Gender, race, ethnicity, and age are summarized independently; selecting
+multiple strata does not create intersectional groups such as gender-by-race.
+For gender, race, and ethnicity, `demographicId` retains the raw value and a
+`demographicLabel` gives the readable label (for example, ID `8507` is labeled
+"Male"). Unknown IDs are retained as their raw values. Missing values use the
+ID and label "Missing". The label column is repeated on each statistic row for
+that demographic category.
 
 Age rows are grouped into the inclusive ranges configured in `ageGroups`.
 Ages outside the configured ranges remain in the "Other/Unmapped" group, and
-missing ages remain represented separately. Each age row also carries the
-continuous age summary for its span in `ageMean`, `ageSd`, `ageMin`,
-`ageMedian`, and `ageMax`; these statistics are computed from the underlying
-single-year age counts, regardless of the selected age bands.
+missing ages remain represented separately. Counts and proportions are
+reported for each age group. The span-level age statistics are emitted as
+separate rows with `demographicId = "All ages"` and `stat` values `"ageMean"`,
+`"ageStd"`, `"ageMin"`, `"ageMedian"`, and `"ageMax"`; they are computed from
+the underlying single-year age counts, regardless of the selected age bands.
+
+For example, select the gender count and label rows with:
+
+```{r}
+genderSummary <- results$demographics |>
+  dplyr::filter(
+    demographic == "gender",
+    stat == "caseCount"
+  )
+```
 
 
 ## Step 4: Export

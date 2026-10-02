@@ -90,7 +90,7 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' - prevalence data frame: Main prevalence estimates
 #' - incidence data frame: Incidence rates if requested
 #' - drugUsage data frame: Drug usage patterns if requested
-#' - demographics data frame: Case demographic counts, proportions, labels, and age summaries if requested
+#' - demographics data frame: Tidy demographic statistics in `stat` / `value` rows if requested
 #' - metaInfo data frame: Analysis metadata and configuration
 #'
 #' ## Query Audit Trail (Level 1)

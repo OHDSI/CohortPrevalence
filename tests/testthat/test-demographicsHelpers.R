@@ -1,4 +1,4 @@
-test_that("cleanDemographicsResults adds known labels and analysis metadata", {
+test_that("cleanDemographicsResults returns tidy statistics with labels and metadata", {
   demographicsData <- tibble::tibble(
     spanLabel = rep("2020", 10),
     demographic = c(
@@ -23,40 +23,57 @@ test_that("cleanDemographicsResults adds known labels and analysis metadata", {
     ageGroups = list("18-22" = c(18, 22), "23+" = c(23, Inf)),
     analysisId = 42L,
     cohortId = 7L,
-    cohortName = "Example cohort",
-    databaseId = "Example database"
+    cohortName = "Example cohort"
   )
 
-  ageResults <- results[results$demographic == "age", ]
-  expect_equal(ageResults$demographicValue, c("18-22", "23+", "Missing", "Other/Unmapped"))
-  expect_equal(ageResults$demographicLabel, ageResults$demographicValue)
-  expect_equal(ageResults$caseCount, c(5, 4, 1, 1))
-  expect_equal(ageResults$totalCases, rep(11, 4))
-  expect_equal(ageResults$proportion, c(5, 4, 1, 1) / 11)
-  expect_equal(ageResults$ageMean, rep(21.1, 4))
-  expect_equal(ageResults$ageMin, rep(17, 4))
-  expect_equal(ageResults$ageMedian, rep(22, 4))
-  expect_equal(ageResults$ageMax, rep(23, 4))
-  expect_equal(ageResults$ageSd, rep(stats::sd(c(18, 18, 22, 22, 22, 23, 23, 23, 23, 17)), 4))
-
-  genderResults <- results[results$demographic == "gender", ]
-  expect_equal(genderResults$demographicValue, c("8507", "999", NA_character_))
-  expect_equal(genderResults$demographicLabel, c("Male", "999", "Missing"))
-  expect_equal(genderResults$demographicValue[genderResults$demographicLabel == "Male"], "8507")
-
-  raceResult <- results[results$demographic == "race", ]
-  ethnicityResult <- results[results$demographic == "ethnicity", ]
-  expect_equal(raceResult$demographicLabel, "White")
-  expect_equal(ethnicityResult$demographicLabel, "Hispanic or Latino")
-
+  expect_named(
+    results,
+    c(
+      "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+      "demographic", "demographicId", "demographicLabel", "stat", "value"
+    )
+  )
   expect_equal(unique(results$analysisId), 42L)
   expect_equal(unique(results$cohortId), 7L)
   expect_equal(unique(results$cohortName), "Example cohort")
-  expect_equal(unique(results$databaseId), "Example database")
   expect_equal(unique(results$statType), "Demographics")
+
+  get_value <- function(demographic, demographicId, stat) {
+    results$value[
+      results$demographic == demographic &
+        results$demographicId == demographicId &
+        results$stat == stat
+    ]
+  }
+
+  expect_equal(as.numeric(get_value("age", "18-22", "caseCount")), 5)
+  expect_equal(as.numeric(get_value("age", "23+", "caseCount")), 4)
+  expect_equal(as.numeric(get_value("age", "Other/Unmapped", "caseCount")), 1)
+  expect_equal(as.numeric(get_value("age", "Missing", "caseCount")), 1)
+  expect_equal(as.numeric(get_value("age", "18-22", "proportion")), 5 / 11)
+  expect_equal(as.numeric(get_value("age", "All ages", "ageMean")), 21.1)
+  expect_equal(as.numeric(get_value("age", "All ages", "ageMin")), 17)
+  expect_equal(as.numeric(get_value("age", "All ages", "ageMedian")), 22)
+  expect_equal(as.numeric(get_value("age", "All ages", "ageMax")), 23)
+  expect_equal(
+    as.numeric(get_value("age", "All ages", "ageStd")),
+    stats::sd(c(18, 18, 22, 22, 22, 23, 23, 23, 23, 17))
+  )
+
+  get_label <- function(demographic, demographicId) {
+    unique(results$demographicLabel[
+      results$demographic == demographic & results$demographicId == demographicId
+    ])
+  }
+
+  expect_equal(get_label("gender", "8507"), "Male")
+  expect_equal(get_label("gender", "999"), "999")
+  expect_equal(get_label("gender", "Missing"), "Missing")
+  expect_equal(get_label("race", "8527"), "White")
+  expect_equal(get_label("ethnicity", "38003563"), "Hispanic or Latino")
 })
 
-test_that("cleanDemographicsResults summarizes continuous age when age groups are omitted", {
+test_that("cleanDemographicsResults summarizes continuous age without configured groups", {
   demographicsData <- tibble::tibble(
     spanLabel = rep("2020", 3),
     demographic = rep("age", 3),
@@ -70,22 +87,28 @@ test_that("cleanDemographicsResults summarizes continuous age when age groups ar
     demographicsData = demographicsData,
     analysisId = 1L,
     cohortId = 2L,
-    cohortName = "Example cohort",
-    databaseId = "Example database"
+    cohortName = "Example cohort"
   )
 
-  expect_equal(results$demographicValue, c("All ages", "Missing"))
-  expect_equal(results$demographicLabel, c("All ages", "Missing"))
-  expect_equal(results$caseCount, c(3, 1))
-  expect_equal(results$proportion, c(0.75, 0.25))
-  expect_equal(results$ageMean, c(18 + 2 / 3, 18 + 2 / 3))
-  expect_equal(results$ageMin, c(18, 18))
-  expect_equal(results$ageMedian, c(18, 18))
-  expect_equal(results$ageMax, c(20, 20))
-  expect_equal(results$ageSd, rep(stats::sd(c(18, 18, 20)), 2))
+  allAges <- results[
+    results$demographic == "age" & results$demographicId == "All ages",
+  ]
+  get_value <- function(stat) allAges$value[allAges$stat == stat]
+
+  expect_equal(as.numeric(get_value("caseCount")), 3)
+  expect_equal(as.numeric(get_value("proportion")), 0.75)
+  expect_equal(as.numeric(get_value("ageMean")), 18 + 2 / 3)
+  expect_equal(as.numeric(get_value("ageMin")), 18)
+  expect_equal(as.numeric(get_value("ageMedian")), 18)
+  expect_equal(as.numeric(get_value("ageMax")), 20)
+  expect_equal(as.numeric(get_value("ageStd")), stats::sd(c(18, 18, 20)))
+  expect_equal(
+    as.numeric(results$value[results$demographicId == "Missing" & results$stat == "caseCount"]),
+    1
+  )
 })
 
-test_that("cleanDemographicsResults preserves raw values and labels known race and ethnicity IDs", {
+test_that("cleanDemographicsResults retains raw concept IDs and known labels", {
   demographicsData <- tibble::tibble(
     spanLabel = rep("2020", 4),
     demographic = c("race", "race", "race", "ethnicity"),
@@ -99,13 +122,17 @@ test_that("cleanDemographicsResults preserves raw values and labels known race a
     demographicsData = demographicsData,
     analysisId = 1L,
     cohortId = 2L,
-    cohortName = "Example cohort",
-    databaseId = "Example database"
+    cohortName = "Example cohort"
   )
 
-  expect_equal(results$demographicValue, c("38003564", "8516", "8522", "8657"))
-  expect_equal(
-    results$demographicLabel,
-    c("Not Hispanic or Latino", "Black or African American", "Native Hawaiian or Other Pacific Islander", "Other Race")
-  )
+  raceLabels <- unique(results[results$demographic == "race", c("demographicId", "demographicLabel")])
+  ethnicityLabel <- unique(results[results$demographic == "ethnicity", c("demographicId", "demographicLabel")])
+  expect_equal(raceLabels$demographicId, c("8516", "8522", "8657"))
+  expect_equal(raceLabels$demographicLabel, c(
+    "Black or African American",
+    "Native Hawaiian or Other Pacific Islander",
+    "Other Race"
+  ))
+  expect_equal(ethnicityLabel$demographicId, "38003564")
+  expect_equal(ethnicityLabel$demographicLabel, "Not Hispanic or Latino")
 })

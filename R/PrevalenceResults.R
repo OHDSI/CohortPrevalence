@@ -52,7 +52,7 @@ PrevalenceResults <- R6::R6Class(
       private$.stdPrev <- NULL
       private$.incidence <- incidence
       private$.drugUsage <- drugUsage
-      private$.demographics <- demographics
+      private$.demographics <- normalizeDemographicsResults(demographics)
       private$.metaInfo <- metaInfo
       private$.executionId <- executionId %||% format(Sys.time(), "%Y%m%d_%H%M%S")
       private$.exportDate <- NULL
@@ -268,9 +268,8 @@ PrevalenceResults <- R6::R6Class(
       if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
 
         required_cols <- c(
-          "analysisId", "spanLabel", "demographic", "demographicValue",
-          "demographicLabel", "caseCount", "totalCases", "proportion",
-          "ageMean", "ageSd", "ageMin", "ageMedian", "ageMax"
+          "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+          "demographic", "demographicId", "demographicLabel", "stat", "value"
         )
         missing <- setdiff(required_cols, colnames(private$.demographics))
 
@@ -438,7 +437,7 @@ PrevalenceResults <- R6::R6Class(
         return(private$.demographics)
       } else {
 
-        private$.demographics <- value
+        private$.demographics <- normalizeDemographicsResults(value)
 
       }
     },
@@ -575,16 +574,15 @@ loadPrevalenceResults <- function(bundlePath) {
       demographics <- readr::read_csv(
         file.path(bundlePath, manifest$files$demographics$path),
         col_types = readr::cols(
-          .default = readr::col_guess(),
+          .default = readr::col_character(),
+          analysisId = readr::col_integer(),
+          cohortId = readr::col_integer(),
           spanLabel = readr::col_character(),
           demographic = readr::col_character(),
-          demographicValue = readr::col_character(),
+          demographicId = readr::col_character(),
           demographicLabel = readr::col_character(),
-          ageMean = readr::col_double(),
-          ageSd = readr::col_double(),
-          ageMin = readr::col_double(),
-          ageMedian = readr::col_double(),
-          ageMax = readr::col_double()
+          stat = readr::col_character(),
+          value = readr::col_character()
         ),
         show_col_types = FALSE
       )
