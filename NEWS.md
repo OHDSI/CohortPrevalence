@@ -10,6 +10,7 @@ CohortPrevalence v1.2.2
 
 ## Demographics
 - Add race and ethnicity features to crude prevalence calculation #35
+- Allow for a summary output describing the demographic breakdown of the prevalent cases
 
 CohortPrevalence v1.2.1
 =======================

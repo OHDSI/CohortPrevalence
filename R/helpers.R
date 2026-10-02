@@ -217,6 +217,36 @@ buildPrevalenceAggSQL <- function(strata) {
   )
 }
 
+# Build demographics summary SQL for only the requested strata.
+buildDemographicsAggSQL <- function(strata) {
+  checkmate::assert_subset(
+    strata,
+    choices = c("age", "gender", "race", "ethnicity"),
+    empty.ok = FALSE
+  )
+
+  demographicCounts <- vapply(
+    strata,
+    function(stratum) {
+      glue::glue(
+        "SELECT span_label, '{stratum}' AS demographic,\n",
+        "  CAST({stratum} AS VARCHAR(255)) AS demographic_value,\n",
+        "  COUNT(DISTINCT subject_id) AS case_count\n",
+        "FROM case_rows\n",
+        "GROUP BY span_label, {stratum}"
+      )
+    },
+    character(1)
+  ) |>
+    paste(collapse = "\n\n  UNION ALL\n\n")
+
+  demographicsTemplate <- readr::read_file(
+    fs::path_package(package = "CohortPrevalence", "sql/demographics.sql")
+  )
+
+  glue::glue(demographicsTemplate)
+}
+
 # Build incidence aggregation SQL
 buildIncidenceAggSQL <- function(strata) {
   glue::glue(
