@@ -57,7 +57,7 @@ createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", 
 #' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `PopulationCohort` object specifying the population of interest on which to compute prevalence.
-#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"`, `"drugs"`, and/or `"demographics"` for simultaneous generation using shared base tables. `"demographics"` requires `"prevalence"` and at least one demographic stratum.
+#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"`, `"drugs"`, and/or `"demographics"` for simultaneous generation using shared base tables. `"demographics"` requires `"prevalence"` and/or `"incidence"`, plus at least one demographic stratum.
 #'   **Warning**: The `"drugs"` output type is experimental and should be used with caution. Results may be subject to future changes.
 #' @param drugConceptSets Optional list of Capr ConceptSetItems. Required if `"drugs"` is in `outputTypes`, otherwise ignored.
 #' @param ageGroups Optional named list of inclusive age ranges, e.g. `list("18-22" = c(18, 22), "23+" = c(23, Inf))`. Requires `"age"` in `strata`. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as `"Other/Unmapped"`. Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum. If `NULL`, age counts are combined into `"All ages"`; otherwise counts are grouped by the supplied age ranges.
@@ -98,47 +98,6 @@ createCohortPrevalenceAnalysis <- function(analysisId,
     outputTypes = outputTypes,
     drugConceptSets = drugConceptSets,
     ageGroups = ageGroups
-  )
-  return(analysisDef)
-}
-
-#' Create a `IncidenceAnalysis` object for Rassen Incidence
-#'
-#' Constructs an `IncidenceAnalysis` object with the specified settings.
-#'
-#' @param analysisId Unique integer analysisId to identify the analysis (required).
-#' @param targetCohort A `TargetCohort` object specifying the cohort of interest (required).
-#' @param periodOfInterest A `PeriodOfInterest` object (required).
-#' @param minimumObservationLength: Integer specifying minimum observation length (optional).
-#' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
-#' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
-#' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
-#' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
-#'
-#' @return A `IncidenceAnalysis` R6 object.
-#' @export
-#'
-createRassenIncidenceAnalysis <- function(analysisId,
-                                          targetCohort,
-                                          periodOfInterest,
-                                          minimumObservationLength = 0L,
-                                          useOnlyFirstObservationPeriod = FALSE,
-                                          multiplier = 100000L,
-                                          strata = NULL,
-                                          demographicConstraints = createDemographicConstraints(),
-                                          populationCohort = NULL){
-
-  analysisDef <- IncidenceAnalysis$new(
-    analysisId = analysisId,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest,
-    minimumObservationLength = minimumObservationLength,
-    useOnlyFirstObservationPeriod = useOnlyFirstObservationPeriod,
-    multiplier = multiplier,
-    strata = strata,
-    demographicConstraints = demographicConstraints,
-    populationCohort = populationCohort
   )
   return(analysisDef)
 }
@@ -203,22 +162,31 @@ createYearlyRange <- function(range) {
 #'
 #' Constructs an `PeriodOfInterest` object for span prevalence analyses.
 #'
-#' @param startYears A numeric vector of start years of interest.
-#' @param endYears A numeric vector of end years of interest.
+#' @param startDates A numeric vector of start years or Date values.
+#' @param endDates A numeric vector of inclusive end years or Date values.
+#'   End dates are stored as exclusive boundaries internally.
 #' @return A `PeriodOfInterest` R6 object.
 #' @export
 #'
 createSpan <- function(startDates, endDates) {
   spanLabel <- paste(startDates, "-", endDates)
 
-  if(is.numeric(startDates)){
-    startDates <- paste0(startDates,"-01-01") |>
+  if (is.numeric(startDates)) {
+
+    startDates <- paste0(startDates, "-01-01") |>
       as.Date()
+
   }
 
-  if(is.numeric(endDates)){
-    endDates <- paste0(endDates,"-12-31") |>
+  if (is.numeric(endDates)) {
+
+    endDates <- paste0(endDates + 1, "-01-01") |>
       as.Date()
+
+  } else if (inherits(endDates, "Date")) {
+
+    endDates <- endDates + 1
+
   }
 
   range <- data.frame(calendar_start_date = startDates,

@@ -45,7 +45,7 @@ summarizeWeightedAge <- function(ages, caseCounts) {
 
 formatDemographicsResults <- function(demographics) {
   resultColumns <- c(
-    "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+    "analysisId", "cohortId", "cohortName", "statType", "measureType", "spanLabel",
     "demographic", "demographicId", "demographicLabel", "stat", "value"
   )
   demographics <- as.data.frame(demographics)
@@ -63,7 +63,8 @@ formatDemographicsResults <- function(demographics) {
   demographics$demographicId[missingIds] <- "Missing"
 
   metadataColumns <- c(
-    "analysisId", "cohortId", "cohortName", "statType", "spanLabel", "demographic"
+    "analysisId", "cohortId", "cohortName", "statType", "measureType",
+    "spanLabel", "demographic"
   )
 
   makeStatRows <- function(data, statName, statValue, id = data$demographicId) {
@@ -102,7 +103,9 @@ formatDemographicsResults <- function(demographics) {
   if (nrow(ageRows) > 0) {
 
     ageRows <- ageRows[
-      !duplicated(ageRows[c("analysisId", "cohortId", "cohortName", "spanLabel")]),
+      !duplicated(ageRows[c(
+        "analysisId", "cohortId", "cohortName", "measureType", "spanLabel"
+      )]),
       ,
       drop = FALSE
     ]
@@ -133,6 +136,7 @@ formatDemographicsResults <- function(demographics) {
       cohortId = demographics$cohortId[0],
       cohortName = demographics$cohortName[0],
       statType = demographics$statType[0],
+      measureType = demographics$measureType[0],
       spanLabel = demographics$spanLabel[0],
       demographic = demographics$demographic[0],
       demographicId = character(),
@@ -147,6 +151,7 @@ formatDemographicsResults <- function(demographics) {
   results <- dplyr::bind_rows(statRows)
   results <- results[resultColumns]
   results <- results[order(
+    results$measureType,
     results$spanLabel,
     results$demographic,
     results$demographicId,
@@ -165,7 +170,7 @@ normalizeDemographicsResults <- function(demographics) {
 
   checkmate::assert_data_frame(demographics)
   resultColumns <- c(
-    "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+    "analysisId", "cohortId", "cohortName", "statType", "measureType", "spanLabel",
     "demographic", "demographicId", "demographicLabel", "stat", "value"
   )
 
@@ -178,6 +183,7 @@ normalizeDemographicsResults <- function(demographics) {
   }
 
   demographics <- as.data.frame(demographics)
+
   if ("value" %in% names(demographics)) {
 
     demographics$value <- as.character(demographics$value)
@@ -194,16 +200,16 @@ cleanDemographicsResults <- function(demographicsData,
                                      cohortId,
                                      cohortName) {
   checkmate::assert_data_frame(demographicsData)
+  results <- as.data.frame(demographicsData)
   checkmate::assert_names(
-    names(demographicsData),
+    names(results),
     must.include = c(
-      "spanLabel", "demographic", "demographicValue", "caseCount",
+      "measureType", "spanLabel", "demographic", "demographicValue", "caseCount",
       "totalCases", "proportion"
     )
   )
   validateAgeGroups(ageGroups)
 
-  results <- as.data.frame(demographicsData)
   results$demographicValue <- as.character(results$demographicValue)
   results$demographicLabel <- results$demographicValue
 
@@ -249,18 +255,25 @@ cleanDemographicsResults <- function(demographicsData,
 
     ageResults <- results[ageRows, , drop = FALSE]
     ages <- suppressWarnings(as.numeric(ageResults$demographicValue))
-    ageSummaries <- lapply(split(seq_len(nrow(ageResults)), ageResults$spanLabel), function(rows) {
-      summary <- summarizeWeightedAge(ages[rows], ageResults$caseCount[rows])
-      data.frame(
-        spanLabel = ageResults$spanLabel[rows[[1]]],
-        ageMean = summary[["ageMean"]],
-        ageSd = summary[["ageSd"]],
-        ageMin = summary[["ageMin"]],
-        ageMedian = summary[["ageMedian"]],
-        ageMax = summary[["ageMax"]],
-        stringsAsFactors = FALSE
-      )
-    }) |>
+    ageSummaries <- lapply(
+      split(
+        seq_len(nrow(ageResults)),
+        interaction(ageResults$measureType, ageResults$spanLabel, drop = TRUE, lex.order = TRUE)
+      ),
+      function(rows) {
+        summary <- summarizeWeightedAge(ages[rows], ageResults$caseCount[rows])
+        data.frame(
+          measureType = ageResults$measureType[rows[[1]]],
+          spanLabel = ageResults$spanLabel[rows[[1]]],
+          ageMean = summary[["ageMean"]],
+          ageSd = summary[["ageSd"]],
+          ageMin = summary[["ageMin"]],
+          ageMedian = summary[["ageMedian"]],
+          ageMax = summary[["ageMax"]],
+          stringsAsFactors = FALSE
+        )
+      }
+    ) |>
       dplyr::bind_rows()
 
     ageLabels <- rep("Other/Unmapped", length(ages))
@@ -284,6 +297,7 @@ cleanDemographicsResults <- function(demographicsData,
     ageResults$demographicLabel <- ageLabels
     ageResults <- ageResults |>
       dplyr::group_by(
+        .data$measureType,
         .data$spanLabel,
         .data$demographic,
         .data$demographicValue,
@@ -294,7 +308,7 @@ cleanDemographicsResults <- function(demographicsData,
         totalCases = max(.data$totalCases),
         .groups = "drop"
       ) |>
-      dplyr::left_join(ageSummaries, by = "spanLabel")
+      dplyr::left_join(ageSummaries, by = c("measureType", "spanLabel"))
     ageResults$proportion <- 1.0 * ageResults$caseCount / ageResults$totalCases
 
     nonAgeRows <- results[-ageRows, , drop = FALSE]
@@ -322,7 +336,12 @@ cleanDemographicsResults <- function(demographicsData,
       statType = "Demographics",
       .before = 1
     ) |>
-    dplyr::arrange(.data$spanLabel, .data$demographic, .data$demographicValue)
+    dplyr::arrange(
+      .data$measureType,
+      .data$spanLabel,
+      .data$demographic,
+      .data$demographicValue
+    )
 
   formatDemographicsResults(results)
 }

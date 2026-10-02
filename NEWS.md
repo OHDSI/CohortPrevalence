@@ -1,5 +1,10 @@
-CohortPrevalence v1.2.2
+CohortPrevalence v1.3.0
 =======================
+
+## Incidence
+
+- Add incidence analytic to prevalence class following Rassen
+- allow for multiple output types prevalence and incidence or each individually.
 
 ## Standardization
 
@@ -12,6 +17,7 @@ CohortPrevalence v1.2.2
 - Add race and ethnicity features to crude prevalence calculation #35
 - Allow for a summary output describing the demographic breakdown of the prevalent cases
 - Return demographics as tidy `stat` / `value` rows with a required `demographicLabel` column, including category counts, proportions, and span-level age statistics.
+- summarize demographics for both incidence and prevalence. Differentiate by measureType
 
 CohortPrevalence v1.2.1
 =======================

@@ -47,7 +47,7 @@ results <- generatePrevalence(analyses, executionSettings)
 \item prevalence data frame: Main prevalence estimates
 \item incidence data frame: Incidence rates if requested
 \item drugUsage data frame: Drug usage patterns if requested
-\item demographics data frame: Case demographic counts, proportions, labels, and age summaries if requested
+\item demographics data frame: Tidy demographic statistics in \code{stat} / \code{value} rows if requested
 \item metaInfo data frame: Analysis metadata and configuration
 }
 }

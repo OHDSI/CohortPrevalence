@@ -46,17 +46,17 @@ test_that("CohortPrevalenceExperiment propagates demographics and ageGroups", {
   exp$addPeriodsOfInterest(list(createYearlyRange(2020:2021)))
   exp$setCommonParameters(
     strata = c("age", "gender"),
-    outputTypes = c("prevalence", "demographics"),
+    outputTypes = c("incidence", "demographics"),
     ageGroups = list("18-22" = c(18, 22), "23+" = c(23, Inf))
   )
 
   spec <- exp$getSpecification()
   expect_equal(spec$strata[[1]], c("age", "gender"))
-  expect_equal(spec$outputTypes[[1]], c("prevalence", "demographics"))
+  expect_equal(spec$outputTypes[[1]], c("incidence", "demographics"))
   expect_equal(spec$ageGroups[[1]], list("18-22" = c(18, 22), "23+" = c(23, Inf)))
 
   analysis <- exp$define()[[1]]
-  expect_equal(analysis$outputTypes, c("prevalence", "demographics"))
+  expect_equal(analysis$outputTypes, c("incidence", "demographics"))
   expect_equal(analysis$ageGroups, list("18-22" = c(18, 22), "23+" = c(23, Inf)))
 })
 

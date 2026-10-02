@@ -215,7 +215,7 @@ Set common parameters for all analyses
 \describe{
 \item{\code{strata}}{Character vector of strata variables (e.g., c("age", "gender"))}
 
-\item{\code{outputTypes}}{Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and at least one demographic stratum}
+\item{\code{outputTypes}}{Character vector of output types (e.g., c("prevalence", "demographics")); demographics requires prevalence and/or incidence plus at least one demographic stratum}
 
 \item{\code{useOnlyFirstObservationPeriod}}{Logical. If TRUE, only first observation period per person is used}
 

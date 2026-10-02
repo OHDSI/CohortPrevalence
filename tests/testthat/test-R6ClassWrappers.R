@@ -136,7 +136,7 @@ test_that("createCohortPrevalenceAnalysis accepts multiple strata", {
   expect_equal(analysis$strata, c("age", "gender", "race"))
 })
 
-test_that("demographics output requires prevalence and at least one demographic stratum", {
+test_that("demographics output requires a measure and at least one demographic stratum", {
   commonArgs <- list(
     analysisId = 1,
     prevalentCohort = createTargetCohort(1, "Test Cohort"),
@@ -146,7 +146,7 @@ test_that("demographics output requires prevalence and at least one demographic 
 
   expect_error(
     do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = "demographics", strata = "age"))),
-    "requires 'prevalence'"
+    "requires 'prevalence' and/or 'incidence'"
   )
   expect_error(
     do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = c("prevalence", "demographics")))),
@@ -159,7 +159,13 @@ test_that("demographics output requires prevalence and at least one demographic 
   )
   expect_equal(analysis$outputTypes, c("prevalence", "demographics"))
 
-  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence'")
+  incidenceDemographics <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(commonArgs, list(outputTypes = c("incidence", "demographics"), strata = "gender"))
+  )
+  expect_equal(incidenceDemographics$outputTypes, c("incidence", "demographics"))
+
+  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence' and/or 'incidence'")
   expect_error(analysis$strata <- NULL, "requires at least one demographic stratum")
 })
 
@@ -269,6 +275,44 @@ test_that("assembleSql omits ungrouped strata from the aggregation GROUP BY", {
   expect_no_match(sql, "GROUP BY span_label,ethnicity, race")
 })
 
+test_that("assembleSql bounds incidence person-time by observation and event dates", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+    strata = "gender",
+    outputTypes = "incidence"
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  expect_match(sql, "observation_period_start_date", fixed = TRUE)
+  expect_match(sql, "observation_period_end_date", fixed = TRUE)
+  expect_match(
+    sql,
+    "DATEADD(day, 1, observation_periods.observation_period_end_date)",
+    fixed = TRUE
+  )
+  expect_match(sql, "COALESCE(event_status.incident_date", fixed = TRUE)
+  expect_match(sql, "MAX(inc_event) AS inc_event", fixed = TRUE)
+  expect_match(sql, "SUM(time_at_risk) AS time_at_risk", fixed = TRUE)
+  expect_match(sql, "FROM #denomInc", fixed = TRUE)
+  expect_match(
+    sql,
+    "CAST(SUM(inc_event) AS FLOAT) / NULLIF(SUM(time_at_risk) / 365.25, 0)",
+    fixed = TRUE
+  )
+})
+
 test_that("assembleSql builds only selected demographic summaries after #allEvents", {
   executionSettings <- structure(
     list(
@@ -309,6 +353,35 @@ test_that("assembleSql builds only selected demographic summaries after #allEven
   demographicsPosition <- regexpr("CREATE TEMP TABLE #demographics AS", sql, fixed = TRUE)[[1]]
   expect_lt(allEventsPosition, prevalencePosition)
   expect_lt(prevalencePosition, demographicsPosition)
+
+  incidenceDemographicsAnalysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(baseArgs, list(outputTypes = c("incidence", "demographics")))
+  )
+  incidenceSql <- incidenceDemographicsAnalysis$assembleSql(executionSettings)
+
+  expect_match(incidenceSql, "'incidence' AS measure_type", fixed = TRUE)
+  expect_match(incidenceSql, "FROM #denomInc", fixed = TRUE)
+  expect_match(incidenceSql, "WHERE inc_event = 1", fixed = TRUE)
+  expect_no_match(incidenceSql, "#allEvents")
+  denomIncPosition <- regexpr("CREATE TEMP TABLE #denomInc AS", incidenceSql, fixed = TRUE)[[1]]
+  incidencePosition <- regexpr("CREATE TABLE #incidence AS", incidenceSql, fixed = TRUE)[[1]]
+  incidenceDemographicsPosition <- regexpr(
+    "CREATE TEMP TABLE #demographics AS",
+    incidenceSql,
+    fixed = TRUE
+  )[[1]]
+  expect_lt(denomIncPosition, incidencePosition)
+  expect_lt(incidencePosition, incidenceDemographicsPosition)
+
+  combinedAnalysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(baseArgs, list(outputTypes = c("prevalence", "incidence", "demographics")))
+  )
+  combinedSql <- combinedAnalysis$assembleSql(executionSettings)
+  expect_match(combinedSql, "'prevalence' AS measure_type", fixed = TRUE)
+  expect_match(combinedSql, "'incidence' AS measure_type", fixed = TRUE)
+  expect_match(combinedSql, "UNION ALL", fixed = TRUE)
 })
 
 test_that("demographics SQL works with each PD era template and selected dimensions", {
@@ -344,60 +417,6 @@ test_that("demographics SQL works with each PD era template and selected dimensi
     expect_no_match(sql, "'gender' AS demographic")
     expect_no_match(sql, "'race' AS demographic")
   }
-})
-
-# Test createRassenIncidenceAnalysis
-test_that("createRassenIncidenceAnalysis creates valid object with required parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 1,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest
-  )
-
-  expect_r6_class(analysis, "IncidenceAnalysis")
-  expect_equal(analysis$analysisId, 1)
-})
-
-test_that("createRassenIncidenceAnalysis uses default parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 1,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest
-  )
-
-  expect_equal(analysis$minimumObservationLength, 0L)
-  expect_equal(analysis$useOnlyFirstObservationPeriod, FALSE)
-  expect_equal(analysis$multiplier, 100000L)
-  expect_null(analysis$strata)
-})
-
-test_that("createRassenIncidenceAnalysis accepts custom parameters", {
-  targetCohort <- createTargetCohort(1, "Target Cohort")
-  periodOfInterest <- createYearlyRange(2020:2022)
-  demographicConstraints <- createDemographicConstraints(ageMin = 21, ageMax = 75)
-  populationCohort <- createPopulationCohort(99, "Population")
-
-  analysis <- createRassenIncidenceAnalysis(
-    analysisId = 2,
-    targetCohort = targetCohort,
-    periodOfInterest = periodOfInterest,
-    minimumObservationLength = 730L,
-    useOnlyFirstObservationPeriod = TRUE,
-    multiplier = 1000000L,
-    strata = c("age", "gender"),
-    demographicConstraints = demographicConstraints,
-    populationCohort = populationCohort
-  )
-
-  expect_equal(analysis$minimumObservationLength, 730L)
-  expect_equal(analysis$useOnlyFirstObservationPeriod, TRUE)
-  expect_equal(analysis$multiplier, 1000000L)
 })
 
 # Test createTargetCohort
@@ -472,7 +491,7 @@ test_that("createSpan converts numeric years to Date format", {
   poi <- createSpan(2020, 2020)
 
   expect_equal(poi$poiRange$calendar_start_date, as.Date("2020-01-01"))
-  expect_equal(poi$poiRange$calendar_end_date, as.Date("2020-12-31"))
+  expect_equal(poi$poiRange$calendar_end_date, as.Date("2021-01-01"))
 })
 
 test_that("createSpan handles Date inputs directly", {
@@ -481,7 +500,7 @@ test_that("createSpan handles Date inputs directly", {
   poi <- createSpan(start, end)
 
   expect_equal(poi$poiRange$calendar_start_date, start)
-  expect_equal(poi$poiRange$calendar_end_date, end)
+  expect_equal(poi$poiRange$calendar_end_date, end + 1)
 })
 
 test_that("createSpan creates correct span labels", {
@@ -496,7 +515,7 @@ test_that("createSpan handles mixed numeric and Date inputs", {
   poi <- createSpan(c(2020, 2021), end_dates)
 
   expect_equal(poi$poiRange$calendar_start_date[1], as.Date("2020-01-01"))
-  expect_equal(poi$poiRange$calendar_end_date[1], as.Date("2020-12-31"))
+  expect_equal(poi$poiRange$calendar_end_date[1], as.Date("2021-01-01"))
 })
 
 # Test createDemographicConstraints

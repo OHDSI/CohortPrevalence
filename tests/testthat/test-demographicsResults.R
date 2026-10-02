@@ -12,6 +12,7 @@ make_demographics_result <- function(value = "Male", analysisId = 1L) {
     cohortId = 2L,
     cohortName = "Example cohort",
     statType = "Demographics",
+    measureType = "prevalence",
     spanLabel = "2020",
     demographic = "gender",
     demographicId = demographicValue,
@@ -104,7 +105,7 @@ test_that("demographics result bundles round-trip and old bundles remain compati
   expect_null(legacyLoaded$demographics)
 })
 
-test_that("PrevalenceResults requires the current tidy demographics schema", {
+test_that("PrevalenceResults requires measureType in the tidy demographics schema", {
   wideDemographics <- tibble::tibble(
     analysisId = 1L,
     cohortId = 2L,
@@ -133,13 +134,14 @@ test_that("PrevalenceResults requires the current tidy demographics schema", {
     spanLabel = c("2020", "2020"),
     demographic = c("gender", "gender"),
     demographicId = c("8507", "8507"),
+    demographicLabel = c("Male", "Male"),
     stat = c("caseCount", "demographicLabel"),
     value = c("3", "Male")
   )
 
   wideResults <- PrevalenceResults$new(demographics = wideDemographics)
-  priorTidyResults <- PrevalenceResults$new(demographics = priorTidyDemographics)
+  untaggedResults <- PrevalenceResults$new(demographics = priorTidyDemographics)
 
   expect_error(wideResults$validate(), "Demographics is missing required columns")
-  expect_error(priorTidyResults$validate(), "Demographics is missing required columns")
+  expect_error(untaggedResults$validate(), "measureType")
 })

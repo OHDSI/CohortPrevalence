@@ -15,7 +15,7 @@
 #' - `stdPrev`: Data frame with standardized prevalence results (read/write)
 #' - `incidence`: Data frame with incidence results (read/write)
 #' - `drugUsage`: Data frame with drug usage results (read/write)
-#' - `demographics`: Data frame with case demographic summaries (read/write)
+#' - `demographics`: Data frame with case demographic summaries tagged by measureType (read/write)
 #' - `metaInfo`: Data frame with analysis metadata (read/write)
 #' - `standardizationApplied`: List containing standardization parameters (read-only)
 #'
@@ -41,7 +41,7 @@ PrevalenceResults <- R6::R6Class(
     #' @param drugUsage Data frame with drug usage results
     #' @param metaInfo Data frame with analysis metadata
     #' @param executionId Optional character string for execution tracking (internal use)
-    #' @param demographics Data frame with case demographic summaries
+    #' @param demographics Data frame with case demographic summaries, including measureType
     initialize = function(prevalence = NULL,
                          incidence = NULL,
                          drugUsage = NULL,
@@ -268,7 +268,7 @@ PrevalenceResults <- R6::R6Class(
       if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
 
         required_cols <- c(
-          "analysisId", "cohortId", "cohortName", "statType", "spanLabel",
+          "analysisId", "cohortId", "cohortName", "statType", "measureType", "spanLabel",
           "demographic", "demographicId", "demographicLabel", "stat", "value"
         )
         missing <- setdiff(required_cols, colnames(private$.demographics))
