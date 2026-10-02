@@ -8,6 +8,9 @@ CohortPrevalence v1.2.2
 - Remove the sex-combined WHO reference and reject unsupported gender IDs. Validate ACS age-sex coverage, estimates, and totals.
 - update reference data stored files
 
+## Demographics
+- Add race and ethnicity features to crude prevalence calculation #35
+
 CohortPrevalence v1.2.1
 =======================
 
