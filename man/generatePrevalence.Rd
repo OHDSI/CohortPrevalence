@@ -26,7 +26,8 @@ Replaces separate generateSinglePrevalence and generateMultiplePrevalence functi
 }
 \details{
 This function consolidates analysis execution and result collection into a single workflow.
-Results include prevalence, incidence, and drug usage data as configured in the analysis objects.
+Results include prevalence, incidence, drug usage, and demographics data as configured in the analysis objects.
+When multiple analyses are supplied, they must request the same \code{outputTypes}.
 SQL queries are captured with SHA256 checksums for reproducibility verification.
 
 When running multiple analyses from a \code{CohortPrevalenceExperiment}, use the experiment's
@@ -46,6 +47,7 @@ results <- generatePrevalence(analyses, executionSettings)
 \item prevalence data frame: Main prevalence estimates
 \item incidence data frame: Incidence rates if requested
 \item drugUsage data frame: Drug usage patterns if requested
+\item demographics data frame: Case demographic counts, proportions, labels, and age summaries if requested
 \item metaInfo data frame: Analysis metadata and configuration
 }
 }

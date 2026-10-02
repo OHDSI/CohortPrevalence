@@ -15,7 +15,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
                           demographicConstraints,
                           populationCohort = NULL,
                           outputTypes = "prevalence",
-                          drugConceptSets = NULL) {
+                          drugConceptSets = NULL,
+                          ageGroups = NULL) {
       # set analysisId
       checkmate::assert_integerish(x = analysisId, len = 1)
       private[[".analysisId"]] <- analysisId
@@ -45,8 +46,16 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private[[".strata"]] <- strata
+
+      validateAgeGroups(ageGroups)
+
+      if (!is.null(ageGroups) && !("age" %in% strata)) {
+        stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
+      }
+
+      private[[".ageGroups"]] <- ageGroups
 
       # set demographic constraints
       checkmate::assert_class(x = demographicConstraints, classes = "DemoConstraint")
@@ -56,9 +65,8 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       checkmate::assert_class(x = populationCohort, classes = "PopulationCohort", null.ok = TRUE)
       private[[".populationCohort"]] <- populationCohort
 
-      # set outputTypes (defaults to "prevalence", can include "incidence" and/or "drugs")
-      checkmate::assert_character(x = outputTypes, min.len = 1)
-      checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
+      # Set output types and verify demographics prerequisites.
+      validatePrevalenceOutputOptions(outputTypes, strata)
       private[[".outputTypes"]] <- outputTypes
 
       # set drugConceptSets - required if "drugs" is in outputTypes
@@ -147,6 +155,11 @@ CohortPrevalenceAnalysis <- R6::R6Class(
         prevSql <- buildPrevalenceAggSQL(strata)
         
         sqlComponents <- c(sqlComponents, denomSql, prevSql)
+      }
+
+      if ("demographics" %in% private$.outputTypes) {
+        demographicsSql <- buildDemographicsAggSQL(self$strata)
+        sqlComponents <- c(sqlComponents, demographicsSql)
       }
       
       if ("incidence" %in% private$.outputTypes) {
@@ -291,6 +304,22 @@ CohortPrevalenceAnalysis <- R6::R6Class(
           )
         resultList$prevalence <- prevResults
       }
+
+      if ("demographics" %in% private$.outputTypes) {
+        demographicsData <- DatabaseConnector::renderTranslateQuerySql(
+          connection = connection,
+          sql = "SELECT * FROM #demographics;",
+          tempEmulationSchema = executionSettings$tempEmulationSchema,
+          snakeCaseToCamelCase = TRUE
+        )
+        resultList$demographics <- cleanDemographicsResults(
+          demographicsData = demographicsData,
+          ageGroups = self$ageGroups,
+          analysisId = self$analysisId,
+          cohortId = self$prevalentCohort$id(),
+          cohortName = self$prevalentCohort$name()
+        )
+      }
       
       # Collect incidence results  
       if ("incidence" %in% private$.outputTypes) {
@@ -349,6 +378,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
     .useOnlyFirstObservationPeriod = NULL,
     .multiplier = NULL,
     .strata = NULL,
+    .ageGroups = NULL,
     .demographicConstraints = NULL,
     .populationCohort = NULL,
     .outputTypes = NULL,
@@ -409,7 +439,19 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = value, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
+
+      if ("demographics" %in% private$.outputTypes && (is.null(value) || length(value) == 0)) {
+        stop(
+          "The 'demographics' output type requires at least one demographic stratum.",
+          call. = FALSE
+        )
+      }
+
+      if (!is.null(private$.ageGroups) && !("age" %in% value)) {
+        stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
+      }
+
       private$.strata <- value
 
     },
@@ -443,9 +485,21 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.outputTypes)
       }
-      checkmate::assert_character(x = outputTypes, min.len = 1)
-      checkmate::assert_subset(x = outputTypes, choices = c("prevalence", "incidence", "drugs"))
+      validatePrevalenceOutputOptions(value, private$.strata)
       private$.outputTypes <- value
+    },
+
+    ageGroups = function(value) {
+      if (missing(value)) {
+        return(private$.ageGroups)
+      }
+      validateAgeGroups(value)
+
+      if (!is.null(value) && !("age" %in% private$.strata)) {
+        stop("'ageGroups' can only be supplied when 'age' is included in strata.", call. = FALSE)
+      }
+
+      private$.ageGroups <- value
     },
 
     drugConceptSets = function(value) {
@@ -506,7 +560,7 @@ IncidenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set demographic constraints
@@ -711,7 +765,7 @@ IncidenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private$.strata <- value
 
     },

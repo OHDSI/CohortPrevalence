@@ -54,12 +54,13 @@ createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", 
 #'   by this object via `createPrevalenceType(leadInDays = )`.
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `PopulationCohort` object specifying the population of interest on which to compute prevalence.
-#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"` and/or `"drugs"` for simultaneous generation using shared base tables.
+#' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"`, `"drugs"`, and/or `"demographics"` for simultaneous generation using shared base tables. `"demographics"` requires `"prevalence"` and at least one demographic stratum.
 #'   **Warning**: The `"drugs"` output type is experimental and should be used with caution. Results may be subject to future changes.
 #' @param drugConceptSets Optional list of Capr ConceptSetItems. Required if `"drugs"` is in `outputTypes`, otherwise ignored.
+#' @param ageGroups Optional named list of inclusive age ranges, e.g. `list("18-22" = c(18, 22), "23+" = c(23, Inf))`. Requires `"age"` in `strata`. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as `"Other/Unmapped"`. Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum. If `NULL`, age counts are combined into `"All ages"`; otherwise counts are grouped by the supplied age ranges.
 #'
 #' @return A `CohortPrevalenceAnalysis` R6 object.
 #' @export
@@ -75,7 +76,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
                                            demographicConstraints = createDemographicConstraints(),
                                            populationCohort = NULL,
                                            outputTypes = "prevalence",
-                                           drugConceptSets = NULL){
+                                           drugConceptSets = NULL,
+                                           ageGroups = NULL){
   if (is.null(analysisTag)) {
     analysisTag <- glue::glue("Analysis {analysisId} | {prevalentCohort$name()}")
   } else {
@@ -94,7 +96,8 @@ createCohortPrevalenceAnalysis <- function(analysisId,
     demographicConstraints = demographicConstraints,
     populationCohort = populationCohort,
     outputTypes = outputTypes,
-    drugConceptSets = drugConceptSets
+    drugConceptSets = drugConceptSets,
+    ageGroups = ageGroups
   )
   return(analysisDef)
 }
@@ -109,7 +112,7 @@ createCohortPrevalenceAnalysis <- function(analysisId,
 #' @param minimumObservationLength: Integer specifying minimum observation length (optional).
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
 #'

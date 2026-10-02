@@ -16,7 +16,8 @@ createCohortPrevalenceAnalysis(
   demographicConstraints = createDemographicConstraints(),
   populationCohort = NULL,
   outputTypes = "prevalence",
-  drugConceptSets = NULL
+  drugConceptSets = NULL,
+  ageGroups = NULL
 )
 }
 \arguments{
@@ -33,16 +34,18 @@ by this object via \code{createPrevalenceType(leadInDays = )}.}
 
 \item{multiplier}{Integer specifying prevalence multiplier (optional).}
 
-\item{strata}{Character string. Must be one, or some of: \code{"age"}, \code{"gender"}, \code{"race"} (optional).}
+\item{strata}{Character string. Must be one, or some of: \code{"age"}, \code{"gender"}, \verb{"race"``, }"ethnicity"` (optional).}
 
 \item{demographicConstraints}{a \code{DemoConstraint} object specifying the constraints of the population.}
 
 \item{populationCohort}{A \code{PopulationCohort} object specifying the population of interest on which to compute prevalence.}
 
-\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"} and/or \code{"drugs"} for simultaneous generation using shared base tables.
+\item{outputTypes}{Character vector specifying which output types to generate. Defaults to \code{"prevalence"}. Can include \code{"incidence"}, \code{"drugs"}, and/or \code{"demographics"} for simultaneous generation using shared base tables. \code{"demographics"} requires \code{"prevalence"} and at least one demographic stratum.
 \strong{Warning}: The \code{"drugs"} output type is experimental and should be used with caution. Results may be subject to future changes.}
 
 \item{drugConceptSets}{Optional list of Capr ConceptSetItems. Required if \code{"drugs"} is in \code{outputTypes}, otherwise ignored.}
+
+\item{ageGroups}{Optional named list of inclusive age ranges, e.g. \code{list("18-22" = c(18, 22), "23+" = c(23, Inf))}. Requires \code{"age"} in \code{strata}. Ranges must be ordered and non-overlapping; ages outside the ranges are retained as \code{"Other/Unmapped"}. Age is always summarized per span by mean, sample standard deviation, minimum, median, and maximum. If \code{NULL}, age counts are combined into \code{"All ages"}; otherwise counts are grouped by the supplied age ranges.}
 }
 \value{
 A \code{CohortPrevalenceAnalysis} R6 object.

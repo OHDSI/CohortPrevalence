@@ -187,8 +187,15 @@ demographicConstraints <- createDemographicConstraints(
   genderIds = c(8507, 8532)
 )
 
-# Set strata options - NULL means no stratification
-strata <- NULL
+# Request demographic summaries by each selected stratum. These are separate
+# distributions (not cross-tabulations such as gender-by-race).
+strata <- c("gender", "race", "ethnicity", "age")
+ageGroups <- list(
+  "0-17" = c(0, 17),
+  "18-44" = c(18, 44),
+  "45-64" = c(45, 64),
+  "65+" = c(65, Inf)
+)
 
 # Set other specifications
 useOnlyFirstObservationPeriod <- FALSE
@@ -204,7 +211,8 @@ prevalenceAnalysisClass <- createCohortPrevalenceAnalysis(
   strata = strata,
   demographicConstraints = demographicConstraints,
   populationCohort = populationCohort,
-  outputTypes = "prevalence"
+  outputTypes = c("prevalence", "demographics"),
+  ageGroups = ageGroups
 )
 
 # Review the assembled settings
@@ -227,6 +235,41 @@ results <- generatePrevalence(
 # Inspect what came back
 results
 results$prevalence
+results$demographics
+```
+
+The demographics table uses a tidy `stat` / `value` layout. Each row contains
+one statistic for a demographic value and span, with columns
+`analysisId`, `cohortId`, `cohortName`, `statType`, `spanLabel`, `demographic`,
+`demographicId`, `demographicLabel`, `stat`, and `value`. For example, filter `stat` to
+`"caseCount"` to see counts, or to `"proportion"` to see the share of cases.
+The `value` column is character so it can contain both numeric statistics and
+readable labels; convert it to numeric when analyzing a numeric `stat`.
+
+Gender, race, ethnicity, and age are summarized independently; selecting
+multiple strata does not create intersectional groups such as gender-by-race.
+For gender, race, and ethnicity, `demographicId` retains the raw value and a
+`demographicLabel` gives the readable label (for example, ID `8507` is labeled
+"Male"). Unknown IDs are retained as their raw values. Missing values use the
+ID and label "Missing". The label column is repeated on each statistic row for
+that demographic category.
+
+Age rows are grouped into the inclusive ranges configured in `ageGroups`.
+Ages outside the configured ranges remain in the "Other/Unmapped" group, and
+missing ages remain represented separately. Counts and proportions are
+reported for each age group. The span-level age statistics are emitted as
+separate rows with `demographicId = "All ages"` and `stat` values `"ageMean"`,
+`"ageStd"`, `"ageMin"`, `"ageMedian"`, and `"ageMax"`; they are computed from
+the underlying single-year age counts, regardless of the selected age bands.
+
+For example, select the gender count and label rows with:
+
+```{r}
+genderSummary <- results$demographics |>
+  dplyr::filter(
+    demographic == "gender",
+    stat == "caseCount"
+  )
 ```
 
 

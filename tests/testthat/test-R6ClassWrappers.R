@@ -136,6 +136,216 @@ test_that("createCohortPrevalenceAnalysis accepts multiple strata", {
   expect_equal(analysis$strata, c("age", "gender", "race"))
 })
 
+test_that("demographics output requires prevalence and at least one demographic stratum", {
+  commonArgs <- list(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365)
+  )
+
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = "demographics", strata = "age"))),
+    "requires 'prevalence'"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(outputTypes = c("prevalence", "demographics")))),
+    "requires at least one demographic stratum"
+  )
+
+  analysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(commonArgs, list(outputTypes = c("prevalence", "demographics"), strata = "gender"))
+  )
+  expect_equal(analysis$outputTypes, c("prevalence", "demographics"))
+
+  expect_error(analysis$outputTypes <- "demographics", "requires 'prevalence'")
+  expect_error(analysis$strata <- NULL, "requires at least one demographic stratum")
+})
+
+test_that("ageGroups accepts ordered non-overlapping inclusive ranges", {
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+    strata = "age",
+    outputTypes = c("prevalence", "demographics"),
+    ageGroups = list("18-22" = c(18, 22), "23+" = c(23, Inf))
+  )
+
+  expect_equal(analysis$ageGroups, list("18-22" = c(18, 22), "23+" = c(23, Inf)))
+
+  commonArgs <- list(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365)
+  )
+
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(ageGroups = list("overlap1" = c(18, 25), "overlap2" = c(25, 40))))),
+    "must not overlap"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(ageGroups = list("later" = c(30, 40), "earlier" = c(18, 29))))),
+    "ordered by increasing lower bound"
+  )
+  expect_error(
+    do.call(createCohortPrevalenceAnalysis, c(commonArgs, list(strata = "gender", ageGroups = list("18+" = c(18, Inf))))),
+    "only be supplied"
+  )
+})
+
+test_that("assembleSql exposes race and ethnicity columns and respects requested strata", {
+  # Minimal stand-in for ExecutionSettings (defined in the companion
+  # ClinicalCharacteristics package, not a dependency here). assembleSql()
+  # only needs getDbms() and tempEmulationSchema to render the year-interval
+  # insert statement.
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  prevalentCohort <- createTargetCohort(1, "Test Cohort")
+  periodOfInterest <- createYearlyRange(2020:2021)
+  prevalenceType <- createPrevalenceType("point_prevalence", lookBackDays = 365)
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = prevalentCohort,
+    periodOfInterest = periodOfInterest,
+    prevalenceType = prevalenceType,
+    strata = c("age", "gender", "race", "ethnicity")
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  # obsPopYear always exposes race/ethnicity from the person table,
+  # regardless of which strata were requested for this analysis.
+  expect_match(sql, "race_concept_id AS race", fixed = TRUE)
+  expect_match(sql, "ethnicity_concept_id AS ethnicity", fixed = TRUE)
+
+  # the requested strata must drive both the pd1 denominator SELECT/GROUP BY...
+  expect_match(
+    sql,
+    "GROUP BY subject_id, span_label, calendar_start_date, calendar_end_date,age, gender, race, ethnicity",
+    fixed = TRUE
+  )
+
+  # ...and the final #prevalence aggregation SELECT/GROUP BY
+  expect_match(sql, "SELECT\n  span_label,age, gender, race, ethnicity", fixed = TRUE)
+  expect_match(sql, "GROUP BY span_label,age, gender, race, ethnicity;", fixed = TRUE)
+})
+
+test_that("assembleSql omits ungrouped strata from the aggregation GROUP BY", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+    strata = "ethnicity"
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  # race/ethnicity columns are always selected upstream in obsPopYear...
+  expect_match(sql, "race_concept_id AS race", fixed = TRUE)
+  expect_match(sql, "ethnicity_concept_id AS ethnicity", fixed = TRUE)
+
+  # ...but only the requested stratum reaches the final aggregation
+  expect_match(sql, "GROUP BY span_label,ethnicity;", fixed = TRUE)
+  expect_no_match(sql, "GROUP BY span_label,ethnicity, race")
+})
+
+test_that("assembleSql builds only selected demographic summaries after #allEvents", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  prevalenceType <- createPrevalenceType("point_prevalence", lookBackDays = 365)
+  baseArgs <- list(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = prevalenceType,
+    strata = "gender"
+  )
+
+  prevalenceOnlyAnalysis <- do.call(createCohortPrevalenceAnalysis, baseArgs)
+  prevalenceOnlySql <- prevalenceOnlyAnalysis$assembleSql(executionSettings)
+
+  expect_no_match(prevalenceOnlySql, "#demographics")
+
+  demographicsAnalysis <- do.call(
+    createCohortPrevalenceAnalysis,
+    c(baseArgs, list(outputTypes = c("prevalence", "demographics")))
+  )
+  sql <- demographicsAnalysis$assembleSql(executionSettings)
+
+  expect_match(sql, "CREATE TEMP TABLE #demographics AS", fixed = TRUE)
+  expect_match(sql, "'gender' AS demographic", fixed = TRUE)
+  expect_no_match(sql, "'age' AS demographic")
+  expect_no_match(sql, "'race' AS demographic")
+  expect_no_match(sql, "'ethnicity' AS demographic")
+
+  allEventsPosition <- regexpr("CREATE TEMP TABLE #allEvents AS", sql, fixed = TRUE)[[1]]
+  prevalencePosition <- regexpr("CREATE TABLE #prevalence AS", sql, fixed = TRUE)[[1]]
+  demographicsPosition <- regexpr("CREATE TEMP TABLE #demographics AS", sql, fixed = TRUE)[[1]]
+  expect_lt(allEventsPosition, prevalencePosition)
+  expect_lt(prevalencePosition, demographicsPosition)
+})
+
+test_that("demographics SQL works with each PD era template and selected dimensions", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  prevalenceTypes <- list(
+    createPrevalenceType("point_prevalence", lookBackDays = 365),
+    createPrevalenceType("period_prevalence_pd2", lookBackDays = 365),
+    createPrevalenceType("period_prevalence_pd3", lookBackDays = 365),
+    createPrevalenceType("period_prevalence_pd4", lookBackDays = 365, sufficientDays = 30)
+  )
+
+  for (prevalenceType in prevalenceTypes) {
+    analysis <- createCohortPrevalenceAnalysis(
+      analysisId = 1,
+      prevalentCohort = createTargetCohort(1, "Test Cohort"),
+      periodOfInterest = createYearlyRange(2020:2021),
+      prevalenceType = prevalenceType,
+      strata = c("age", "ethnicity"),
+      outputTypes = c("prevalence", "demographics")
+    )
+
+    sql <- analysis$assembleSql(executionSettings)
+
+    expect_match(sql, "'age' AS demographic", fixed = TRUE)
+    expect_match(sql, "'ethnicity' AS demographic", fixed = TRUE)
+    expect_no_match(sql, "'gender' AS demographic")
+    expect_no_match(sql, "'race' AS demographic")
+  }
+})
+
 # Test createRassenIncidenceAnalysis
 test_that("createRassenIncidenceAnalysis creates valid object with required parameters", {
   targetCohort <- createTargetCohort(1, "Target Cohort")
