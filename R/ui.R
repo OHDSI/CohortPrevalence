@@ -287,8 +287,8 @@ generatePrevalence <- function(prevalenceAnalysisList,
   cli::cat_rule("Creating Result Object")
 
   results <- PrevalenceResults$new(
-    prevalence = combinedResults$prevalence,
-    incidence = combinedResults$incidence,
+    crudePrev = combinedResults$prevalence,
+    crudeInc = combinedResults$incidence,
     drugUsage = combinedResults$drugUsage,
     demographics = combinedResults$demographics,
     metaInfo = combinedResults$metaInfo
