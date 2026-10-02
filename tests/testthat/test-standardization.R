@@ -63,8 +63,8 @@ make_standardization_test_prevalence <- function() {
 }
 
 test_that("standardization uses separate reference weights per analysis", {
-  result <- CohortPrevalence:::standardize_prevalence(
-    prevalenceData = make_standardization_test_prevalence(),
+  result <- CohortPrevalence:::standardize_measure(
+    measureData = make_standardization_test_prevalence(),
     referencePopulation = make_standardization_test_reference()
   )
 
@@ -85,11 +85,36 @@ test_that("standardization rejects unsupported gender concept IDs", {
   prevalence$gender[[1]] <- 9999L
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = prevalence,
+    CohortPrevalence:::standardize_measure(
+      measureData = prevalence,
       referencePopulation = make_standardization_test_reference()
     ),
     "unsupported gender concept IDs.*9999"
+  )
+})
+
+test_that("standardize_measure requires extracted age and gender columns", {
+  measure_data <- make_standardization_test_prevalence()
+  without_age <- measure_data
+  without_age$age <- NULL
+  without_gender <- measure_data
+  without_gender$gender <- NULL
+
+  expect_error(
+    CohortPrevalence:::standardize_measure(
+      measureData = without_age,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "incidence"
+    ),
+    "missing extracted age/gender columns.*age"
+  )
+  expect_error(
+    CohortPrevalence:::standardize_measure(
+      measureData = without_gender,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "incidence"
+    ),
+    "missing extracted age/gender columns.*gender"
   )
 })
 
@@ -408,8 +433,8 @@ test_that("ACS-style mixed age bands map to their literal labels", {
 })
 
 test_that("standardization maps generated truncation labels to adjusted reference cells", {
-  result <- CohortPrevalence:::standardize_prevalence(
-    prevalenceData = make_standardization_test_prevalence(),
+  result <- CohortPrevalence:::standardize_measure(
+    measureData = make_standardization_test_prevalence(),
     referencePopulation = make_standardization_test_reference(),
     ageRightTruncation = 30
   )
@@ -428,8 +453,8 @@ test_that("standardization reports unmapped ages with analysis context", {
   )
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = prevalence,
+    CohortPrevalence:::standardize_measure(
+      measureData = prevalence,
       referencePopulation = make_standardization_test_reference()
     ),
     expected_detail
@@ -440,8 +465,8 @@ test_that("standardization rejects an empty prevalence result", {
   prevalence <- make_standardization_test_prevalence()[0, ]
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = prevalence,
+    CohortPrevalence:::standardize_measure(
+      measureData = prevalence,
       referencePopulation = make_standardization_test_reference()
     ),
     "No supported age/gender prevalence strata remain"
@@ -460,8 +485,8 @@ test_that("standardization errors when a span is missing an analysis stratum", {
   ]
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = prevalence,
+    CohortPrevalence:::standardize_measure(
+      measureData = prevalence,
       referencePopulation = make_standardization_test_reference()
     ),
     "analysisId=1, spanLabel=2021, age=030, gender=Female"
@@ -470,8 +495,8 @@ test_that("standardization errors when a span is missing an analysis stratum", {
 
 test_that("standardization errors when prevalence strata are absent from the reference", {
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = make_standardization_test_prevalence(),
+    CohortPrevalence:::standardize_measure(
+      measureData = make_standardization_test_prevalence(),
       referencePopulation = make_standardization_test_reference(
         omit_strata = "030/Female"
       )
@@ -491,8 +516,8 @@ test_that("standardization errors when matched reference population totals zero"
   )
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = make_standardization_test_prevalence(),
+    CohortPrevalence:::standardize_measure(
+      measureData = make_standardization_test_prevalence(),
       referencePopulation = reference
     ),
     "finite, positive total.*1"
@@ -504,43 +529,179 @@ test_that("standardization rejects explicitly represented zero-denominator strat
   prevalence$denominator[[1]] <- 0
 
   expect_error(
-    CohortPrevalence:::standardize_prevalence(
-      prevalenceData = prevalence,
+    CohortPrevalence:::standardize_measure(
+      measureData = prevalence,
       referencePopulation = make_standardization_test_reference()
     ),
     "non-finite or non-positive denominators.*age=005"
   )
 })
 
-test_that("age bounds are deprecated on the public standardization method", {
+test_that("standardization methods no longer accept age bounds", {
   results <- PrevalenceResults$new(
-    prevalence = make_standardization_test_prevalence()
+    crudePrev = make_standardization_test_prevalence(),
+    crudeInc = make_standardization_test_prevalence()
   )
-
-  expect_warning(
-    results$standardizePrevalence(
-      referencePopulation = make_standardization_test_reference(),
-      ageMin = 18,
-      ageMax = 30
-    ),
-    "ageMin.*ageMax.*deprecated"
-  )
-
-  expect_identical(results$standardizationApplied$ageMin, 18)
-  expect_identical(results$standardizationApplied$ageMax, 30)
-  expect_equal(nrow(results$stdPrev), 4L)
-})
-
-test_that("filtered reference helper warns while remaining available", {
   reference <- make_standardization_test_reference()
 
-  expect_warning(
-    filtered_reference <- reference$getFilteredReference(ageMin = 18, ageMax = 30),
-    "getFilteredReference.*deprecated"
+  expect_error(
+    results$standardizePrevalence(reference, ageMin = 18),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizePrevalence(reference, ageMax = 30),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizeIncidence(reference, ageMin = 18),
+    "unused argument"
+  )
+  expect_error(
+    results$standardizeIncidence(reference, ageMax = 30),
+    "unused argument"
+  )
+  expect_error(
+    CohortPrevalence:::standardize_measure(
+      measureData = make_standardization_test_prevalence(),
+      referencePopulation = reference,
+      ageMin = 18
+    ),
+    "unused argument"
+  )
+})
+
+test_that("standardizeIncidence shares measure standardization and stores results independently", {
+  results <- PrevalenceResults$new(
+    crudePrev = make_standardization_test_prevalence(),
+    crudeInc = make_standardization_test_prevalence()
   )
 
-  expect_setequal(filtered_reference$age, c("018", "030"))
-  expect_false("weight" %in% names(filtered_reference))
+  expect_identical(results$prevalence, results$crudePrev)
+  expect_identical(results$incidence, results$crudeInc)
+  expect_invisible(
+    results$standardizePrevalence(
+      referencePopulation = make_standardization_test_reference()
+    )
+  )
+  expect_invisible(
+    results$standardizeIncidence(
+      referencePopulation = make_standardization_test_reference()
+    )
+  )
+
+  expect_equal(results$stdPrev$stdStat, c(270, 270, 425, 425))
+  expect_equal(results$stdInc$stdStat, c(270, 270, 425, 425))
+  expect_named(results$standardizationApplied, c("prevalence", "incidence"))
+})
+
+test_that("crude and standardized measure slots round-trip through result bundles", {
+  outputFolder <- tempfile("standardized-measure-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  bundleData <- make_standardization_test_prevalence()
+  bundleData$spanLabel <- as.integer(as.character(bundleData$spanLabel))
+  rownames(bundleData) <- NULL
+
+  results <- PrevalenceResults$new(
+    crudePrev = bundleData,
+    stdPrev = CohortPrevalence:::standardize_measure(
+      measureData = bundleData,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "prevalence"
+    ),
+    crudeInc = bundleData,
+    stdInc = CohortPrevalence:::standardize_measure(
+      measureData = bundleData,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "incidence"
+    ),
+    executionId = "standardized-measures"
+  )
+  results$standardizationApplied <- list(
+    prevalence = list(reference = "Test reference", reference_year = 2020L),
+    incidence = list(reference = "Test reference", reference_year = 2020L)
+  )
+
+  results$export(outputFolder, bundleName = "measure-results")
+  loaded <- loadPrevalenceResults(file.path(outputFolder, "measure-results"))
+
+  expect_equal(as.data.frame(loaded$crudePrev), as.data.frame(results$crudePrev))
+  expect_equal(as.data.frame(loaded$stdPrev), as.data.frame(results$stdPrev))
+  expect_equal(as.data.frame(loaded$crudeInc), as.data.frame(results$crudeInc))
+  expect_equal(as.data.frame(loaded$stdInc), as.data.frame(results$stdInc))
+  expect_equal(names(loaded$standardizationApplied), c("prevalence", "incidence"))
+})
+
+test_that("standardized-only export omits crude files and preserves in-memory results", {
+  outputFolder <- tempfile("standardized-only-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  crude_data <- make_standardization_test_prevalence()
+  crude_data$spanLabel <- as.integer(as.character(crude_data$spanLabel))
+  standardized_data <- CohortPrevalence:::standardize_measure(
+    measureData = crude_data,
+    referencePopulation = make_standardization_test_reference()
+  )
+  results <- PrevalenceResults$new(
+    crudePrev = crude_data,
+    stdPrev = standardized_data,
+    crudeInc = crude_data,
+    stdInc = CohortPrevalence:::standardize_measure(
+      measureData = crude_data,
+      referencePopulation = make_standardization_test_reference(),
+      measure = "incidence"
+    )
+  )
+
+  results$export(outputFolder, bundleName = "standardized-only", includeCrude = FALSE)
+
+  bundlePath <- file.path(outputFolder, "standardized-only")
+  expect_false(file.exists(file.path(bundlePath, "prevalence.csv")))
+  expect_false(file.exists(file.path(bundlePath, "incidence.csv")))
+  expect_true(file.exists(file.path(bundlePath, "standardized_prevalence.csv")))
+  expect_true(file.exists(file.path(bundlePath, "standardized_incidence.csv")))
+  expect_equal(results$crudePrev, crude_data)
+  expect_equal(results$crudeInc, crude_data)
+
+  loaded <- loadPrevalenceResults(bundlePath)
+  expect_null(loaded$crudePrev)
+  expect_null(loaded$crudeInc)
+  expect_equal(nrow(loaded$stdPrev), nrow(standardized_data))
+  expect_equal(nrow(loaded$stdInc), nrow(standardized_data))
+})
+
+test_that("standardized-only export rejects crude results without standardized counterparts", {
+  outputFolder <- tempfile("unstandardized-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  results <- PrevalenceResults$new(
+    crudePrev = make_standardization_test_prevalence()
+  )
+
+  expect_error(
+    results$export(outputFolder, bundleName = "invalid", includeCrude = FALSE),
+    "standardized results for: prevalence"
+  )
+  expect_false(dir.exists(file.path(outputFolder, "invalid")))
+})
+
+test_that("generatePrevalence no longer accepts captureSql", {
+  expect_false(
+    "captureSql" %in% names(formals(CohortPrevalence::generatePrevalence))
+  )
+  expect_error(
+    generatePrevalence(NULL, NULL, captureSql = FALSE),
+    "unused argument"
+  )
+})
+
+test_that("standardization references no longer expose the deprecated filter helper", {
+  reference <- make_standardization_test_reference()
+
+  expect_null(reference$getFilteredReference)
 })
 
 test_that("adjusted reference applies only right truncation", {

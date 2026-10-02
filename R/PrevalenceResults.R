@@ -11,13 +11,15 @@
 #' tracking provenance, standardization parameters, and execution metadata.
 #'
 #' ## Active Fields
-#' - `prevalence`: Data frame with crude (unadjusted) prevalence results (read/write)
+#' - `crudePrev`: Data frame with crude prevalence results (read/write)
 #' - `stdPrev`: Data frame with standardized prevalence results (read/write)
-#' - `incidence`: Data frame with incidence results (read/write)
+#' - `crudeInc`: Data frame with crude incidence results (read/write)
+#' - `stdInc`: Data frame with standardized incidence results (read/write)
+#' - `prevalence` and `incidence`: Aliases for `crudePrev` and `crudeInc`
 #' - `drugUsage`: Data frame with drug usage results (read/write)
 #' - `demographics`: Data frame with case demographic summaries tagged by measureType (read/write)
 #' - `metaInfo`: Data frame with analysis metadata (read/write)
-#' - `standardizationApplied`: List containing standardization parameters (read-only)
+#' - `standardizationApplied`: Parameters keyed by measure (read-only)
 #'
 #' ## Private Tracking Fields (visible in print/summary only)
 #' - `executionId`: Unique execution identifier
@@ -26,7 +28,8 @@
 #' ## Methods
 #' - `initialize()`: Create new PrevalenceResults object
 #' - `export()`: Save results to directory bundle with manifest
-#' - `standardizePrevalence()`: Apply direct method standardization (returns new object)
+#' - `standardizePrevalence()`: Standardize crude prevalence (returns self)
+#' - `standardizeIncidence()`: Standardize crude incidence (returns self)
 #' - `validate()`: Check data integrity and consistency
 #' - `summary()`: Print summary statistics
 #' - `print()`: Display object overview
@@ -42,15 +45,48 @@ PrevalenceResults <- R6::R6Class(
     #' @param metaInfo Data frame with analysis metadata
     #' @param executionId Optional character string for execution tracking (internal use)
     #' @param demographics Data frame with case demographic summaries, including measureType
+    #' @param crudePrev Crude prevalence data frame; mutually exclusive with `prevalence`
+    #' @param stdPrev Standardized prevalence data frame
+    #' @param crudeInc Crude incidence data frame; mutually exclusive with `incidence`
+    #' @param stdInc Standardized incidence data frame
     initialize = function(prevalence = NULL,
                          incidence = NULL,
                          drugUsage = NULL,
                          metaInfo = NULL,
                          executionId = NULL,
-                         demographics = NULL) {
-      private$.prevalence <- prevalence
-      private$.stdPrev <- NULL
-      private$.incidence <- incidence
+                         demographics = NULL,
+                         crudePrev = NULL,
+                         stdPrev = NULL,
+                         crudeInc = NULL,
+                         stdInc = NULL) {
+      if (!is.null(prevalence) && !is.null(crudePrev)) {
+
+        cli::cli_abort("Supply only one of 'prevalence' and 'crudePrev'.")
+
+      }
+
+      if (!is.null(incidence) && !is.null(crudeInc)) {
+
+        cli::cli_abort("Supply only one of 'incidence' and 'crudeInc'.")
+
+      }
+
+      if (is.null(crudePrev)) {
+
+        crudePrev <- prevalence
+
+      }
+
+      if (is.null(crudeInc)) {
+
+        crudeInc <- incidence
+
+      }
+
+      private$.crudePrev <- crudePrev
+      private$.stdPrev <- stdPrev
+      private$.crudeInc <- crudeInc
+      private$.stdInc <- stdInc
       private$.drugUsage <- drugUsage
       private$.demographics <- normalizeDemographicsResults(demographics)
       private$.metaInfo <- metaInfo
@@ -63,13 +99,41 @@ PrevalenceResults <- R6::R6Class(
     #' @description Export results to directory bundle with manifest
     #' @param outputFolder Character path where bundle directory will be created
     #' @param bundleName Optional name for the bundle directory. Default: auto-generated timestamp
+    #' @param includeCrude Logical. Include crude prevalence/incidence CSVs. Set to `FALSE` after standardizing to omit them; errors if a non-empty crude result has no standardized counterpart.
     #' @return Invisibly returns self for chaining
-    export = function(outputFolder, bundleName = NULL) {
+    export = function(outputFolder, bundleName = NULL, includeCrude = TRUE) {
       if (is.null(outputFolder)) {
         outputFolder <- here::here()
       }
 
       checkmate::assert_directory_exists(outputFolder)
+      checkmate::assert_logical(includeCrude, len = 1, any.missing = FALSE)
+
+      if (!includeCrude) {
+
+        unstandardizedMeasures <- character()
+
+        if (!is.null(private$.crudePrev) &&
+            nrow(private$.crudePrev) > 0 &&
+            (is.null(private$.stdPrev) || nrow(private$.stdPrev) == 0)) {
+          unstandardizedMeasures <- c(unstandardizedMeasures, "prevalence")
+        }
+
+        if (!is.null(private$.crudeInc) &&
+            nrow(private$.crudeInc) > 0 &&
+            (is.null(private$.stdInc) || nrow(private$.stdInc) == 0)) {
+          unstandardizedMeasures <- c(unstandardizedMeasures, "incidence")
+        }
+
+        if (length(unstandardizedMeasures) > 0) {
+          cli::cli_abort(paste0(
+            "Cannot omit crude results without standardized results for: ",
+            paste(unstandardizedMeasures, collapse = ", "),
+            "."
+          ))
+        }
+
+      }
 
       # Create bundle directory name
       if (is.null(bundleName)) {
@@ -87,19 +151,19 @@ PrevalenceResults <- R6::R6Class(
 
       tryCatch({
         # Export prevalence
-        if (!is.null(private$.prevalence) && nrow(private$.prevalence) > 0) {
+        if (includeCrude && !is.null(private$.crudePrev) && nrow(private$.crudePrev) > 0) {
           prevFile <- file.path(bundlePath, "prevalence.csv")
-          readr::write_csv(private$.prevalence, file = prevFile)
-          exportedFiles$prevalence <- list(path = "prevalence.csv", rows = nrow(private$.prevalence))
-          cli::cli_alert_success("Exported prevalence ({nrow(private$.prevalence)} rows)")
+          readr::write_csv(private$.crudePrev, file = prevFile)
+          exportedFiles$prevalence <- list(path = "prevalence.csv", rows = nrow(private$.crudePrev))
+          cli::cli_alert_success("Exported prevalence ({nrow(private$.crudePrev)} rows)")
         }
 
         # Export incidence
-        if (!is.null(private$.incidence) && nrow(private$.incidence) > 0) {
+        if (includeCrude && !is.null(private$.crudeInc) && nrow(private$.crudeInc) > 0) {
           incFile <- file.path(bundlePath, "incidence.csv")
-          readr::write_csv(private$.incidence, file = incFile)
-          exportedFiles$incidence <- list(path = "incidence.csv", rows = nrow(private$.incidence))
-          cli::cli_alert_success("Exported incidence ({nrow(private$.incidence)} rows)")
+          readr::write_csv(private$.crudeInc, file = incFile)
+          exportedFiles$incidence <- list(path = "incidence.csv", rows = nrow(private$.crudeInc))
+          cli::cli_alert_success("Exported incidence ({nrow(private$.crudeInc)} rows)")
         }
 
         # Export drug usage
@@ -126,6 +190,13 @@ PrevalenceResults <- R6::R6Class(
           readr::write_csv(private$.stdPrev, file = stdprevFile)
           exportedFiles$stdPrev <- list(path = "standardized_prevalence.csv", rows = nrow(private$.stdPrev))
           cli::cli_alert_success("Exported standardized prevalence ({nrow(private$.stdPrev)} rows)")
+        }
+
+        if (!is.null(private$.stdInc) && nrow(private$.stdInc) > 0) {
+          stdincFile <- file.path(bundlePath, "standardized_incidence.csv")
+          readr::write_csv(private$.stdInc, file = stdincFile)
+          exportedFiles$stdInc <- list(path = "standardized_incidence.csv", rows = nrow(private$.stdInc))
+          cli::cli_alert_success("Exported standardized incidence ({nrow(private$.stdInc)} rows)")
         }
 
         # Export metaInfo
@@ -178,25 +249,12 @@ PrevalenceResults <- R6::R6Class(
 
     #' @description Apply direct method standardization
     #' @param referencePopulation StandardizationReference object
-    #' @param ageMin Deprecated. Numeric minimum age for filtering. Demographic
-    #'   eligibility should be applied when defining the analysis.
-    #' @param ageMax Deprecated. Numeric maximum age for filtering. Demographic
-    #'   eligibility should be applied when defining the analysis.
     #' @param ageRightTruncation Numeric age threshold for collapsing
-    #' @return New PrevalenceResults object with standardized prevalence
+    #' @return Invisibly returns self
     standardizePrevalence = function(referencePopulation,
-                                     ageMin = NULL,
-                                     ageMax = NULL,
                                      ageRightTruncation = NULL) {
 
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-        cli::cli_warn(c(
-          "`ageMin` and `ageMax` are deprecated for standardization.",
-          "i" = "Set demographic eligibility on the analysis; these bounds are retained temporarily for compatibility."
-        ))
-      }
-
-      if (is.null(private$.prevalence) || nrow(private$.prevalence) == 0) {
+      if (is.null(private$.crudePrev) || nrow(private$.crudePrev) == 0) {
         cli::cli_abort("No prevalence data to standardize")
       }
 
@@ -204,11 +262,10 @@ PrevalenceResults <- R6::R6Class(
       cli::cat_rule("Standardizing Prevalence")
 
       # Call standardization function
-      result_df <- standardize_prevalence(
-        prevalenceData = private$.prevalence,
+      result_df <- standardize_measure(
+        measureData = private$.crudePrev,
         referencePopulation = referencePopulation,
-        ageMin = ageMin,
-        ageMax = ageMax,
+        measure = "prevalence",
         ageRightTruncation = ageRightTruncation
       )
 
@@ -218,11 +275,42 @@ PrevalenceResults <- R6::R6Class(
       private$.stdPrev <- result_df
 
       # Track standardization parameters
-      private$.standardizationApplied <- list(
+      private$.standardizationApplied$prevalence <- list(
         reference = referencePopulation$name,
         reference_year = referencePopulation$year,
-        ageMin = ageMin,
-        ageMax = ageMax,
+        rightTruncation = ageRightTruncation,
+        appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
+      )
+
+      invisible(self)
+    },
+
+    #' @description Apply direct method standardization to crude incidence
+    #' @param referencePopulation StandardizationReference object
+    #' @param ageRightTruncation Numeric age threshold for collapsing
+    #' @return Invisibly returns self
+    standardizeIncidence = function(referencePopulation,
+                                    ageRightTruncation = NULL) {
+
+      if (is.null(private$.crudeInc) || nrow(private$.crudeInc) == 0) {
+        cli::cli_abort("No incidence data to standardize")
+      }
+
+      cli::cat_line()
+      cli::cat_rule("Standardizing Incidence")
+
+      result_df <- standardize_measure(
+        measureData = private$.crudeInc,
+        referencePopulation = referencePopulation,
+        measure = "incidence",
+        ageRightTruncation = ageRightTruncation
+      )
+
+      cli::cli_alert_success("Standardization complete ({nrow(result_df)} rows)")
+      private$.stdInc <- result_df
+      private$.standardizationApplied$incidence <- list(
+        reference = referencePopulation$name,
+        reference_year = referencePopulation$year,
         rightTruncation = ageRightTruncation,
         appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
       )
@@ -237,11 +325,11 @@ PrevalenceResults <- R6::R6Class(
       cli::cli_alert_info("Validating results...")
 
       # Check crude prevalence structure (if present)
-      if (!is.null(private$.prevalence)) {
+      if (!is.null(private$.crudePrev)) {
         # Crude prevalence should have stratified data
-        if (nrow(private$.prevalence) > 0) {
+        if (nrow(private$.crudePrev) > 0) {
           required_cols <- c("analysisId", "spanLabel")
-          missing <- setdiff(required_cols, colnames(private$.prevalence))
+          missing <- setdiff(required_cols, colnames(private$.crudePrev))
           if (length(missing) > 0) {
             cli::cli_abort(c(
               "Prevalence is missing required columns:",
@@ -265,6 +353,30 @@ PrevalenceResults <- R6::R6Class(
         }
       }
 
+      if (!is.null(private$.crudeInc) && nrow(private$.crudeInc) > 0) {
+        required_cols <- c("analysisId", "spanLabel", "age", "gender", "numerator", "denominator")
+        missing <- setdiff(required_cols, colnames(private$.crudeInc))
+
+        if (length(missing) > 0) {
+          cli::cli_abort(c(
+            "Crude incidence is missing required columns:",
+            stats::setNames(missing, rep("x", length(missing)))
+          ))
+        }
+      }
+
+      if (!is.null(private$.stdInc) && nrow(private$.stdInc) > 0) {
+        required_cols <- c("analysisId", "spanLabel", "totalNum", "totalDenom", "crudeStat", "stdStat")
+        missing <- setdiff(required_cols, colnames(private$.stdInc))
+
+        if (length(missing) > 0) {
+          cli::cli_abort(c(
+            "Standardized incidence is missing required columns:",
+            stats::setNames(missing, rep("x", length(missing)))
+          ))
+        }
+      }
+
       if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
 
         required_cols <- c(
@@ -284,14 +396,18 @@ PrevalenceResults <- R6::R6Class(
 
       }
 
-      # Check metaInfo if present - should match either prevalence or stdPrev
+      # Check metaInfo if present - should match one of the result tables.
       if (!is.null(private$.metaInfo)) {
         meta_ids <- unique(private$.metaInfo$analysisId)
         
         data_to_check <- if (!is.null(private$.stdPrev) && nrow(private$.stdPrev) > 0) {
           private$.stdPrev
-        } else if (!is.null(private$.prevalence) && nrow(private$.prevalence) > 0) {
-          private$.prevalence
+        } else if (!is.null(private$.crudePrev) && nrow(private$.crudePrev) > 0) {
+          private$.crudePrev
+        } else if (!is.null(private$.stdInc) && nrow(private$.stdInc) > 0) {
+          private$.stdInc
+        } else if (!is.null(private$.crudeInc) && nrow(private$.crudeInc) > 0) {
+          private$.crudeInc
         } else if (!is.null(private$.demographics) && nrow(private$.demographics) > 0) {
           private$.demographics
         } else {
@@ -319,16 +435,20 @@ PrevalenceResults <- R6::R6Class(
       cat("\n=== PrevalenceResults Summary ===\n")
       cat("Execution ID:", private$.executionId, "\n")
 
-      if (!is.null(private$.prevalence)) {
-        cat("Prevalence (crude): ", nrow(private$.prevalence), " rows\n", sep = "")
+      if (!is.null(private$.crudePrev)) {
+        cat("Prevalence (crude): ", nrow(private$.crudePrev), " rows\n", sep = "")
       }
 
       if (!is.null(private$.stdPrev)) {
         cat("Prevalence (standardized): ", nrow(private$.stdPrev), " rows\n", sep = "")
       }
 
-      if (!is.null(private$.incidence)) {
-        cat("Incidence: ", nrow(private$.incidence), " rows\n", sep = "")
+      if (!is.null(private$.crudeInc)) {
+        cat("Incidence (crude): ", nrow(private$.crudeInc), " rows\n", sep = "")
+      }
+
+      if (!is.null(private$.stdInc)) {
+        cat("Incidence (standardized): ", nrow(private$.stdInc), " rows\n", sep = "")
       }
 
       if (!is.null(private$.drugUsage)) {
@@ -346,7 +466,7 @@ PrevalenceResults <- R6::R6Class(
       }
 
       if (length(private$.standardizationApplied) > 0) {
-        cat("Standardization: ", private$.standardizationApplied$reference, "\n", sep = "")
+        cat("Standardization applied to: ", paste(names(private$.standardizationApplied), collapse = ", "), "\n", sep = "")
       }
 
       cat("\n")
@@ -404,21 +524,39 @@ PrevalenceResults <- R6::R6Class(
   ),
 
   active = list(
+    #' @field crudePrev Data frame with crude prevalence results
+    crudePrev = function(value) {
+      if (missing(value)) {
+        return(private$.crudePrev)
+      } else {
+        private$.crudePrev <- value
+      }
+    },
+
+    #' @field crudeInc Data frame with crude incidence results
+    crudeInc = function(value) {
+      if (missing(value)) {
+        return(private$.crudeInc)
+      } else {
+        private$.crudeInc <- value
+      }
+    },
+
     #' @field prevalence Data frame with prevalence results
     prevalence = function(value) {
       if (missing(value)) {
-        return(private$.prevalence)
+        return(private$.crudePrev)
       } else {
-        private$.prevalence <- value
+        private$.crudePrev <- value
       }
     },
 
     #' @field incidence Data frame with incidence results
     incidence = function(value) {
       if (missing(value)) {
-        return(private$.incidence)
+        return(private$.crudeInc)
       } else {
-        private$.incidence <- value
+        private$.crudeInc <- value
       }
     },
 
@@ -460,6 +598,15 @@ PrevalenceResults <- R6::R6Class(
       }
     },
 
+    #' @field stdInc Data frame with standardized incidence results
+    stdInc = function(value) {
+      if (missing(value)) {
+        return(private$.stdInc)
+      } else {
+        private$.stdInc <- value
+      }
+    },
+
     #' @field standardizationApplied List of standardization parameters (read-only)
     standardizationApplied = function(value) {
       if (missing(value)) {
@@ -471,9 +618,10 @@ PrevalenceResults <- R6::R6Class(
   ),
 
   private = list(
-    .prevalence = NULL,
+    .crudePrev = NULL,
     .stdPrev = NULL,
-    .incidence = NULL,
+    .crudeInc = NULL,
+    .stdInc = NULL,
     .drugUsage = NULL,
     .demographics = NULL,
     .metaInfo = NULL,
@@ -533,6 +681,7 @@ loadPrevalenceResults <- function(bundlePath) {
     prevalence <- NULL
     stdPrev <- NULL
     incidence <- NULL
+    stdInc <- NULL
     drugUsage <- NULL
     demographics <- NULL
     metaInfo <- NULL
@@ -551,6 +700,14 @@ loadPrevalenceResults <- function(bundlePath) {
         show_col_types = FALSE
       )
       cli::cli_alert_success("Loaded standardized prevalence ({nrow(stdPrev)} rows)")
+    }
+
+    if ("stdInc" %in% names(manifest$files)) {
+      stdInc <- readr::read_csv(
+        file.path(bundlePath, manifest$files$stdInc$path),
+        show_col_types = FALSE
+      )
+      cli::cli_alert_success("Loaded standardized incidence ({nrow(stdInc)} rows)")
     }
 
     if ("incidence" %in% names(manifest$files)) {
@@ -626,18 +783,15 @@ loadPrevalenceResults <- function(bundlePath) {
 
     # Create PrevalenceResults object
     results <- PrevalenceResults$new(
-      prevalence = prevalence,
-      incidence = incidence,
+      crudePrev = prevalence,
+      stdPrev = stdPrev,
+      crudeInc = incidence,
+      stdInc = stdInc,
       drugUsage = drugUsage,
       metaInfo = metaInfo,
       executionId = manifest$execution_id,
       demographics = demographics
     )
-
-    # Restore standardized prevalence if present
-    if (!is.null(stdPrev)) {
-      results$stdPrev <- stdPrev
-    }
 
     # Restore standardization info if present
     if (length(manifest$standardization_applied) > 0) {
@@ -666,27 +820,22 @@ loadPrevalenceResults <- function(bundlePath) {
 # Standardization Functions
 # ============================================================================
 
-#' Direct Method Standardization of Prevalence Rates
+#' Direct Method Standardization of Prevalence and Incidence Rates
 #'
 #' @description
-#' Applies direct method age-sex standardization to crude prevalence data
-#' using a reference population. Analysis-specific demographic eligibility is
-#' represented by the age/gender strata in `prevalenceData`. Age truncation is
+#' Applies direct method age-sex standardization to crude measure data using a
+#' reference population. Analysis-specific demographic eligibility is
+#' represented by the age/gender strata in `measureData`. Age truncation is
 #' supported for real-world database patterns (e.g., Optum age masking).
 #'
-#' @param prevalenceData Data frame with stratified prevalence data.
-#'   Required columns: age, gender, numerator, denominator
+#' @param measureData Data frame with stratified prevalence or incidence data.
+#'   Required columns include age, gender, numerator, and denominator.
+#' @param measure Either "prevalence" or "incidence", used in validation and
+#'   error messages.
+#' @param rateMultiplier Numeric scale applied to crude and standardized rates.
 #'
 #' @param referencePopulation StandardizationReference object defining
 #'   the standard population for weighting
-#'
-#' @param ageMin Deprecated. Numeric minimum age for filtering. If supplied,
-#'   it is temporarily applied for compatibility; define eligibility on the
-#'   analysis instead.
-#'
-#' @param ageMax Deprecated. Numeric maximum age for filtering. If supplied,
-#'   it is temporarily applied for compatibility; define eligibility on the
-#'   analysis instead.
 #'
 #' @param ageRightTruncation Numeric. Optional age threshold for collapsing
 #'   ages >= threshold into single "threshold+" group. Useful for handling
@@ -698,12 +847,11 @@ loadPrevalenceResults <- function(bundlePath) {
 #'
 #' **Step 1**: Validate & apply right truncation to reference population
 #'   - If ageRightTruncation specified: validate that threshold is at group boundary (fails fast if mid-group)
-#'   - Apply truncation to reference; legacy age bounds are deprecated
+#'   - Apply truncation to reference
 #'
-#' **Step 2**: Filter & prepare crude prevalence
+#' **Step 2**: Prepare the requested crude measure
 #'   - Convert gender concept IDs (8532→Female, 8507→Male)
-#'   - Derive analysis-specific support from observed age/gender strata
-#'   - Apply deprecated ageMin/ageMax arguments only when supplied
+#'   - Require extracted age and gender columns and derive analysis-specific support
 #'   - Apply right truncation: ages >= threshold → "threshold+"
 #'
 #' **Step 3**: Map crude ages → reference group labels
@@ -713,7 +861,7 @@ loadPrevalenceResults <- function(bundlePath) {
 #'
 #' **Step 4**: Summarize by mapped age-gender groups
 #'   - Group by analysisId, spanLabel, age, gender; sum numerator and denominator
-#'   - Calculate crude rate per 100,000
+#'   - Calculate stratum-specific crude rates using `rateMultiplier`
 #'
 #' **Step 5**: Build matched reference weights separately for each analysis
 #'   - Match reference age-gender pairs to each analysis's observed strata
@@ -727,48 +875,72 @@ loadPrevalenceResults <- function(bundlePath) {
 #'   - Output includes totalNum, totalDenom, crudeStat, and stdStat
 #'
 #' @return
-#' Data frame with standardized prevalence results. One row per analysis-span combination.
+#' Data frame with standardized results. One row per analysis-span combination.
 #'   Columns:
 #'   - analysisId: Character, unique identifier for the analysis
 #'   - spanLabel: Character, label for the time span/period
 #'   - totalNum: Integer, total numerator (cases) across all strata
-#'   - totalDenom: Integer, total denominator (population) across all strata
-#'   - crudeStat: Numeric, crude prevalence rate (per 100,000)
-#'   - stdStat: Numeric, age-sex standardized prevalence rate (per 100,000)
+#'   - totalDenom: Total denominator across all strata (persons or person-years)
+#'   - crudeStat: Numeric, crude rate at the requested multiplier
+#'   - stdStat: Numeric, age-sex standardized rate at the requested multiplier
 #'   - reference_name: Character, name of the reference population used
 #'   - reference_year: Integer, year of the reference population
 #'
 #' @keywords internal
-standardize_prevalence <- function(
-    prevalenceData,
+standardize_measure <- function(
+    measureData,
     referencePopulation,
-    ageMin = NULL,
-    ageMax = NULL,
-    ageRightTruncation = NULL) {
+    measure = c("prevalence", "incidence"),
+    ageRightTruncation = NULL,
+    rateMultiplier = 100000) {
+
+  measure <- match.arg(measure)
+  measureLabel <- if (measure == "prevalence") {
+
+    "Prevalence"
+
+  } else {
+
+    "Incidence"
+
+  }
 
   # Validate inputs
   if (!inherits(referencePopulation, "StandardizationReference")) {
     cli::cli_abort("referencePopulation must be a StandardizationReference object")
   }
 
-  if (!is.data.frame(prevalenceData)) {
-    cli::cli_abort("prevalenceData must be a data frame")
+  if (!is.data.frame(measureData)) {
+    cli::cli_abort(paste0(measureLabel, " data must be a data frame"))
   }
 
-  # Validate required columns (standard CohortPrevalence output)
-  required_cols <- c("analysisId", "spanLabel", "age", "gender", "numerator", "denominator")
-  missing_cols <- setdiff(required_cols, colnames(prevalenceData))
+  # Age and gender must be present in the collected strata before mapping.
+  missing_demographic_cols <- setdiff(c("age", "gender"), colnames(measureData))
+
+  if (length(missing_demographic_cols) > 0) {
+
+    cli::cli_abort(c(
+      paste0(measureLabel, " data is missing extracted age/gender columns:"),
+      stats::setNames(missing_demographic_cols, rep("x", length(missing_demographic_cols)))
+    ))
+
+  }
+
+  required_cols <- c("analysisId", "spanLabel", "numerator", "denominator")
+  missing_cols <- setdiff(required_cols, colnames(measureData))
   if (length(missing_cols) > 0) {
     cli::cli_abort(c(
-      "prevalenceData is missing required columns:",
+      paste0(measureLabel, " data is missing required columns:"),
       stats::setNames(missing_cols, rep("x", length(missing_cols)))
     ))
   }
 
+  checkmate::assert_number(rateMultiplier, lower = 0, finite = TRUE)
+
   supported_gender_ids <- c("8507", "8532")
-  prevalence_gender_ids <- as.character(prevalenceData$gender)
+  measure_gender_ids <- as.character(measureData$gender)
   unsupported_gender_ids <- setdiff(
-    unique(prevalence_gender_ids),
+    unique(measure_gender_ids),
     supported_gender_ids
   )
 
@@ -777,7 +949,7 @@ standardize_prevalence <- function(
     unsupported_gender_labels[is.na(unsupported_gender_labels)] <- "<NA>"
 
     cli::cli_abort(c(
-      "prevalenceData contains unsupported gender concept IDs:",
+      paste0(measureLabel, " data contains unsupported gender concept IDs:"),
       stats::setNames(
         unsupported_gender_labels,
         rep("x", length(unsupported_gender_labels))
@@ -799,8 +971,8 @@ standardize_prevalence <- function(
     ref_base <- referencePopulation$getData()
   }
 
-  # ── Step 2: Filter & prepare crude prevalence ──
-  prev_clean <- prevalenceData |>
+  # ── Step 2: Filter & prepare crude measure ──
+  prev_clean <- measureData |>
     dplyr::select(
       analysisId, spanLabel, age, gender, numerator, denominator
     ) |>
@@ -813,21 +985,6 @@ standardize_prevalence <- function(
       ),
       age = as.numeric(age)
     )
-
-  # Apply legacy age bounds only when supplied; otherwise retain all
-  # analysis-eligible strata already present in prevalenceData.
-  age_is_in_bounds <- rep(TRUE, nrow(prev_clean))
-
-  if (!is.null(ageMin)) {
-    age_is_in_bounds <- age_is_in_bounds & prev_clean$age >= ageMin
-  }
-
-  if (!is.null(ageMax)) {
-    age_is_in_bounds <- age_is_in_bounds & prev_clean$age <= ageMax
-  }
-
-  prev_clean <- prev_clean |>
-    dplyr::filter(age_is_in_bounds)
 
   # Apply right truncation outside the dplyr pipeline.
   if (is.null(ageRightTruncation)) {
@@ -855,7 +1012,7 @@ standardize_prevalence <- function(
       ", age=", ages_before_mapping[unmapped_ages]
     )
     cli::cli_abort(c(
-      "Prevalence ages could not be mapped to the reference population:",
+      paste0(measureLabel, " ages could not be mapped to the reference population:"),
       stats::setNames(unmapped_description, rep("x", length(unmapped_description)))
     ))
   }
@@ -889,16 +1046,21 @@ standardize_prevalence <- function(
   }
 
   prev_grouped <- prev_grouped |>
-    dplyr::mutate(stat = (numerator / denominator) * 100000)
+    dplyr::mutate(stat = (numerator / denominator) * rateMultiplier)
 
   # ── Step 5: Build a consistent reference distribution per analysis ──
   if (nrow(prev_grouped) == 0) {
-    cli::cli_abort("No supported age/gender prevalence strata remain after filtering")
+    cli::cli_abort(paste0(
+      "No supported age/gender ", measure, " strata remain after filtering"
+    ))
   }
 
   if (anyNA(prev_grouped$age) || anyNA(prev_grouped$gender)) {
     cli::cli_abort(
-      "Prevalence contains age/gender strata that could not be mapped to the reference population"
+      paste0(
+        measureLabel,
+        " contains age/gender strata that could not be mapped to the reference population"
+      )
     )
   }
 
@@ -950,7 +1112,7 @@ standardize_prevalence <- function(
       ", gender=", unmatched_strata$gender
     )
     cli::cli_abort(c(
-      "Prevalence strata have no matching reference population:",
+      paste0(measureLabel, " strata have no matching reference population:"),
       stats::setNames(unmatched_description, rep("x", length(unmatched_description)))
     ))
   }
@@ -992,7 +1154,7 @@ standardize_prevalence <- function(
     dplyr::summarize(
       totalNum = sum(numerator),
       totalDenom = sum(denominator),
-      crudeStat = (totalNum / totalDenom) * 100000,
+      crudeStat = (totalNum / totalDenom) * rateMultiplier,
       stdStat = sum(stdValue),
       .groups = "keep"
     ) |>
@@ -1191,8 +1353,6 @@ standardize_prevalence <- function(
 #'   # Get total population
 #'   my_ref$getTotalPopulation()
 #'
-#'   # Filter to age range
-#'   filtered <- my_ref$getFilteredReference(ageMin = 18, ageMax = 65)
 #' }
 #'
 #' @export
@@ -1361,43 +1521,6 @@ StandardizationReference <- R6::R6Class(
         source = private$.source,
         reference = private$.reference
       )
-    },
-
-    #' @description Filter the reference to demographic bounds.
-    #' This helper is deprecated and will be removed in a future release; use
-    #' `getData()` and apply filtering explicitly.
-    #'
-    #' @param ageMin Minimum age (inclusive)
-    #' @param ageMax Maximum age (inclusive)
-    #'
-    #' @return Filtered data frame with age, gender, and population columns
-    getFilteredReference = function(ageMin = NULL, ageMax = NULL) {
-
-      cli::cli_warn(c(
-        "`getFilteredReference()` is deprecated and will be removed in a future release.",
-        "i" = "Use `getData()` and apply filtering explicitly."
-      ))
-
-      result <- private$.data
-
-      # Convert ages to numeric for comparison
-      if (!is.null(ageMin) || !is.null(ageMax)) {
-        ages_numeric <- suppressWarnings(as.numeric(gsub("\\+", "", result$age)))
-        age_is_in_bounds <- rep(TRUE, length(ages_numeric))
-
-        if (!is.null(ageMin)) {
-          age_is_in_bounds <- age_is_in_bounds & ages_numeric >= ageMin
-        }
-
-        if (!is.null(ageMax)) {
-          age_is_in_bounds <- age_is_in_bounds & ages_numeric <= ageMax
-        }
-
-        age_is_in_bounds <- age_is_in_bounds | is.na(ages_numeric)
-        result <- dplyr::filter(result, age_is_in_bounds)
-      }
-
-      result
     },
 
     #' @description Apply age truncation and aggregate population counts

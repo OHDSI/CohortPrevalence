@@ -8,10 +8,20 @@ CohortPrevalence v1.3.0
 
 ## Standardization
 
+- Add shared direct-method standardization for crude prevalence and incidence results, with separate crude and standardized result slots.
+- Allow result bundles to omit crude CSVs after standardization with `export(includeCrude = FALSE)`.
 - Fix #31: calculate matched reference weights per analysis and reuse them across spans; fail on missing strata rather than silently dropping or renormalizing them.
-- Reference objects store population counts, not global weights; validate and map age bands against their actual labels. Deprecate `ageMin`/`ageMax` standardization arguments.
+- Reference objects store population counts, not global weights; validate and map age bands against their actual labels.
 - Remove the sex-combined WHO reference and reject unsupported gender IDs. Validate ACS age-sex coverage, estimates, and totals.
 - update reference data stored files
+
+## Breaking Changes
+
+- Remove deprecated `ageMin` and `ageMax` arguments from standardization methods, the `minimumObservationLength` compatibility argument from `setCommonParameters()`, and `StandardizationReference$getFilteredReference()`.
+
+## SQL Export
+
+- Remove `captureSql` from `generatePrevalence()`; use `exportPrevalenceQuery()` to export SQL explicitly.
 
 ## Demographics
 - Add race and ethnicity features to crude prevalence calculation #35
@@ -37,7 +47,7 @@ CohortPrevalence v1.2.0
 
 ## Breaking Changes
 
-- `minimumObservationLength` has been removed from the prevalence API. `createCohortPrevalenceAnalysis()` and `CohortPrevalenceExperiment$setCommonParameters()` no longer accept it; use `createPrevalenceType(leadInDays = )` instead. Passing it to `setCommonParameters()` warns and is ignored. `createRassenIncidenceAnalysis()` keeps `minimumObservationLength` since incidence analyses have no prevalence type.
+- `minimumObservationLength` has been removed from the prevalence API. `createCohortPrevalenceAnalysis()` and `CohortPrevalenceExperiment$setCommonParameters()` no longer accept it; use `createPrevalenceType(leadInDays = )` instead. Passing it to `setCommonParameters()` warns and is ignored.
 
 ## Bug Fixes
 
