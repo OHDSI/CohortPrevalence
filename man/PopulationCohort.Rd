@@ -9,78 +9,87 @@ Does not require a CIRCE JSON file or a calculation mode.
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-PopulationCohort-new}{\code{PopulationCohort$new()}}
-\item \href{#method-PopulationCohort-id}{\code{PopulationCohort$id()}}
-\item \href{#method-PopulationCohort-name}{\code{PopulationCohort$name()}}
-\item \href{#method-PopulationCohort-viewCohortInfo}{\code{PopulationCohort$viewCohortInfo()}}
-\item \href{#method-PopulationCohort-clone}{\code{PopulationCohort$clone()}}
-}
+  \itemize{
+    \item \href{#method-PopulationCohort-initialize}{\code{PopulationCohort$new()}}
+    \item \href{#method-PopulationCohort-id}{\code{PopulationCohort$id()}}
+    \item \href{#method-PopulationCohort-name}{\code{PopulationCohort$name()}}
+    \item \href{#method-PopulationCohort-viewCohortInfo}{\code{PopulationCohort$viewCohortInfo()}}
+    \item \href{#method-PopulationCohort-clone}{\code{PopulationCohort$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-PopulationCohort-new"></a>}}
-\if{latex}{\out{\hypertarget{method-PopulationCohort-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new PopulationCohort object
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PopulationCohort$new(id, name)}\if{html}{\out{</div>}}
+\if{html}{\out{<a id="method-PopulationCohort-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-PopulationCohort-initialize}{}}}
+\subsection{\code{PopulationCohort$new()}}{
+  Create a new PopulationCohort object
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PopulationCohort$new(id, name)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{id}}{Integer cohort ID within the database results schema.}
+      \item{\code{name}}{Character cohort name.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{id}}{Integer cohort ID within the database results schema.}
-
-\item{\code{name}}{Character cohort name.}
-}
-\if{html}{\out{</div>}}
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PopulationCohort-id"></a>}}
 \if{latex}{\out{\hypertarget{method-PopulationCohort-id}{}}}
-\subsection{Method \code{id()}}{
-Return the cohort ID.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PopulationCohort$id()}\if{html}{\out{</div>}}
+\subsection{\code{PopulationCohort$id()}}{
+  Return the cohort ID.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PopulationCohort$id()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PopulationCohort-name"></a>}}
 \if{latex}{\out{\hypertarget{method-PopulationCohort-name}{}}}
-\subsection{Method \code{name()}}{
-Return the cohort name.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PopulationCohort$name()}\if{html}{\out{</div>}}
+\subsection{\code{PopulationCohort$name()}}{
+  Return the cohort name.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PopulationCohort$name()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PopulationCohort-viewCohortInfo"></a>}}
 \if{latex}{\out{\hypertarget{method-PopulationCohort-viewCohortInfo}{}}}
-\subsection{Method \code{viewCohortInfo()}}{
-Return a formatted info string about this cohort.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PopulationCohort$viewCohortInfo()}\if{html}{\out{</div>}}
+\subsection{\code{PopulationCohort$viewCohortInfo()}}{
+  Return a formatted info string about this cohort.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PopulationCohort$viewCohortInfo()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-PopulationCohort-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-PopulationCohort-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PopulationCohort$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{PopulationCohort$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PopulationCohort$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

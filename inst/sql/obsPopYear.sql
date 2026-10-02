@@ -23,7 +23,8 @@ demographics AS (
         /* compute age */
         EXTRACT(YEAR FROM calendar_start_date) - year_of_birth AS age,
         gender_concept_id AS gender,
-        race_concept_id AS race-- put other strata here
+        race_concept_id AS race,
+        ethnicity_concept_id AS ethnicity
   FROM eligible_periods
 )
 /* demographic constraints */

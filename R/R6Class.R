@@ -45,7 +45,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set demographic constraints
@@ -409,7 +409,7 @@ CohortPrevalenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private$.strata <- value
 
     },
@@ -506,7 +506,7 @@ IncidenceAnalysis <- R6::R6Class(
       private[[".multiplier"]] <- multiplier
 
       # set strata
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private[[".strata"]] <- strata
 
       # set demographic constraints
@@ -711,7 +711,7 @@ IncidenceAnalysis <- R6::R6Class(
       if (missing(value)) {
         return(private$.strata)
       }
-      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race"), empty.ok = TRUE)
+      checkmate::assert_subset(x = strata, choices = c("age", "gender", "race", "ethnicity"), empty.ok = TRUE)
       private$.strata <- value
 
     },

@@ -33,7 +33,7 @@ by this object via \code{createPrevalenceType(leadInDays = )}.}
 
 \item{multiplier}{Integer specifying prevalence multiplier (optional).}
 
-\item{strata}{Character string. Must be one, or some of: \code{"age"}, \code{"gender"}, \code{"race"} (optional).}
+\item{strata}{Character string. Must be one, or some of: \code{"age"}, \code{"gender"}, \verb{"race"``, }"ethnicity"` (optional).}
 
 \item{demographicConstraints}{a \code{DemoConstraint} object specifying the constraints of the population.}
 

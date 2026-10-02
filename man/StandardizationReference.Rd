@@ -44,281 +44,300 @@ methods for accessing and manipulating reference data.
 
 }
 \section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{name}}{Name of the reference population (active)}
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{name}}{Name of the reference population (active)}
 
-\item{\code{country}}{Country or region (active)}
+    \item{\code{country}}{Country or region (active)}
 
-\item{\code{year}}{Year of reference (numeric) (active)}
+    \item{\code{year}}{Year of reference (numeric) (active)}
 
-\item{\code{source}}{Source/citation (active)}
+    \item{\code{source}}{Source/citation (active)}
 
-\item{\code{reference}}{URL or reference to access source data (active)}
-}
-\if{html}{\out{</div>}}
+    \item{\code{reference}}{URL or reference to access source data (active)}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-StandardizationReference-new}{\code{StandardizationReference$new()}}
-\item \href{#method-StandardizationReference-viewReference}{\code{StandardizationReference$viewReference()}}
-\item \href{#method-StandardizationReference-getData}{\code{StandardizationReference$getData()}}
-\item \href{#method-StandardizationReference-getTotalPopulation}{\code{StandardizationReference$getTotalPopulation()}}
-\item \href{#method-StandardizationReference-getAgeValues}{\code{StandardizationReference$getAgeValues()}}
-\item \href{#method-StandardizationReference-getGenderValues}{\code{StandardizationReference$getGenderValues()}}
-\item \href{#method-StandardizationReference-getMetadata}{\code{StandardizationReference$getMetadata()}}
-\item \href{#method-StandardizationReference-getFilteredReference}{\code{StandardizationReference$getFilteredReference()}}
-\item \href{#method-StandardizationReference-getAdjustedReference}{\code{StandardizationReference$getAdjustedReference()}}
-\item \href{#method-StandardizationReference-validateRightTruncation}{\code{StandardizationReference$validateRightTruncation()}}
-\item \href{#method-StandardizationReference-getValidTruncationPoints}{\code{StandardizationReference$getValidTruncationPoints()}}
-\item \href{#method-StandardizationReference-mapAgesToReference}{\code{StandardizationReference$mapAgesToReference()}}
-\item \href{#method-StandardizationReference-clone}{\code{StandardizationReference$clone()}}
-}
+  \itemize{
+    \item \href{#method-StandardizationReference-initialize}{\code{StandardizationReference$new()}}
+    \item \href{#method-StandardizationReference-viewReference}{\code{StandardizationReference$viewReference()}}
+    \item \href{#method-StandardizationReference-getData}{\code{StandardizationReference$getData()}}
+    \item \href{#method-StandardizationReference-getTotalPopulation}{\code{StandardizationReference$getTotalPopulation()}}
+    \item \href{#method-StandardizationReference-getAgeValues}{\code{StandardizationReference$getAgeValues()}}
+    \item \href{#method-StandardizationReference-getGenderValues}{\code{StandardizationReference$getGenderValues()}}
+    \item \href{#method-StandardizationReference-getMetadata}{\code{StandardizationReference$getMetadata()}}
+    \item \href{#method-StandardizationReference-getFilteredReference}{\code{StandardizationReference$getFilteredReference()}}
+    \item \href{#method-StandardizationReference-getAdjustedReference}{\code{StandardizationReference$getAdjustedReference()}}
+    \item \href{#method-StandardizationReference-validateRightTruncation}{\code{StandardizationReference$validateRightTruncation()}}
+    \item \href{#method-StandardizationReference-getValidTruncationPoints}{\code{StandardizationReference$getValidTruncationPoints()}}
+    \item \href{#method-StandardizationReference-mapAgesToReference}{\code{StandardizationReference$mapAgesToReference()}}
+    \item \href{#method-StandardizationReference-clone}{\code{StandardizationReference$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-StandardizationReference-new"></a>}}
-\if{latex}{\out{\hypertarget{method-StandardizationReference-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new StandardizationReference
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$new(
+\if{html}{\out{<a id="method-StandardizationReference-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-StandardizationReference-initialize}{}}}
+\subsection{\code{StandardizationReference$new()}}{
+  Create a new StandardizationReference
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$new(
   name,
   country,
   year,
   source,
   data,
   reference = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{name}}{Character. Name of reference (e.g., "USA Census 2020")}
-
-\item{\code{country}}{Character. Country/region name}
-
-\item{\code{year}}{Integer. Reference year}
-
-\item{\code{source}}{Character. Data source description}
-
-\item{\code{data}}{Data frame with columns: age, gender, population
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{name}}{Character. Name of reference (e.g., "USA Census 2020")}
+      \item{\code{country}}{Character. Country/region name}
+      \item{\code{year}}{Integer. Reference year}
+      \item{\code{source}}{Character. Data source description}
+      \item{\code{data}}{Data frame with columns: age, gender, population
 Age labels must be single ages, inclusive ranges, open-ended bands, or
 Under N bands; age/gender pairs must be unique.}
+      \item{\code{reference}}{Character. URL or reference to access the source data}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A new StandardizationReference object
+  }
+}
 
-\item{\code{reference}}{Character. URL or reference to access the source data}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A new StandardizationReference object
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-viewReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-viewReference}{}}}
-\subsection{Method \code{viewReference()}}{
-View the reference population data
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$viewReference()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$viewReference()}}{
+  View the reference population data
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$viewReference()}
+    \if{html}{\out{</div>}}
+  }
 }
 
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getData"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getData}{}}}
-\subsection{Method \code{getData()}}{
-Get the full reference data frame
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getData()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getData()}}{
+  Get the full reference data frame
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getData()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Data frame with columns: age, gender, and population
+  }
 }
 
-\subsection{Returns}{
-Data frame with columns: age, gender, and population
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getTotalPopulation"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getTotalPopulation}{}}}
-\subsection{Method \code{getTotalPopulation()}}{
-Get total population
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getTotalPopulation()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getTotalPopulation()}}{
+  Get total population
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getTotalPopulation()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Numeric value
+  }
 }
 
-\subsection{Returns}{
-Numeric value
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getAgeValues"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAgeValues}{}}}
-\subsection{Method \code{getAgeValues()}}{
-Get unique ages
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAgeValues()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getAgeValues()}}{
+  Get unique ages
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getAgeValues()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Character vector of age values
+  }
 }
 
-\subsection{Returns}{
-Character vector of age values
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getGenderValues"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getGenderValues}{}}}
-\subsection{Method \code{getGenderValues()}}{
-Get unique genders
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getGenderValues()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getGenderValues()}}{
+  Get unique genders
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getGenderValues()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Character vector of gender values
+  }
 }
 
-\subsection{Returns}{
-Character vector of gender values
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getMetadata"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getMetadata}{}}}
-\subsection{Method \code{getMetadata()}}{
-Get metadata as list
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getMetadata()}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getMetadata()}}{
+  Get metadata as list
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getMetadata()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    List with name, country, year, source, reference
+  }
 }
 
-\subsection{Returns}{
-List with name, country, year, source, reference
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getFilteredReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getFilteredReference}{}}}
-\subsection{Method \code{getFilteredReference()}}{
-Filter the reference to demographic bounds.
+\subsection{\code{StandardizationReference$getFilteredReference()}}{
+  Filter the reference to demographic bounds.
 This helper is deprecated and will be removed in a future release; use
 \code{getData()} and apply filtering explicitly.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getFilteredReference(ageMin = NULL, ageMax = NULL)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getFilteredReference(ageMin = NULL, ageMax = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{ageMin}}{Minimum age (inclusive)}
+      \item{\code{ageMax}}{Maximum age (inclusive)}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Filtered data frame with age, gender, and population columns
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ageMin}}{Minimum age (inclusive)}
-
-\item{\code{ageMax}}{Maximum age (inclusive)}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Filtered data frame with age, gender, and population columns
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getAdjustedReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getAdjustedReference}{}}}
-\subsection{Method \code{getAdjustedReference()}}{
-Apply age truncation and aggregate population counts
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getAdjustedReference(rightTruncation)}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$getAdjustedReference()}}{
+  Apply age truncation and aggregate population counts
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getAdjustedReference(rightTruncation)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{rightTruncation}}{Numeric age threshold for truncation
+Must be a finite, non-negative integer supported by this reference.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Data frame with truncated age groups and aggregated population counts
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{rightTruncation}}{Numeric age threshold for truncation
-Must be a finite, non-negative integer supported by this reference.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Data frame with truncated age groups and aggregated population counts
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-validateRightTruncation"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-validateRightTruncation}{}}}
-\subsection{Method \code{validateRightTruncation()}}{
-Validate right truncation point against reference age groups
+\subsection{\code{StandardizationReference$validateRightTruncation()}}{
+  Validate right truncation point against reference age groups
 
 For single-year references, any integer age is valid. For grouped references,
 the truncation point must fall exactly at the start of an age group (e.g.,
 "85" for "85+" group, "80" for "80-84" group). Fails fast if truncation
 falls mid-group.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$validateRightTruncation(rightTruncation)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$validateRightTruncation(rightTruncation)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{rightTruncation}}{Numeric. Age threshold to validate.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Numeric. The validated truncation point (or stop with error)
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{rightTruncation}}{Numeric. Age threshold to validate.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Numeric. The validated truncation point (or stop with error)
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-getValidTruncationPoints"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-getValidTruncationPoints}{}}}
-\subsection{Method \code{getValidTruncationPoints()}}{
-Get valid truncation points for this reference
+\subsection{\code{StandardizationReference$getValidTruncationPoints()}}{
+  Get valid truncation points for this reference
 
 Returns a numeric vector of all valid age thresholds where right truncation
 is allowed (start of each age group for grouped references, all ages for
 single-year references).
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$getValidTruncationPoints()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$getValidTruncationPoints()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Numeric vector of valid truncation points
+  }
 }
 
-\subsection{Returns}{
-Numeric vector of valid truncation points
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-mapAgesToReference"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-mapAgesToReference}{}}}
-\subsection{Method \code{mapAgesToReference()}}{
-Map single-year ages to reference age group labels
+\subsection{\code{StandardizationReference$mapAgesToReference()}}{
+  Map single-year ages to reference age group labels
 
 Converts ages to the exact labels used by the reference population. Numeric
 ages are matched to parsed reference intervals, including single-year labels
 with or without zero padding. Plus-suffixed values are accepted only when
 they match a native open-ended label or the requested right truncation.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$mapAgesToReference(age_values, rightTruncation = NULL)}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$mapAgesToReference(age_values, rightTruncation = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{age_values}}{Character/numeric vector. May contain \"N+\" suffix values or numeric strings.}
+      \item{\code{rightTruncation}}{Optional numeric threshold used to create a supported \"N+\" label.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Character vector of reference-formatted age labels
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{age_values}}{Character/numeric vector. May contain \"N+\" suffix values or numeric strings.}
-
-\item{\code{rightTruncation}}{Optional numeric threshold used to create a supported \"N+\" label.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Character vector of reference-formatted age labels
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-StandardizationReference-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-StandardizationReference-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{StandardizationReference$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{StandardizationReference$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{StandardizationReference$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

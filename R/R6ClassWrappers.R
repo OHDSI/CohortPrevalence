@@ -54,7 +54,7 @@ createPrevalenceType <- function(prevalenceType, lookBackDays, mode = "formal", 
 #'   by this object via `createPrevalenceType(leadInDays = )`.
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `PopulationCohort` object specifying the population of interest on which to compute prevalence.
 #' @param outputTypes Character vector specifying which output types to generate. Defaults to `"prevalence"`. Can include `"incidence"` and/or `"drugs"` for simultaneous generation using shared base tables.
@@ -109,7 +109,7 @@ createCohortPrevalenceAnalysis <- function(analysisId,
 #' @param minimumObservationLength: Integer specifying minimum observation length (optional).
 #' @param useOnlyFirstObservationPeriod Logical: `TRUE` to restrict analysis to the first observation period (optional).
 #' @param multiplier Integer specifying prevalence multiplier (optional).
-#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"` (optional).
+#' @param strata Character string. Must be one, or some of: `"age"`, `"gender"`, `"race"``, `"ethnicity"` (optional).
 #' @param demographicConstraints a `DemoConstraint` object specifying the constraints of the population.
 #' @param populationCohort A `CohortPopulation` object specifying the population of interest on which to compute prevalence.
 #'
