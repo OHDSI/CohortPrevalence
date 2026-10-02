@@ -269,6 +269,39 @@ test_that("assembleSql omits ungrouped strata from the aggregation GROUP BY", {
   expect_no_match(sql, "GROUP BY span_label,ethnicity, race")
 })
 
+test_that("assembleSql bounds incidence person-time by observation and event dates", {
+  executionSettings <- structure(
+    list(
+      getDbms = function() "postgresql",
+      tempEmulationSchema = NULL
+    ),
+    class = "ExecutionSettings"
+  )
+
+  analysis <- createCohortPrevalenceAnalysis(
+    analysisId = 1,
+    prevalentCohort = createTargetCohort(1, "Test Cohort"),
+    periodOfInterest = createYearlyRange(2020:2021),
+    prevalenceType = createPrevalenceType("point_prevalence", lookBackDays = 365),
+    strata = "gender",
+    outputTypes = "incidence"
+  )
+
+  sql <- analysis$assembleSql(executionSettings)
+
+  expect_match(sql, "observation_period_start_date", fixed = TRUE)
+  expect_match(sql, "observation_period_end_date", fixed = TRUE)
+  expect_match(sql, "DATEADD(day, -1, event_status.incident_date)", fixed = TRUE)
+  expect_match(sql, "MAX(inc_event) AS inc_event", fixed = TRUE)
+  expect_match(sql, "SUM(time_at_risk) AS time_at_risk", fixed = TRUE)
+  expect_match(sql, "FROM #denomInc", fixed = TRUE)
+  expect_match(
+    sql,
+    "CAST(SUM(inc_event) AS FLOAT) / NULLIF(SUM(time_at_risk) / 365.25, 0)",
+    fixed = TRUE
+  )
+})
+
 test_that("assembleSql builds only selected demographic summaries after #allEvents", {
   executionSettings <- structure(
     list(
