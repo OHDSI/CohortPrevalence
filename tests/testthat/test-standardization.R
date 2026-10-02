@@ -674,13 +674,13 @@ test_that("standardized-only export rejects crude results without standardized c
   expect_false(dir.exists(file.path(outputFolder, "invalid")))
 })
 
-test_that("captureSql warns when supplied and defaults to disabled", {
-  expect_warning(
-    expect_error(generatePrevalence(NULL, NULL, captureSql = FALSE)),
-    "captureSql.*deprecated"
+test_that("generatePrevalence no longer accepts captureSql", {
+  expect_false(
+    "captureSql" %in% names(formals(CohortPrevalence::generatePrevalence))
   )
-  expect_null(
-    formals(CohortPrevalence::generatePrevalence)[["captureSql"]]
+  expect_error(
+    generatePrevalence(NULL, NULL, captureSql = FALSE),
+    "unused argument"
   )
 })
 

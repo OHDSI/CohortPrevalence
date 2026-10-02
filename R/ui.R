@@ -62,7 +62,6 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #'
 #' @param prevalenceAnalysisList A `CohortPrevalenceAnalysis` R6 object or list of such objects
 #' @param executionSettings An `executionSettings` R6 object with connection and schema details
-#' @param captureSql Deprecated. If supplied, warns and temporarily honors the logical SQL-capture setting. SQL capture is disabled by default.
 #'
 #' @return A `PrevalenceResults` R6 object containing all results with full provenance tracking
 #'
@@ -70,8 +69,6 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' This function consolidates analysis execution and result collection into a single workflow.
 #' Results include prevalence, incidence, drug usage, and demographics data as configured in the analysis objects.
 #' When multiple analyses are supplied, they must request the same `outputTypes`.
-#' SQL query capture is disabled by default. The deprecated `captureSql` argument can
-#' temporarily enable it for reproducibility auditing.
 #'
 #' When running multiple analyses from a `CohortPrevalenceExperiment`, use the experiment's
 #' `define()` method to obtain the analysis list, then pass it to this function:
@@ -94,30 +91,10 @@ runPrevalence <- function(prevalenceAnalysisClass, executionSettings) {
 #' - demographics data frame: Tidy demographic statistics in `stat` / `value` rows if requested
 #' - metaInfo data frame: Analysis metadata and configuration
 #'
-#' ## Query Audit Trail (Level 1)
-#' When SQL capture is enabled through the deprecated `captureSql` argument, executed
-#' queries are stored with SHA256 checksums in the PrevalenceResults object. Access
-#' captured SQL via `results$show_query(analysisId)`.
-#'
 #' @export
 #'
 generatePrevalence <- function(prevalenceAnalysisList,
-                               executionSettings,
-                               captureSql = NULL) {
-
-  if (!missing(captureSql)) {
-
-    cli::cli_warn(
-      "`captureSql` is deprecated and will be removed in a future release."
-    )
-
-  }
-
-  if (is.null(captureSql)) {
-
-    captureSql <- FALSE
-
-  }
+                               executionSettings) {
 
   # Normalize input - handle single analysis or list
   if (!is.list(prevalenceAnalysisList)) {
@@ -127,7 +104,6 @@ generatePrevalence <- function(prevalenceAnalysisList,
   # Validate inputs
   checkmate::assert_list(prevalenceAnalysisList, min.len = 1)
   checkmate::assert_class(executionSettings, classes = "ExecutionSettings")
-  checkmate::assert_logical(captureSql, len = 1)
 
   outputTypes <- validateCommonPrevalenceOutputTypes(prevalenceAnalysisList)
 
@@ -170,7 +146,6 @@ generatePrevalence <- function(prevalenceAnalysisList,
   }
 
   metaInfoList <- list()
-  executedQueries <- list()
   executionErrors <- list()
 
   # Run each analysis with tolerant error handling
@@ -199,11 +174,6 @@ generatePrevalence <- function(prevalenceAnalysisList,
 
       sql1 <- prevalenceAnalysisClass$assembleSql(executionSettings)
       sql2 <- prevalenceAnalysisClass$renderAssembledSql(sql = sql1, executionSettings)
-
-      # Capture SQL if requested
-      if (captureSql && !is.null(sql2)) {
-        executedQueries[[analysisId]] <- sql2
-      }
 
       cli::cli_alert_success("SQL rendered successfully")
 
@@ -309,14 +279,6 @@ generatePrevalence <- function(prevalenceAnalysisList,
     demographics = combinedResults$demographics,
     metaInfo = combinedResults$metaInfo
   )
-
-  # Add executed queries to result object
-  if (captureSql && length(executedQueries) > 0) {
-    for (analysisId in names(executedQueries)) {
-      results$.addExecutedQuery(analysisId, executedQueries[[analysisId]])
-    }
-    cli::cli_alert_success("Captured {length(executedQueries)} SQL queries with checksums")
-  }
 
   # Report any execution errors
   if (length(executionErrors) > 0) {

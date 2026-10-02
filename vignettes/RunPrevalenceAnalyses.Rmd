@@ -354,8 +354,7 @@ analyses <- exp$define()
 # Execute all analyses
 results <- generatePrevalence(
   prevalenceAnalysisList = analyses,
-  executionSettings = executionSettings,
-  captureSql = TRUE
+  executionSettings = executionSettings
 )
 
 #standardize results

@@ -12,13 +12,15 @@ Results are stored as CSV files in a directory bundle with a manifest.json file
 tracking provenance, standardization parameters, and execution metadata.
 \subsection{Active Fields}{
 \itemize{
-\item \code{prevalence}: Data frame with crude (unadjusted) prevalence results (read/write)
+\item \code{crudePrev}: Data frame with crude prevalence results (read/write)
 \item \code{stdPrev}: Data frame with standardized prevalence results (read/write)
-\item \code{incidence}: Data frame with incidence results (read/write)
+\item \code{crudeInc}: Data frame with crude incidence results (read/write)
+\item \code{stdInc}: Data frame with standardized incidence results (read/write)
+\item \code{prevalence} and \code{incidence}: Aliases for \code{crudePrev} and \code{crudeInc}
 \item \code{drugUsage}: Data frame with drug usage results (read/write)
 \item \code{demographics}: Data frame with case demographic summaries tagged by measureType (read/write)
 \item \code{metaInfo}: Data frame with analysis metadata (read/write)
-\item \code{standardizationApplied}: List containing standardization parameters (read-only)
+\item \code{standardizationApplied}: Parameters keyed by measure (read-only)
 }
 }
 
@@ -33,7 +35,8 @@ tracking provenance, standardization parameters, and execution metadata.
 \itemize{
 \item \code{initialize()}: Create new PrevalenceResults object
 \item \code{export()}: Save results to directory bundle with manifest
-\item \code{standardizePrevalence()}: Apply direct method standardization (returns new object)
+\item \code{standardizePrevalence()}: Standardize crude prevalence (returns self)
+\item \code{standardizeIncidence()}: Standardize crude incidence (returns self)
 \item \code{validate()}: Check data integrity and consistency
 \item \code{summary()}: Print summary statistics
 \item \code{print()}: Display object overview
@@ -43,6 +46,10 @@ tracking provenance, standardization parameters, and execution metadata.
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
+\item{\code{crudePrev}}{Data frame with crude prevalence results}
+
+\item{\code{crudeInc}}{Data frame with crude incidence results}
+
 \item{\code{prevalence}}{Data frame with prevalence results}
 
 \item{\code{incidence}}{Data frame with incidence results}
@@ -55,6 +62,8 @@ tracking provenance, standardization parameters, and execution metadata.
 
 \item{\code{stdPrev}}{Data frame with standardized prevalence results}
 
+\item{\code{stdInc}}{Data frame with standardized incidence results}
+
 \item{\code{standardizationApplied}}{List of standardization parameters (read-only)}
 }
 \if{html}{\out{</div>}}
@@ -65,6 +74,7 @@ tracking provenance, standardization parameters, and execution metadata.
 \item \href{#method-PrevalenceResults-new}{\code{PrevalenceResults$new()}}
 \item \href{#method-PrevalenceResults-export}{\code{PrevalenceResults$export()}}
 \item \href{#method-PrevalenceResults-standardizePrevalence}{\code{PrevalenceResults$standardizePrevalence()}}
+\item \href{#method-PrevalenceResults-standardizeIncidence}{\code{PrevalenceResults$standardizeIncidence()}}
 \item \href{#method-PrevalenceResults-validate}{\code{PrevalenceResults$validate()}}
 \item \href{#method-PrevalenceResults-summary}{\code{PrevalenceResults$summary()}}
 \item \href{#method-PrevalenceResults-print}{\code{PrevalenceResults$print()}}
@@ -85,7 +95,11 @@ Create new PrevalenceResults object
   drugUsage = NULL,
   metaInfo = NULL,
   executionId = NULL,
-  demographics = NULL
+  demographics = NULL,
+  crudePrev = NULL,
+  stdPrev = NULL,
+  crudeInc = NULL,
+  stdInc = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -103,6 +117,14 @@ Create new PrevalenceResults object
 \item{\code{executionId}}{Optional character string for execution tracking (internal use)}
 
 \item{\code{demographics}}{Data frame with case demographic summaries, including measureType}
+
+\item{\code{crudePrev}}{Crude prevalence data frame; mutually exclusive with \code{prevalence}}
+
+\item{\code{stdPrev}}{Standardized prevalence data frame}
+
+\item{\code{crudeInc}}{Crude incidence data frame; mutually exclusive with \code{incidence}}
+
+\item{\code{stdInc}}{Standardized incidence data frame}
 }
 \if{html}{\out{</div>}}
 }
@@ -113,7 +135,7 @@ Create new PrevalenceResults object
 \subsection{Method \code{export()}}{
 Export results to directory bundle with manifest
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$export(outputFolder, bundleName = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$export(outputFolder, bundleName = NULL, includeCrude = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -122,6 +144,8 @@ Export results to directory bundle with manifest
 \item{\code{outputFolder}}{Character path where bundle directory will be created}
 
 \item{\code{bundleName}}{Optional name for the bundle directory. Default: auto-generated timestamp}
+
+\item{\code{includeCrude}}{Logical. Include crude prevalence/incidence CSVs. Set to \code{FALSE} after standardizing to omit them; errors if a non-empty crude result has no standardized counterpart.}
 }
 \if{html}{\out{</div>}}
 }
@@ -159,7 +183,38 @@ eligibility should be applied when defining the analysis.}
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-New PrevalenceResults object with standardized prevalence
+Invisibly returns self
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PrevalenceResults-standardizeIncidence"></a>}}
+\if{latex}{\out{\hypertarget{method-PrevalenceResults-standardizeIncidence}{}}}
+\subsection{Method \code{standardizeIncidence()}}{
+Apply direct method standardization to crude incidence
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$standardizeIncidence(
+  referencePopulation,
+  ageMin = NULL,
+  ageMax = NULL,
+  ageRightTruncation = NULL
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{referencePopulation}}{StandardizationReference object}
+
+\item{\code{ageMin}}{Deprecated. Numeric minimum age for filtering.}
+
+\item{\code{ageMax}}{Deprecated. Numeric maximum age for filtering.}
+
+\item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self
 }
 }
 \if{html}{\out{<hr>}}

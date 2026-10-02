@@ -69,16 +69,15 @@ analysis <- createCohortPrevalenceAnalysis(
 # Execute analysis
 results <- generatePrevalence(
   prevalenceAnalysisList = analysis,
-  executionSettings = settings,
-  captureSql = TRUE
+  executionSettings = settings
 )
 
 # Explore results interactively
 results$explore()  # Launches Shiny dashboard with tabs: Prevalence | Incidence | Drug Usage
 # Note: explore() is not yet ready for use
 
-# View SQL executed
-results$show_query(analysisId = 1)
+# Export SQL separately when needed
+exportPrevalenceQuery(analysis, settings)
 
 # Standardize prevalence
 reference <- getStandardizationReference("usa_census_2020")
@@ -184,9 +183,6 @@ results$metaInfo        # Analysis metadata & configuration
 # Standardized data
 results$stdPrev         # Standardized prevalence (after standardizePrevalence())
 
-# Query tracking
-results$show_query(analysisId = 1)  # View SQL executed
-
 # Provenance & export
 results$export(outputFolder = "output")  # Creates manifest.json with SHA256 checksums
 ```
@@ -211,7 +207,7 @@ results$export(outputFolder = "output")  # Creates manifest.json with SHA256 che
 
 ### Performance Tips
 - For large experiments (>100 analyses), run in stages with monitoring
-- Use `captureSql = FALSE` to reduce memory footprint (disables query audit trail)
+- SQL is not stored with analysis results; use `exportPrevalenceQuery()` when a SQL file is needed
 - Advanced: `explore()` UI filter available once feature is ready
 
 ## Installation

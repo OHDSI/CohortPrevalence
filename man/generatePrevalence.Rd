@@ -4,18 +4,12 @@
 \alias{generatePrevalence}
 \title{Generate Prevalence Analysis Results}
 \usage{
-generatePrevalence(
-  prevalenceAnalysisList,
-  executionSettings,
-  captureSql = TRUE
-)
+generatePrevalence(prevalenceAnalysisList, executionSettings)
 }
 \arguments{
 \item{prevalenceAnalysisList}{A \code{CohortPrevalenceAnalysis} R6 object or list of such objects}
 
 \item{executionSettings}{An \code{executionSettings} R6 object with connection and schema details}
-
-\item{captureSql}{Logical. If TRUE (default), capture rendered SQL queries for audit trail}
 }
 \value{
 A \code{PrevalenceResults} R6 object containing all results with full provenance tracking
@@ -28,7 +22,6 @@ Replaces separate generateSinglePrevalence and generateMultiplePrevalence functi
 This function consolidates analysis execution and result collection into a single workflow.
 Results include prevalence, incidence, drug usage, and demographics data as configured in the analysis objects.
 When multiple analyses are supplied, they must request the same \code{outputTypes}.
-SQL queries are captured with SHA256 checksums for reproducibility verification.
 
 When running multiple analyses from a \code{CohortPrevalenceExperiment}, use the experiment's
 \code{define()} method to obtain the analysis list, then pass it to this function:
@@ -50,11 +43,5 @@ results <- generatePrevalence(analyses, executionSettings)
 \item demographics data frame: Tidy demographic statistics in \code{stat} / \code{value} rows if requested
 \item metaInfo data frame: Analysis metadata and configuration
 }
-}
-
-\subsection{Query Audit Trail (Level 1)}{
-
-Each executed query is captured and stored with SHA256 checksum in the PrevalenceResults
-object. Access via \code{results$show_query(analysisId)} for inspection.
 }
 }
