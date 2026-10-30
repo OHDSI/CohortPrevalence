@@ -1,4 +1,6 @@
 /* Keep one eligible target row per patient and calendar span. */
+DROP TABLE IF EXISTS #drug_pers_res;
+CREATE TABLE #drug_pers_res AS
 WITH target_years AS (
     SELECT DISTINCT
         @prevalent_cohort_id AS target_id,
@@ -75,52 +77,7 @@ valid_drug_intervals AS (
     FROM drug_intervals
     WHERE drug_start < drug_end
 ),
-/* Find the furthest end among prior intervals to detect nested overlaps. */
-intervals_with_prior_end AS (
-    SELECT
-        *,
-        MAX(drug_end) OVER (
-            PARTITION BY target_id, subject_id, span_label, drug_occurrence_id
-            ORDER BY drug_start, drug_end
-            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-        ) AS prior_drug_end
-    FROM valid_drug_intervals
-),
-/* Mark the beginning of each non-overlapping run of drug intervals. */
-interval_island_starts AS (
-    SELECT
-        *,
-        CASE
-            WHEN prior_drug_end IS NULL OR drug_start > prior_drug_end THEN 1
-            ELSE 0
-        END AS starts_new_island
-    FROM intervals_with_prior_end
-),
-/* Assign a shared island ID to each overlapping or adjacent run. */
-numbered_drug_intervals AS (
-    SELECT
-        *,
-        SUM(starts_new_island) OVER (
-            PARTITION BY target_id, subject_id, span_label, drug_occurrence_id
-            ORDER BY drug_start, drug_end
-            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-        ) AS island_id
-    FROM interval_island_starts
-),
-/* Collapse each island into one interval so overlapping days count once. */
-merged_drug_intervals AS (
-    SELECT
-        target_id,
-        subject_id,
-        span_label,
-        drug_occurrence_id,
-        island_id,
-        MIN(drug_start) AS drug_start,
-        MAX(drug_end) AS drug_end
-    FROM numbered_drug_intervals
-    GROUP BY target_id, subject_id, span_label, drug_occurrence_id, island_id
-),
-/* Sum the merged drug intervals per patient, span, and drug cohort. */
+/* Sum the already non-overlapping eras per patient, span, and drug cohort. */
 drug_days AS (
     SELECT
         target_id,
@@ -128,7 +85,7 @@ drug_days AS (
         span_label,
         drug_occurrence_id,
         SUM(DATEDIFF(day, drug_start, drug_end)) AS comb_drug_time
-    FROM merged_drug_intervals
+    FROM valid_drug_intervals
     GROUP BY target_id, subject_id, span_label, drug_occurrence_id
 )
 /* Pool patient-level day counts by target, drug, and span; return percent. */
