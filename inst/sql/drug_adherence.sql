@@ -47,6 +47,12 @@ patient_adherence_days AS (
 		DATEDIFF(day, MIN(drug_start), MAX(drug_end)) AS treatment_days
 	FROM valid_drug_intervals
 	GROUP BY target_id, subject_id, span_label, drug_occurrence_id
+),
+/* Exclude patient spans shorter than the configured minimum duration. */
+eligible_patient_adherence AS (
+	SELECT *
+	FROM patient_adherence_days
+	WHERE treatment_days >= @min_duration
 )
 /* Pool patient day counts by target, drug, and span; return percent. */
 SELECT
@@ -59,7 +65,7 @@ SELECT
 		100.0 * SUM(drug_days) / NULLIF(SUM(treatment_days), 0),
 		0
 	) AS adherence_rate
-FROM patient_adherence_days
+	FROM eligible_patient_adherence
 GROUP BY target_id, drug_occurrence_id, span_label
 ORDER BY target_id, span_label, drug_occurrence_id
 ;
