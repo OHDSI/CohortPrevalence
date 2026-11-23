@@ -9,7 +9,8 @@ standardize_measure(
   referencePopulation,
   measure = c("prevalence", "incidence"),
   ageRightTruncation = NULL,
-  rateMultiplier = 1e+05
+  rateMultiplier = 1e+05,
+  includeMatchedPopulation = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,9 @@ database age masking (e.g., Optum: 70+ all collapsed to "70+").
 If NULL (default), no truncation applied.}
 
 \item{rateMultiplier}{Numeric scale applied to crude and standardized rates.}
+
+\item{includeMatchedPopulation}{Logical. Include the matched reference total
+in the result for population case estimation.}
 }
 \value{
 Data frame with standardized results. One row per analysis-span combination.

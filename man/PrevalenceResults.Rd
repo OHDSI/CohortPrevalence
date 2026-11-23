@@ -16,6 +16,7 @@ tracking provenance, standardization parameters, and execution metadata.
 \item \code{stdPrev}: Data frame with standardized prevalence results (read/write)
 \item \code{crudeInc}: Data frame with crude incidence results (read/write)
 \item \code{stdInc}: Data frame with standardized incidence results (read/write)
+\item \code{projPopEst}: Data frame with population-standardized prevalence estimates (read/write)
 \item \code{prevalence} and \code{incidence}: Aliases for \code{crudePrev} and \code{crudeInc}
 \item \code{drugUsage}: Data frame with drug usage results (read/write)
 \item \code{demographics}: Data frame with case demographic summaries tagged by measureType (read/write)
@@ -37,6 +38,7 @@ tracking provenance, standardization parameters, and execution metadata.
 \item \code{export()}: Save results to directory bundle with manifest
 \item \code{standardizePrevalence()}: Standardize crude prevalence (returns self)
 \item \code{standardizeIncidence()}: Standardize crude incidence (returns self)
+\item \code{project_to_population()}: Standardize prevalence to annual population references
 \item \code{validate()}: Check data integrity and consistency
 \item \code{summary()}: Print summary statistics
 \item \code{print()}: Display object overview
@@ -64,6 +66,8 @@ tracking provenance, standardization parameters, and execution metadata.
 
 \item{\code{stdInc}}{Data frame with standardized incidence results}
 
+\item{\code{projPopEst}}{Data frame with population-standardized prevalence estimates}
+
 \item{\code{standardizationApplied}}{List of standardization parameters (read-only)}
 }
 \if{html}{\out{</div>}}
@@ -75,6 +79,7 @@ tracking provenance, standardization parameters, and execution metadata.
 \item \href{#method-PrevalenceResults-export}{\code{PrevalenceResults$export()}}
 \item \href{#method-PrevalenceResults-standardizePrevalence}{\code{PrevalenceResults$standardizePrevalence()}}
 \item \href{#method-PrevalenceResults-standardizeIncidence}{\code{PrevalenceResults$standardizeIncidence()}}
+\item \href{#method-PrevalenceResults-project_to_population}{\code{PrevalenceResults$project_to_population()}}
 \item \href{#method-PrevalenceResults-validate}{\code{PrevalenceResults$validate()}}
 \item \href{#method-PrevalenceResults-summary}{\code{PrevalenceResults$summary()}}
 \item \href{#method-PrevalenceResults-print}{\code{PrevalenceResults$print()}}
@@ -99,7 +104,8 @@ Create new PrevalenceResults object
   crudePrev = NULL,
   stdPrev = NULL,
   crudeInc = NULL,
-  stdInc = NULL
+  stdInc = NULL,
+  projPopEst = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -125,6 +131,8 @@ Create new PrevalenceResults object
 \item{\code{crudeInc}}{Crude incidence data frame; mutually exclusive with \code{incidence}}
 
 \item{\code{stdInc}}{Standardized incidence data frame}
+
+\item{\code{projPopEst}}{Population-standardized prevalence estimates}
 }
 \if{html}{\out{</div>}}
 }
@@ -201,6 +209,34 @@ Apply direct method standardization to crude incidence
 }
 \subsection{Returns}{
 Invisibly returns self
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PrevalenceResults-project_to_population"></a>}}
+\if{latex}{\out{\hypertarget{method-PrevalenceResults-project_to_population}{}}}
+\subsection{Method \code{project_to_population()}}{
+Standardize prevalence to matched annual population references
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{PrevalenceResults$project_to_population(
+  referencePopulation,
+  ageRightTruncation = NULL,
+  rateMultiplier = 1e+05
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{referencePopulation}}{ProjectionReference object}
+
+\item{\code{ageRightTruncation}}{Numeric age threshold for collapsing}
+
+\item{\code{rateMultiplier}}{Numeric scale for the standardized rate}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns self; results are stored in \code{projPopEst}
 }
 }
 \if{html}{\out{<hr>}}

@@ -3,6 +3,7 @@
 export(CohortPrevalenceExperiment)
 export(PopulationCohort)
 export(PrevalenceResults)
+export(ProjectionReference)
 export(StandardizationReference)
 export(TargetCohort)
 export(createCohortPrevalenceAnalysis)
