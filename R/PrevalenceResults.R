@@ -15,6 +15,7 @@
 #' - `stdPrev`: Data frame with standardized prevalence results (read/write)
 #' - `crudeInc`: Data frame with crude incidence results (read/write)
 #' - `stdInc`: Data frame with standardized incidence results (read/write)
+#' - `projPopEst`: Data frame with population-standardized prevalence estimates (read/write)
 #' - `prevalence` and `incidence`: Aliases for `crudePrev` and `crudeInc`
 #' - `drugUsage`: Data frame with drug usage results (read/write)
 #' - `demographics`: Data frame with case demographic summaries tagged by measureType (read/write)
@@ -30,6 +31,7 @@
 #' - `export()`: Save results to directory bundle with manifest
 #' - `standardizePrevalence()`: Standardize crude prevalence (returns self)
 #' - `standardizeIncidence()`: Standardize crude incidence (returns self)
+#' - `project_to_population()`: Standardize prevalence to annual population references
 #' - `validate()`: Check data integrity and consistency
 #' - `summary()`: Print summary statistics
 #' - `print()`: Display object overview
@@ -49,6 +51,7 @@ PrevalenceResults <- R6::R6Class(
     #' @param stdPrev Standardized prevalence data frame
     #' @param crudeInc Crude incidence data frame; mutually exclusive with `incidence`
     #' @param stdInc Standardized incidence data frame
+    #' @param projPopEst Population-standardized prevalence estimates
     initialize = function(prevalence = NULL,
                          incidence = NULL,
                          drugUsage = NULL,
@@ -58,7 +61,8 @@ PrevalenceResults <- R6::R6Class(
                          crudePrev = NULL,
                          stdPrev = NULL,
                          crudeInc = NULL,
-                         stdInc = NULL) {
+                         stdInc = NULL,
+                         projPopEst = NULL) {
       if (!is.null(prevalence) && !is.null(crudePrev)) {
 
         cli::cli_abort("Supply only one of 'prevalence' and 'crudePrev'.")
@@ -87,6 +91,7 @@ PrevalenceResults <- R6::R6Class(
       private$.stdPrev <- stdPrev
       private$.crudeInc <- crudeInc
       private$.stdInc <- stdInc
+      private$.projPopEst <- projPopEst
       private$.drugUsage <- drugUsage
       private$.demographics <- normalizeDemographicsResults(demographics)
       private$.metaInfo <- metaInfo
@@ -314,6 +319,76 @@ PrevalenceResults <- R6::R6Class(
         rightTruncation = ageRightTruncation,
         appliedDate = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ")
       )
+
+      invisible(self)
+    },
+
+    #' @description Standardize prevalence to matched annual population references
+    #' @param referencePopulation ProjectionReference object
+    #' @param ageRightTruncation Numeric age threshold for collapsing
+    #' @param rateMultiplier Numeric scale for the standardized rate
+    #' @return Invisibly returns self; results are stored in `projPopEst`
+    project_to_population = function(referencePopulation,
+                                     ageRightTruncation = NULL,
+                                     rateMultiplier = 100000) {
+
+      if (!inherits(referencePopulation, "ProjectionReference")) {
+        cli::cli_abort("referencePopulation must be a ProjectionReference object.")
+      }
+
+      if (is.null(private$.crudePrev) || nrow(private$.crudePrev) == 0) {
+        cli::cli_abort("No prevalence data to project to a population.")
+      }
+
+      if (!"spanLabel" %in% names(private$.crudePrev)) {
+        cli::cli_abort("Prevalence data must contain a 'spanLabel' column.")
+      }
+
+      checkmate::assert_number(rateMultiplier, lower = 0, finite = TRUE)
+
+      if (rateMultiplier == 0) {
+        cli::cli_abort("'rateMultiplier' must be greater than zero for case estimation.")
+      }
+
+      matched_years <- referencePopulation$matchSpanYears(
+        private$.crudePrev$spanLabel
+      )
+      metadata <- referencePopulation$getMetadata()
+      reference_vintage <- metadata$provenance$vintage
+
+      if (is.null(reference_vintage)) {
+        reference_vintage <- NA_character_
+      } else {
+        reference_vintage <- paste(reference_vintage, collapse = ", ")
+      }
+
+      cli::cat_line()
+      cli::cat_rule("Projecting Prevalence to Population")
+
+      result_df <- purrr::map_dfr(unique(matched_years), function(year) {
+        rows <- matched_years == year
+        year_data <- private$.crudePrev[rows, , drop = FALSE]
+        standardization_reference <- referencePopulation$getStandardizationReference(year)
+        standardized_data <- standardize_measure(
+          measureData = year_data,
+          referencePopulation = standardization_reference,
+          measure = "prevalence",
+          ageRightTruncation = ageRightTruncation,
+          rateMultiplier = rateMultiplier,
+          includeMatchedPopulation = TRUE
+        )
+
+        standardized_data |>
+          dplyr::mutate(
+            rateMultiplier = rateMultiplier,
+            estimatedCases = stdStat / rateMultiplier * matchedPopulation,
+            reference_source = metadata$source,
+            reference_vintage = reference_vintage
+          )
+      })
+
+      private$.projPopEst <- result_df
+      cli::cli_alert_success("Population projection complete ({nrow(result_df)} rows)")
 
       invisible(self)
     },
@@ -607,6 +682,15 @@ PrevalenceResults <- R6::R6Class(
       }
     },
 
+    #' @field projPopEst Data frame with population-standardized prevalence estimates
+    projPopEst = function(value) {
+      if (missing(value)) {
+        return(private$.projPopEst)
+      } else {
+        private$.projPopEst <- value
+      }
+    },
+
     #' @field standardizationApplied List of standardization parameters (read-only)
     standardizationApplied = function(value) {
       if (missing(value)) {
@@ -622,6 +706,7 @@ PrevalenceResults <- R6::R6Class(
     .stdPrev = NULL,
     .crudeInc = NULL,
     .stdInc = NULL,
+    .projPopEst = NULL,
     .drugUsage = NULL,
     .demographics = NULL,
     .metaInfo = NULL,
@@ -831,6 +916,8 @@ loadPrevalenceResults <- function(bundlePath) {
 #' @param measure Either "prevalence" or "incidence", used in validation and
 #'   error messages.
 #' @param rateMultiplier Numeric scale applied to crude and standardized rates.
+#' @param includeMatchedPopulation Logical. Include the matched reference total
+#'   in the result for population case estimation.
 #'
 #' @param referencePopulation StandardizationReference object defining
 #'   the standard population for weighting
@@ -890,7 +977,8 @@ standardize_measure <- function(
     referencePopulation,
     measure = c("prevalence", "incidence"),
     ageRightTruncation = NULL,
-    rateMultiplier = 100000) {
+    rateMultiplier = 100000,
+    includeMatchedPopulation = FALSE) {
 
   measure <- match.arg(measure)
   if (measure == "prevalence") {
@@ -930,6 +1018,7 @@ standardize_measure <- function(
   }
 
   checkmate::assert_number(rateMultiplier, lower = 0, finite = TRUE)
+  checkmate::assert_flag(includeMatchedPopulation)
 
   supported_gender_ids <- c("8507", "8532")
   measure_gender_ids <- as.character(measureData$gender)
@@ -1130,6 +1219,10 @@ standardize_measure <- function(
     ))
   }
 
+  matched_population <- ref_adjusted |>
+    dplyr::group_by(analysisId) |>
+    dplyr::summarize(matchedPopulation = sum(population), .groups = "drop")
+
   ref_adjusted <- ref_adjusted |>
     dplyr::group_by(analysisId) |>
     dplyr::mutate(weight = population / sum(population)) |>
@@ -1157,6 +1250,11 @@ standardize_measure <- function(
       reference_name = referencePopulation$name,
       reference_year = referencePopulation$year
     )
+
+  if (includeMatchedPopulation) {
+    standardized_data <- standardized_data |>
+      dplyr::left_join(matched_population, by = "analysisId")
+  }
 
   return(standardized_data)
 }

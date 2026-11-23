@@ -809,6 +809,60 @@ test_that("ProjectionReference matches span labels to available years", {
   expect_identical(reference$matchSpanYears(2020L), 2020L)
 })
 
+test_that("project_to_population uses matched strata and matched population totals", {
+  prevalence <- make_standardization_test_prevalence()
+  prevalence$spanLabel <- as.character(prevalence$spanLabel)
+  prevalence$spanLabel[prevalence$spanLabel == "2020"] <- "2019"
+  prevalence$spanLabel[prevalence$spanLabel == "2021"] <- "2020"
+  original_std_prev <- data.frame(existing = TRUE)
+  results <- PrevalenceResults$new(
+    crudePrev = prevalence,
+    stdPrev = original_std_prev
+  )
+  reference <- make_projection_test_reference()
+
+  expect_invisible(results$project_to_population(reference))
+
+  projected <- results$projPopEst
+  analysis_one <- projected[projected$analysisId == 1L, ]
+  analysis_two <- projected[projected$analysisId == 2L, ]
+
+  expect_equal(nrow(projected), 4L)
+  expect_equal(analysis_one$matchedPopulation, c(1000, 2000))
+  expect_equal(analysis_one$stdStat, c(270, 270))
+  expect_equal(analysis_one$estimatedCases, c(2.7, 5.4))
+  expect_equal(analysis_two$matchedPopulation, c(2000, 4000))
+  expect_equal(analysis_two$stdStat, c(425, 425))
+  expect_equal(analysis_two$estimatedCases, c(8.5, 17))
+  expect_equal(projected$reference_vintage, rep("2025", 4))
+  expect_identical(results$stdPrev, original_std_prev)
+})
+
+test_that("project_to_population validates years before storing results", {
+  results <- PrevalenceResults$new(
+    crudePrev = make_standardization_test_prevalence()
+  )
+  reference <- make_projection_test_reference()
+
+  expect_error(results$project_to_population(reference), "2021.*not available")
+  expect_null(results$projPopEst)
+})
+
+test_that("project_to_population uses its rate multiplier for case estimates", {
+  prevalence <- make_standardization_test_prevalence()
+  prevalence <- prevalence[prevalence$spanLabel == "2020", , drop = FALSE]
+  results <- PrevalenceResults$new(crudePrev = prevalence)
+
+  results$project_to_population(
+    make_projection_test_reference(),
+    rateMultiplier = 1000000
+  )
+
+  expect_equal(results$projPopEst$stdStat[results$projPopEst$analysisId == 1L], 2700)
+  expect_equal(results$projPopEst$estimatedCases[results$projPopEst$analysisId == 1L], 5.4)
+  expect_equal(results$projPopEst$rateMultiplier, rep(1000000, 2))
+})
+
 test_that("ProjectionReference rejects unavailable and ambiguous span years", {
   reference <- make_projection_test_reference()
 
