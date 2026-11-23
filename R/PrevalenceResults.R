@@ -647,8 +647,6 @@ PrevalenceResults <- R6::R6Class(
     }
   )
 )
-
-
 #' Load PrevalenceResults from Bundle
 #'
 #' @description
@@ -895,14 +893,10 @@ standardize_measure <- function(
     rateMultiplier = 100000) {
 
   measure <- match.arg(measure)
-  measureLabel <- if (measure == "prevalence") {
-
-    "Prevalence"
-
+  if (measure == "prevalence") {
+    measureLabel <- "Prevalence"
   } else {
-
-    "Incidence"
-
+    measureLabel <- "Incidence"
   }
 
   # Validate inputs
@@ -1775,6 +1769,333 @@ StandardizationReference <- R6::R6Class(
         return(private$.reference)
       }
       private$.reference <- value
+    }
+  )
+)
+
+#' ProjectionReference R6 Class
+#'
+#' @description
+#' Stores age-sex population counts for multiple years and provides
+#' year-specific population data for projection and standardization.
+#'
+#' @details
+#' Projection data must contain one row per year, age, and gender combination.
+#' Every year must contain the same age-sex strata and a finite, positive
+#' population total. Use `getStandardizationReference()` to adapt one year of
+#' data to the existing single-year `StandardizationReference` interface.
+#'
+#' @export
+ProjectionReference <- R6::R6Class(
+  "ProjectionReference",
+  public = list(
+    #' @description Create a multi-year ProjectionReference
+    #' @param name Character. Name of the projection reference
+    #' @param country Character. Country or region
+    #' @param source Character. Data source description or citation
+    #' @param data Data frame with columns: year, age, gender, population
+    #' @param reference Character. URL or reference for the source data (optional)
+    #' @param provenance Optional list with retrieval details such as data vintage
+    initialize = function(name,
+                          country,
+                          source,
+                          data,
+                          reference = NULL,
+                          provenance = list()) {
+      if (!is.data.frame(data)) {
+        cli::cli_abort("'data' must be a data frame")
+      }
+
+      required_cols <- c("year", "age", "gender", "population")
+      missing_cols <- setdiff(required_cols, colnames(data))
+      if (length(missing_cols) > 0) {
+        cli::cli_abort(c(
+          "Projection reference data is missing required columns:",
+          stats::setNames(missing_cols, rep("x", length(missing_cols))),
+          "i" = paste0("Required columns: ", paste(required_cols, collapse = ", "))
+        ))
+      }
+
+      if (nrow(data) == 0) {
+        cli::cli_abort("Projection reference data must contain at least one population cell.")
+      }
+
+      if (any(is.na(data$year)) ||
+          any(is.na(data$age)) ||
+          any(is.na(data$gender)) ||
+          any(is.na(data$population))) {
+        cli::cli_abort("Data cannot contain NA values in year, age, gender, or population columns")
+      }
+
+      if (!is.numeric(data$year) ||
+          any(!is.finite(data$year) | data$year != floor(data$year))) {
+        cli::cli_abort("Projection reference years must be finite integers.")
+      }
+
+      if (!is.numeric(data$population)) {
+        cli::cli_abort("Population column must be numeric.")
+      }
+
+      if (!is.list(provenance)) {
+        cli::cli_abort("'provenance' must be a list")
+      }
+
+      data$year <- as.integer(data$year)
+      data$age <- trimws(as.character(data$age))
+      data$gender <- trimws(as.character(data$gender))
+
+      if (any(data$age == "") || any(data$gender == "")) {
+        cli::cli_abort("Age and gender values must be non-empty.")
+      }
+
+      .parse_age_labels(unique(data$age))
+
+      duplicate_keys <- data |>
+        dplyr::count(year, age, gender, name = "cell_count") |>
+        dplyr::filter(cell_count > 1)
+
+      if (nrow(duplicate_keys) > 0) {
+        duplicate_descriptions <- paste0(
+          "year=", duplicate_keys$year,
+          ", age=", duplicate_keys$age,
+          ", gender=", duplicate_keys$gender
+        )
+        cli::cli_abort(c(
+          "Projection reference data contains duplicate year/age/gender cells:",
+          stats::setNames(duplicate_descriptions, rep("x", length(duplicate_descriptions)))
+        ))
+      }
+
+      invalid_population <- !is.finite(data$population) | data$population < 0
+
+      if (any(invalid_population)) {
+        invalid_descriptions <- paste0(
+          "year=", data$year[invalid_population],
+          ", age=", data$age[invalid_population],
+          ", gender=", data$gender[invalid_population],
+          ", population=", data$population[invalid_population]
+        )
+        cli::cli_abort(c(
+          "Population values must be finite and non-negative:",
+          stats::setNames(invalid_descriptions, rep("x", length(invalid_descriptions)))
+        ))
+      }
+
+      years <- sort(unique(data$year))
+      expected_strata <- data |>
+        dplyr::filter(year == years[[1]]) |>
+        dplyr::select(age, gender)
+
+      for (year_value in years[-1]) {
+        year_strata <- data |>
+          dplyr::filter(year == year_value) |>
+          dplyr::select(age, gender)
+        missing_strata <- dplyr::anti_join(
+          expected_strata,
+          year_strata,
+          by = c("age", "gender")
+        )
+        additional_strata <- dplyr::anti_join(
+          year_strata,
+          expected_strata,
+          by = c("age", "gender")
+        )
+
+        if (nrow(missing_strata) > 0 || nrow(additional_strata) > 0) {
+          cli::cli_abort(paste0(
+            "Projection reference year ", year_value,
+            " does not contain the same age/gender strata as year ", years[[1]], "."
+          ))
+        }
+      }
+
+      year_totals <- data |>
+        dplyr::group_by(year) |>
+        dplyr::summarise(totalPopulation = sum(population), .groups = "drop") |>
+        dplyr::filter(!is.finite(totalPopulation) | totalPopulation <= 0)
+
+      if (nrow(year_totals) > 0) {
+        cli::cli_abort(c(
+          "Each projection reference year must have a finite, positive population total:",
+          stats::setNames(
+            paste0("year=", year_totals$year),
+            rep("x", nrow(year_totals))
+          )
+        ))
+      }
+
+      private$.name <- name
+      private$.country <- country
+      private$.source <- source
+      private$.reference <- reference
+      private$.provenance <- provenance
+      private$.data <- data |>
+        dplyr::mutate(population = as.numeric(population)) |>
+        dplyr::arrange(year, gender, age) |>
+        dplyr::select(year, age, gender, population)
+    },
+
+    #' @description View projection reference metadata and population totals
+    viewReference = function() {
+      cat("\n=== ", private$.name, " ===\n", sep = "")
+      cat("Country: ", private$.country, "\n", sep = "")
+      cat("Source:  ", private$.source, "\n", sep = "")
+
+      if (!is.null(private$.reference)) {
+        cat("Reference: ", private$.reference, "\n", sep = "")
+      }
+
+      totals <- private$.data |>
+        dplyr::group_by(year) |>
+        dplyr::summarise(population = sum(population), .groups = "drop")
+      cat("Years:   ", paste(totals$year, collapse = ", "), "\n", sep = "")
+      cat("\nPopulation totals by year:\n")
+      print(totals)
+      invisible(self)
+    },
+
+    #' @description Get reference data, optionally for one year
+    #' @param year Optional integer year to retrieve
+    #' @return Data frame with year, age, gender, and population columns
+    getData = function(year = NULL) {
+
+      if (is.null(year)) {
+        return(private$.data)
+      }
+
+      year <- private$.validateYear(year)
+      private$.data[private$.data$year == year, , drop = FALSE]
+    },
+
+    #' @description Get the years available in this reference
+    #' @return Sorted integer vector of years
+    getYears = function() {
+      sort(unique(private$.data$year))
+    },
+
+    #' @description Get total population for one year
+    #' @param year Integer year
+    #' @return Numeric population total
+    getTotalPopulation = function(year) {
+      sum(self$getData(year)$population)
+    },
+
+    #' @description Adapt one year to a StandardizationReference
+    #' @param year Integer year to adapt
+    #' @return A StandardizationReference for the selected year
+    getStandardizationReference = function(year) {
+      year <- private$.validateYear(year)
+      year_data <- self$getData(year)
+      year_data <- year_data[, c("age", "gender", "population"), drop = FALSE]
+
+      StandardizationReference$new(
+        name = paste0(private$.name, " (", year, ")"),
+        country = private$.country,
+        year = year,
+        source = private$.source,
+        data = year_data,
+        reference = private$.reference
+      )
+    },
+
+    #' @description Get reference metadata
+    #' @return List with name, country, years, source, reference, and provenance
+    getMetadata = function() {
+      list(
+        name = private$.name,
+        country = private$.country,
+        years = self$getYears(),
+        source = private$.source,
+        reference = private$.reference,
+        provenance = private$.provenance
+      )
+    }
+  ),
+
+  private = list(
+    .data = NULL,
+    .name = NULL,
+    .country = NULL,
+    .source = NULL,
+    .reference = NULL,
+    .provenance = NULL,
+    .validateYear = function(year) {
+
+      if (!is.numeric(year) ||
+          length(year) != 1 ||
+          is.na(year) ||
+          !is.finite(year) ||
+          year != floor(year)) {
+        cli::cli_abort("year must be a single finite integer.")
+      }
+
+      year <- as.integer(year)
+
+      if (!year %in% private$.data$year) {
+        cli::cli_abort(paste0(
+          "Year ", year,
+          " is not available in this ProjectionReference. Available years: ",
+          paste(self$getYears(), collapse = ", "), "."
+        ))
+      }
+
+      year
+    }
+  ),
+
+  active = list(
+    #' @field name Name of the projection reference
+    name = function(value) {
+
+      if (missing(value)) {
+        return(private$.name)
+      }
+
+      private$.name <- value
+    },
+
+    #' @field country Country or region
+    country = function(value) {
+
+      if (missing(value)) {
+        return(private$.country)
+      }
+
+      private$.country <- value
+    },
+
+    #' @field source Source description or citation
+    source = function(value) {
+
+      if (missing(value)) {
+        return(private$.source)
+      }
+
+      private$.source <- value
+    },
+
+    #' @field reference URL or reference for the source data
+    reference = function(value) {
+
+      if (missing(value)) {
+        return(private$.reference)
+      }
+
+      private$.reference <- value
+    },
+
+    #' @field provenance Retrieval details for the reference data
+    provenance = function(value) {
+
+      if (missing(value)) {
+        return(private$.provenance)
+      }
+
+      if (!is.list(value)) {
+        cli::cli_abort("'provenance' must be a list")
+      }
+
+      private$.provenance <- value
     }
   )
 )

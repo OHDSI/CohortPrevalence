@@ -715,3 +715,82 @@ test_that("adjusted reference applies only right truncation", {
     c(700, 700)
   )
 })
+
+make_projection_test_reference <- function(data = NULL) {
+
+  if (is.null(data)) {
+    single_year_data <- make_standardization_test_reference()$getData()
+    data <- dplyr::bind_rows(
+      single_year_data |>
+        dplyr::mutate(year = 2019L),
+      single_year_data |>
+        dplyr::mutate(year = 2020L, population = population * 2)
+    ) |>
+      dplyr::select(year, age, gender, population)
+  }
+
+  CohortPrevalence:::ProjectionReference$new(
+    name = "Test projection reference",
+    country = "Test",
+    source = "Unit test",
+    data = data,
+    reference = "https://example.test/population",
+    provenance = list(vintage = 2025L)
+  )
+}
+
+test_that("ProjectionReference stores multiple years and adapts one year", {
+  reference <- make_projection_test_reference()
+
+  expect_equal(reference$getYears(), c(2019L, 2020L))
+  expect_equal(nrow(reference$getData()), 16L)
+  expect_equal(nrow(reference$getData(2019L)), 8L)
+  expect_equal(reference$getTotalPopulation(2020L), 4000)
+  expect_equal(reference$provenance, list(vintage = 2025L))
+
+  standardization_reference <- reference$getStandardizationReference(2020L)
+  expect_s3_class(standardization_reference, "StandardizationReference")
+  expect_equal(standardization_reference$year, 2020L)
+  expect_equal(standardization_reference$getTotalPopulation(), 4000)
+  expect_equal(
+    standardization_reference$getData()$population,
+    reference$getData(2020L)$population
+  )
+})
+
+test_that("ProjectionReference rejects duplicate year-age-gender cells", {
+  reference_data <- make_projection_test_reference()$getData()
+  reference_data <- rbind(reference_data, reference_data[1, ])
+
+  expect_error(
+    make_projection_test_reference(reference_data),
+    "duplicate year/age/gender cells"
+  )
+})
+
+test_that("ProjectionReference requires identical strata and positive totals by year", {
+  reference_data <- make_projection_test_reference()$getData()
+  missing_stratum <- reference_data[
+    !(reference_data$year == 2020L & reference_data$age == "005"),
+    ,
+    drop = FALSE
+  ]
+  zero_population <- reference_data
+  zero_population$population[zero_population$year == 2020L] <- 0
+
+  expect_error(
+    make_projection_test_reference(missing_stratum),
+    "does not contain the same age/gender strata"
+  )
+  expect_error(
+    make_projection_test_reference(zero_population),
+    "finite, positive population total.*year=2020"
+  )
+})
+
+test_that("ProjectionReference validates requested years", {
+  reference <- make_projection_test_reference()
+
+  expect_error(reference$getData(2018L), "Year 2018 is not available")
+  expect_error(reference$getTotalPopulation(2020.5), "single finite integer")
+})
