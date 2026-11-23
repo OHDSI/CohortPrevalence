@@ -1,3 +1,9 @@
+CohortPrevalence v1.4.0
+=======================
+
+- add ProjectionReference
+- start adherence and persistence code
+
 CohortPrevalence v1.3.0
 =======================
 

@@ -794,3 +794,25 @@ test_that("ProjectionReference validates requested years", {
   expect_error(reference$getData(2018L), "Year 2018 is not available")
   expect_error(reference$getTotalPopulation(2020.5), "single finite integer")
 })
+
+test_that("ProjectionReference matches span labels to available years", {
+  reference <- make_projection_test_reference()
+
+  expect_identical(
+    reference$matchSpanYears(c(
+      "2019",
+      "2020 - 2020",
+      "2020-01-01 - 2020-12-31"
+    )),
+    c(2019L, 2020L, 2020L)
+  )
+  expect_identical(reference$matchSpanYears(2020L), 2020L)
+})
+
+test_that("ProjectionReference rejects unavailable and ambiguous span years", {
+  reference <- make_projection_test_reference()
+
+  expect_error(reference$matchSpanYears("2021"), "not available")
+  expect_error(reference$matchSpanYears("2019 - 2020"), "multiple calendar years")
+  expect_error(reference$matchSpanYears("not a year"), "does not contain a four-digit")
+})

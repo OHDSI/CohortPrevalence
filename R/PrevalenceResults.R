@@ -1973,6 +1973,66 @@ ProjectionReference <- R6::R6Class(
       sort(unique(private$.data$year))
     },
 
+    #' @description Match prevalence span labels to available population years
+    #' @param spanLabels Character or numeric prevalence span labels
+    #' @return Integer vector of matched population years
+    matchSpanYears = function(spanLabels) {
+
+      if (is.null(spanLabels) || length(spanLabels) == 0) {
+        cli::cli_abort("'spanLabels' must contain at least one value.")
+      }
+
+      span_labels <- trimws(as.character(spanLabels))
+
+      if (any(is.na(span_labels)) || any(span_labels == "")) {
+        cli::cli_abort("'spanLabels' cannot contain missing or empty values.")
+      }
+
+      matched_years <- vapply(
+        span_labels,
+        function(span_label) {
+          year_tokens <- regmatches(
+            span_label,
+            gregexpr(
+              "(?<![0-9])(?:19|20)[0-9]{2}(?![0-9])",
+              span_label,
+              perl = TRUE
+            )
+          )[[1]]
+          year_tokens <- unique(as.integer(year_tokens))
+
+          if (length(year_tokens) == 0) {
+            cli::cli_abort(paste0(
+              "Span label '", span_label,
+              "' does not contain a four-digit calendar year."
+            ))
+          }
+
+          if (length(year_tokens) > 1) {
+            cli::cli_abort(paste0(
+              "Span label '", span_label,
+              "' contains multiple calendar years and cannot be matched to one population year."
+            ))
+          }
+
+          matched_year <- year_tokens[[1]]
+
+          if (!matched_year %in% private$.data$year) {
+            cli::cli_abort(paste0(
+              "Span label '", span_label, "' maps to year ", matched_year,
+              ", which is not available in this ProjectionReference. Available years: ",
+              paste(self$getYears(), collapse = ", "), "."
+            ))
+          }
+
+          matched_year
+        },
+        integer(1)
+      )
+
+      unname(matched_years)
+    },
+
     #' @description Get total population for one year
     #' @param year Integer year
     #' @return Numeric population total
