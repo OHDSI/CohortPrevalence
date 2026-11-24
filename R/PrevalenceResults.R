@@ -120,7 +120,8 @@ PrevalenceResults <- R6::R6Class(
 
         if (!is.null(private$.crudePrev) &&
             nrow(private$.crudePrev) > 0 &&
-            (is.null(private$.stdPrev) || nrow(private$.stdPrev) == 0)) {
+          (is.null(private$.stdPrev) || nrow(private$.stdPrev) == 0) &&
+          (is.null(private$.projPopEst) || nrow(private$.projPopEst) == 0)) {
           unstandardizedMeasures <- c(unstandardizedMeasures, "prevalence")
         }
 
@@ -202,6 +203,13 @@ PrevalenceResults <- R6::R6Class(
           readr::write_csv(private$.stdInc, file = stdincFile)
           exportedFiles$stdInc <- list(path = "standardized_incidence.csv", rows = nrow(private$.stdInc))
           cli::cli_alert_success("Exported standardized incidence ({nrow(private$.stdInc)} rows)")
+        }
+
+        if (!is.null(private$.projPopEst) && nrow(private$.projPopEst) > 0) {
+          projPopEstFile <- file.path(bundlePath, "population_projection.csv")
+          readr::write_csv(private$.projPopEst, file = projPopEstFile)
+          exportedFiles$projPopEst <- list(path = "population_projection.csv", rows = nrow(private$.projPopEst))
+          cli::cli_alert_success("Exported population projection ({nrow(private$.projPopEst)} rows)")
         }
 
         # Export metaInfo
@@ -380,6 +388,7 @@ PrevalenceResults <- R6::R6Class(
 
         standardized_data |>
           dplyr::mutate(
+            spanLabel = as.character(spanLabel),
             rateMultiplier = rateMultiplier,
             estimatedCases = stdStat / rateMultiplier * matchedPopulation,
             reference_source = metadata$source,
@@ -763,6 +772,7 @@ loadPrevalenceResults <- function(bundlePath) {
     # Load data files
     prevalence <- NULL
     stdPrev <- NULL
+    projPopEst <- NULL
     incidence <- NULL
     stdInc <- NULL
     drugUsage <- NULL
@@ -783,6 +793,18 @@ loadPrevalenceResults <- function(bundlePath) {
         show_col_types = FALSE
       )
       cli::cli_alert_success("Loaded standardized prevalence ({nrow(stdPrev)} rows)")
+    }
+
+    if ("projPopEst" %in% names(manifest$files)) {
+      projPopEst <- readr::read_csv(
+        file.path(bundlePath, manifest$files$projPopEst$path),
+        col_types = readr::cols(
+          spanLabel = readr::col_character(),
+          reference_vintage = readr::col_character()
+        ),
+        show_col_types = FALSE
+      )
+      cli::cli_alert_success("Loaded population projection ({nrow(projPopEst)} rows)")
     }
 
     if ("stdInc" %in% names(manifest$files)) {
@@ -868,6 +890,7 @@ loadPrevalenceResults <- function(bundlePath) {
     results <- PrevalenceResults$new(
       crudePrev = prevalence,
       stdPrev = stdPrev,
+      projPopEst = projPopEst,
       crudeInc = incidence,
       stdInc = stdInc,
       drugUsage = drugUsage,

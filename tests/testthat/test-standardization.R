@@ -863,6 +863,31 @@ test_that("project_to_population uses its rate multiplier for case estimates", {
   expect_equal(results$projPopEst$rateMultiplier, rep(1000000, 2))
 })
 
+test_that("population projection results round-trip through result bundles", {
+  outputFolder <- tempfile("population-projection-bundle-")
+  dir.create(outputFolder)
+  on.exit(unlink(outputFolder, recursive = TRUE), add = TRUE)
+
+  prevalence <- make_standardization_test_prevalence()
+  prevalence <- prevalence[prevalence$spanLabel == "2020", , drop = FALSE]
+  results <- PrevalenceResults$new(crudePrev = prevalence)
+  results$project_to_population(make_projection_test_reference())
+  expected <- results$projPopEst
+
+  results$export(
+    outputFolder,
+    bundleName = "population-projection",
+    includeCrude = FALSE
+  )
+
+  bundlePath <- file.path(outputFolder, "population-projection")
+  expect_false(file.exists(file.path(bundlePath, "prevalence.csv")))
+  expect_true(file.exists(file.path(bundlePath, "population_projection.csv")))
+
+  loaded <- loadPrevalenceResults(bundlePath)
+  expect_equal(as.data.frame(loaded$projPopEst), as.data.frame(expected))
+})
+
 test_that("ProjectionReference rejects unavailable and ambiguous span years", {
   reference <- make_projection_test_reference()
 
